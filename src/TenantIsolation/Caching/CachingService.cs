@@ -8,51 +8,28 @@ using Microsoft.Extensions.Logging;
 namespace TenantIsolation.Caching;
 
 /// <summary>
-/// High-level caching service for application-specific caching operations
-/// Provides convenient methods for caching frequently accessed data
-/// Implements cache-aside pattern with automatic expiration
+/// High-level caching service for application-specific caching operations.
+/// Provides convenient methods for caching frequently accessed data.
+/// Implements cache-aside pattern with automatic expiration.
 /// </summary>
 public interface ICachingService
 {
     /// <summary>
-    /// Get or fetch value, storing in cache for future requests
+    /// Get or fetch value, storing in cache for future requests.
     /// </summary>
     Task<T?> GetOrFetchAsync<T>(string key, Func<Task<T>> fetchFunc, TimeSpan? expiration = null);
 
-    /// <summary>
-    /// Get cached value
-    /// </summary>
-    Task<T?> GetAsync<T>(string key);
-
-    /// <summary>
-    /// Cache value
-    /// </summary>
-    Task SetAsync<T>(string key, T value, TimeSpan? expiration = null);
-
-    /// <summary>
-    /// Remove cached value
-    /// </summary>
-    Task RemoveAsync(string key);
-
-    /// <summary>
-    /// Remove multiple cached values
-    /// </summary>
-    Task RemoveAsync(params string[] keys);
-
-    /// <summary>
-    /// Clear all cache
-    /// </summary>
-    Task ClearAsync();
-
-    /// <summary>
-    /// Get cache statistics
-    /// </summary>
-    Task<CacheStatistics> GetStatisticsAsync();
+    // ValueTask used for all operations that complete synchronously on the hot path
+    // (ConcurrentDictionary lookup / write), eliminating Task heap allocation and
+    // the async state-machine overhead on every cache hit.
+    ValueTask<T?> GetAsync<T>(string key);
+    ValueTask SetAsync<T>(string key, T value, TimeSpan? expiration = null);
+    ValueTask RemoveAsync(string key);
+    ValueTask RemoveAsync(params string[] keys);
+    ValueTask ClearAsync();
+    ValueTask<CacheStatistics> GetStatisticsAsync();
 }
 
-/// <summary>
-/// Cache statistics
-/// </summary>
 public class CacheStatistics
 {
     public int TotalEntries { get; set; }
@@ -63,9 +40,6 @@ public class CacheStatistics
         : 0;
 }
 
-/// <summary>
-/// Caching service implementation
-/// </summary>
 public class CachingService : ICachingService
 {
     private readonly ICacheProvider _cacheProvider;
@@ -80,15 +54,14 @@ public class CachingService : ICachingService
     }
 
     /// <summary>
-    /// Get value from cache, or fetch and cache if not present
-    /// Implements the cache-aside pattern for efficient data retrieval
+    /// Get value from cache, or fetch and cache if not present.
+    /// Implements the cache-aside pattern for efficient data retrieval.
     /// </summary>
     public async Task<T?> GetOrFetchAsync<T>(string key, Func<Task<T>> fetchFunc, TimeSpan? expiration = null)
     {
         if (string.IsNullOrWhiteSpace(key))
             return await fetchFunc();
 
-        // Try to get from cache
         var cachedValue = await _cacheProvider.GetAsync<T>(key);
         if (cachedValue != null)
         {
@@ -102,10 +75,8 @@ public class CachingService : ICachingService
 
         try
         {
-            // Fetch fresh value
             var freshValue = await fetchFunc();
 
-            // Cache the value
             if (freshValue != null)
             {
                 await _cacheProvider.SetAsync(key, freshValue, expiration);
@@ -121,64 +92,66 @@ public class CachingService : ICachingService
         }
     }
 
-    public async Task<T?> GetAsync<T>(string key)
+    // Non-async methods: return the provider's pre-completed ValueTask directly —
+    // no state-machine allocation, no Task wrapper on the hot path.
+
+    public ValueTask<T?> GetAsync<T>(string key)
     {
         if (string.IsNullOrWhiteSpace(key))
-            return default;
+            return ValueTask.FromResult<T?>(default);
 
-        return await _cacheProvider.GetAsync<T>(key);
+        return _cacheProvider.GetAsync<T>(key);
     }
 
-    public async Task SetAsync<T>(string key, T value, TimeSpan? expiration = null)
+    public ValueTask SetAsync<T>(string key, T value, TimeSpan? expiration = null)
     {
         if (string.IsNullOrWhiteSpace(key))
-            return;
+            return ValueTask.CompletedTask;
 
-        await _cacheProvider.SetAsync(key, value, expiration);
+        var vt = _cacheProvider.SetAsync(key, value, expiration);
         _logger.LogDebug("Set cache value for key '{Key}' with expiration {Expiration}",
             key, expiration ?? TimeSpan.MaxValue);
+        return vt;
     }
 
-    public async Task RemoveAsync(string key)
+    public ValueTask RemoveAsync(string key)
     {
         if (string.IsNullOrWhiteSpace(key))
-            return;
+            return ValueTask.CompletedTask;
 
-        await _cacheProvider.RemoveAsync(key);
+        var vt = _cacheProvider.RemoveAsync(key);
         _logger.LogDebug("Removed cache entry for key '{Key}'", key);
+        return vt;
     }
 
-    public async Task RemoveAsync(params string[] keys)
+    public async ValueTask RemoveAsync(params string[] keys)
     {
-        var tasks = keys
-            .Where(k => !string.IsNullOrWhiteSpace(k))
-            .Select(k => _cacheProvider.RemoveAsync(k));
+        foreach (var k in keys.Where(k => !string.IsNullOrWhiteSpace(k)))
+            await _cacheProvider.RemoveAsync(k);
 
-        await Task.WhenAll(tasks);
         _logger.LogDebug("Removed {Count} cache entries", keys.Length);
     }
 
-    public async Task ClearAsync()
+    public ValueTask ClearAsync()
     {
-        await _cacheProvider.ClearAsync();
+        var vt = _cacheProvider.ClearAsync();
         _cacheHits = 0;
         _cacheMisses = 0;
         _logger.LogInformation("Cleared all cache entries and statistics");
+        return vt;
     }
 
-    public async Task<CacheStatistics> GetStatisticsAsync()
-    {
-        return await Task.FromResult(new CacheStatistics
+    public ValueTask<CacheStatistics> GetStatisticsAsync()
+        => ValueTask.FromResult(new CacheStatistics
         {
             CacheHits = _cacheHits,
             CacheMisses = _cacheMisses
         });
-    }
 }
 
 /// <summary>
-/// Tenant-aware caching service
-/// Automatically applies tenant context to cache keys
+/// Tenant-aware caching service.
+/// Automatically scopes cache keys to the current tenant, preventing cross-tenant cache hits.
 /// </summary>
 public class TenantAwareCachingService : ICachingService
 {
@@ -202,53 +175,32 @@ public class TenantAwareCachingService : ICachingService
         if (string.IsNullOrEmpty(tenantId))
             return key;
 
-        return $"{tenantId}:{key}";
+        // string.Concat avoids the intermediate format string allocation of $"{tenantId}:{key}".
+        return string.Concat(tenantId, ":", key);
     }
 
-    public async Task<T?> GetOrFetchAsync<T>(string key, Func<Task<T>> fetchFunc, TimeSpan? expiration = null)
-    {
-        var tenantAwareKey = GetTenantAwareKey(key);
-        return await _innerService.GetOrFetchAsync(tenantAwareKey, fetchFunc, expiration);
-    }
+    public Task<T?> GetOrFetchAsync<T>(string key, Func<Task<T>> fetchFunc, TimeSpan? expiration = null)
+        => _innerService.GetOrFetchAsync(GetTenantAwareKey(key), fetchFunc, expiration);
 
-    public async Task<T?> GetAsync<T>(string key)
-    {
-        var tenantAwareKey = GetTenantAwareKey(key);
-        return await _innerService.GetAsync<T>(tenantAwareKey);
-    }
+    public ValueTask<T?> GetAsync<T>(string key)
+        => _innerService.GetAsync<T>(GetTenantAwareKey(key));
 
-    public async Task SetAsync<T>(string key, T value, TimeSpan? expiration = null)
-    {
-        var tenantAwareKey = GetTenantAwareKey(key);
-        await _innerService.SetAsync(key, value, expiration);
-    }
+    public ValueTask SetAsync<T>(string key, T value, TimeSpan? expiration = null)
+        => _innerService.SetAsync(GetTenantAwareKey(key), value, expiration);
 
-    public async Task RemoveAsync(string key)
-    {
-        var tenantAwareKey = GetTenantAwareKey(key);
-        await _innerService.RemoveAsync(tenantAwareKey);
-    }
+    public ValueTask RemoveAsync(string key)
+        => _innerService.RemoveAsync(GetTenantAwareKey(key));
 
-    public async Task RemoveAsync(params string[] keys)
-    {
-        var tenantAwareKeys = keys.Select(GetTenantAwareKey).ToArray();
-        await _innerService.RemoveAsync(tenantAwareKeys);
-    }
+    public ValueTask RemoveAsync(params string[] keys)
+        => _innerService.RemoveAsync(keys.Select(GetTenantAwareKey).ToArray());
 
-    public async Task ClearAsync()
-    {
-        await _innerService.ClearAsync();
-    }
+    public ValueTask ClearAsync()
+        => _innerService.ClearAsync();
 
-    public async Task<CacheStatistics> GetStatisticsAsync()
-    {
-        return await _innerService.GetStatisticsAsync();
-    }
+    public ValueTask<CacheStatistics> GetStatisticsAsync()
+        => _innerService.GetStatisticsAsync();
 }
 
-/// <summary>
-/// Extension methods for caching service registration
-/// </summary>
 public static class CachingServiceExtensions
 {
     public static IServiceCollection AddCachingService(this IServiceCollection services)
