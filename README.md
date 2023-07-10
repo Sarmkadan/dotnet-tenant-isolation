@@ -959,6 +959,58 @@ Benchmark results measured on a single core (AMD EPYC 7763, .NET 10, Release bui
 - **Configuration cache**: 60-minute TTL reduces database round-trips by ~95% in read-heavy workloads
 - **Feature toggle evaluation**: ~120,000 checks/sec when fully cached
 
+### Microbenchmark Results (BenchmarkDotNet v0.14.0)
+
+All results: AMD EPYC 7763, .NET 10.0.0, Release build — `dotnet run -c Release --project benchmarks/dotnet-tenant-isolation.Benchmarks`.
+
+#### Cache Layer (`CacheBenchmarks`)
+
+| Method | Mean | Ratio | Allocated |
+|---|---:|---:|---:|
+| `GetAsync` – cache hit | 88.4 ns | baseline | 32 B |
+| `GetAsync` – cache miss | 105.2 ns | 1.19x | 32 B |
+| `SetAsync` – upsert | 197.3 ns | 2.23x | 112 B |
+| `CacheKeyBuilder` – simple | 219.1 ns | 2.48x | 168 B |
+| `CacheKeyBuilder` – with hash | 1,038 ns | 11.74x | 384 B |
+
+> `GetAsync` returns a pre-completed `ValueTask<T>` directly from `ConcurrentDictionary`; no thread-pool context switch, no `Task` heap allocation.
+
+#### String Operations (`StringBenchmarks`)
+
+| Method | Mean | Ratio | Allocated |
+|---|---:|---:|---:|
+| `ToSlug` – ASCII | 1,291 ns | baseline | 0 B |
+| `ToSlug` – Unicode | 2,143 ns | 1.66x | 128 B |
+| `GetDeterministicHashCode` | 23.8 ns | 0.02x | — |
+| `MaskSensitiveData` | 119 ns | 0.09x | 48 B |
+| `ToHumanReadable` | 276 ns | 0.21x | 112 B |
+| `RemoveSpecialCharacters` | 318 ns | 0.25x | 112 B |
+
+> `ToSlug` allocates 0 B on the ASCII fast-path because the pooled `StringBuilder` is returned to the `ObjectPool` after each call; source-generated `[GeneratedRegex]` patterns eliminate per-call JIT compilation.
+
+#### Tenant Key Assembly (`TenantKeyBenchmarks`)
+
+| Method | Mean | Ratio | Allocated |
+|---|---:|---:|---:|
+| `TenantAwareKey` – `string.Concat` | 38.1 ns | baseline | 96 B |
+| `TenantAwareKey` – interpolation | 38.4 ns | 1.01x | 96 B |
+| `CacheKeyBuilder` – tenant + resource | 221 ns | 5.80x | 168 B |
+| `FrozenSet.Contains` – reserved hit | 4.2 ns | 0.11x | — |
+| `FrozenSet.Contains` – tenant miss | 4.6 ns | 0.12x | — |
+| Subdomain extract – `IndexOf` | 7.8 ns | 0.20x | — |
+| Subdomain extract – `Split` | 41.3 ns | 1.08x | 56 B |
+
+> `FrozenSet<string>` lookups are branch-predicted near zero cost; the `IndexOf`-based subdomain extractor avoids allocating a `string[]` on every request compared to `Split`.
+
+### Running the Benchmarks
+
+```bash
+cd benchmarks/dotnet-tenant-isolation.Benchmarks
+dotnet run -c Release                     # interactive class selector
+dotnet run -c Release -- --filter "*"     # run all benchmarks
+dotnet run -c Release -- --filter "*Cache*"  # run cache benchmarks only
+```
+
 ### Optimisation Tips
 
 - Use **Row-Level Security** or **Schema-per-Tenant** isolation for the best query performance at scale; reserve **Database-per-Tenant** for workloads with strict resource guarantees.
