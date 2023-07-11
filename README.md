@@ -161,13 +161,13 @@ The framework follows a clean, layered architecture:
 Add the NuGet package to your ASP.NET Core project:
 
 ```bash
-dotnet add package dotnet-tenant-isolation
+dotnet add package dotnet-tenant-isolation --version 2.0.2
 ```
 
 Or via Package Manager Console:
 
 ```powershell
-Install-Package dotnet-tenant-isolation
+Install-Package dotnet-tenant-isolation -Version 2.0.2
 ```
 
 ### Source Installation
