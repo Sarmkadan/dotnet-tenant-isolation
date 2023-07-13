@@ -11,7 +11,7 @@
     <Authors>Vladyslav Zaiets</Authors>
     <Version>1.0.0</Version>
     <PackageProjectUrl>https://github.com/sarmkadan/dotnet-tenant-isolation</PackageProjectUrl>
-    <License>MIT</License>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <RepositoryUrl>https://github.com/sarmkadan/dotnet-tenant-isolation</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
     <PackageDescription>Enterprise-grade multi-tenancy framework for ASP.NET Core with per-tenant databases, configuration, middleware pipeline, and data isolation strategies.</PackageDescription>

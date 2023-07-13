@@ -109,3 +109,6 @@ local.settings.json
 
 # Environment specific files
 launchSettings.json
+appsettings.Development.json
+packages/
+*.DotSettings.user
