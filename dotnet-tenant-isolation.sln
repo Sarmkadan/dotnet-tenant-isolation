@@ -5,6 +5,8 @@ VisualStudioVersion = 17.8.34525.116
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "TenantIsolation", "src\TenantIsolation\TenantIsolation.csproj", "{3EF7D685-31F8-42D4-BEB1-097E9F41FBF6}"
 EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "dotnet-tenant-isolation.Tests", "tests\dotnet-tenant-isolation.Tests\dotnet-tenant-isolation.Tests.csproj", "{B2C3D4E5-F6A7-8901-BCDE-F12345678901}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -15,6 +17,10 @@ Global
 		{3EF7D685-31F8-42D4-BEB1-097E9F41FBF6}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{3EF7D685-31F8-42D4-BEB1-097E9F41FBF6}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{3EF7D685-31F8-42D4-BEB1-097E9F41FBF6}.Release|Any CPU.Build.0 = Release|Any CPU
+		{B2C3D4E5-F6A7-8901-BCDE-F12345678901}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{B2C3D4E5-F6A7-8901-BCDE-F12345678901}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{B2C3D4E5-F6A7-8901-BCDE-F12345678901}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{B2C3D4E5-F6A7-8901-BCDE-F12345678901}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
