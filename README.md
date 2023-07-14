@@ -1,3 +1,7 @@
+[![Build](https://github.com/sarmkadan/dotnet-tenant-isolation/actions/workflows/build.yml/badge.svg)](https://github.com/sarmkadan/dotnet-tenant-isolation/actions/workflows/build.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![.NET](https://img.shields.io/badge/.NET-10.0-purple.svg)](https://dotnet.microsoft.com/)
+
 # dotnet-tenant-isolation
 
 Enterprise-grade multi-tenancy isolation framework for ASP.NET Core 10 with support for multiple data isolation strategies, per-tenant configuration management, comprehensive feature toggle system, and production-ready middleware pipeline.
