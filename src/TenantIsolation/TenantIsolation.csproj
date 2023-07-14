@@ -6,7 +6,7 @@
     <Nullable>enable</Nullable>
     <LangVersion>latest</LangVersion>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
-    <PackageId>TenantIsolation</PackageId>
+    <PackageId>Zaiets.dotnet.tenant.isolation</PackageId>
     <Title>Multi-Tenancy Framework for ASP.NET Core</Title>
     <Authors>Vladyslav Zaiets</Authors>
     <Version>1.0.0</Version>
@@ -14,8 +14,14 @@
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <RepositoryUrl>https://github.com/sarmkadan/dotnet-tenant-isolation</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
-    <PackageDescription>Enterprise-grade multi-tenancy framework for ASP.NET Core with per-tenant databases, configuration, middleware pipeline, and data isolation strategies.</PackageDescription>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <PackageTags>multi-tenancy;asp-net-core;data-isolation;enterprise;configuration-management;middleware;database-isolation;saas</PackageTags>
+    <PackageDescription>Multi-tenancy framework for ASP.NET - per-tenant DB, config, middleware pipeline, data isolation strategies</PackageDescription>
   </PropertyGroup>
+
+  <ItemGroup>
+    <None Include="../../README.md" Pack="true" PackagePath="\" />
+  </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="Microsoft.EntityFrameworkCore" Version="10.0.0" />
