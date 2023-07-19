@@ -5,6 +5,21 @@ All notable changes to the dotnet-tenant-isolation project will be documented in
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.0.0] - 2026-03-13
+
+### Changed
+- Default container port changed from 5000 to 8080 (aligns with .NET 8+ non-root convention)
+- Dockerfile rebuilt with improved multi-stage build and solution-level restore for better layer caching
+- Docker Compose updated to match new port and removed unused source volume mount
+- Non-root container user now created with dedicated group
+
+### Added
+- Migration guide for v1.x to v2.0 (`docs/MIGRATION_v2.md`)
+- Improved HEALTHCHECK with longer start-period and timeout
+
+### Breaking
+- Port 5000 is no longer exposed; consumers must update to port 8080
+
 ## [1.1.0] - 2025-06-24
 
 ### Added
