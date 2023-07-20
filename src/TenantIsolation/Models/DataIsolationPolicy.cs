@@ -11,8 +11,25 @@ using System.ComponentModel.DataAnnotations.Schema;
 namespace TenantIsolation.Models;
 
 /// <summary>
-/// Defines data isolation policies for a tenant
+/// Defines a per-entity data isolation policy for a tenant, controlling field-level access,
+/// cross-tenant visibility, and custom filtering rules. Policies are evaluated by
+/// <see cref="TenantIsolation.Services.DataIsolationService"/> at query time.
 /// </summary>
+/// <remarks>
+/// <para>
+/// Policy types determine the default isolation behavior:
+/// <list type="bullet">
+///   <item><c>Strict</c> - no cross-tenant access, all fields visible unless explicitly denied</item>
+///   <item><c>Relaxed</c> - cross-tenant access allowed for specified tenant IDs</item>
+///   <item><c>Custom</c> - requires a <see cref="FilterRule"/> expression for fine-grained control</item>
+/// </list>
+/// </para>
+/// <para>
+/// Field access is evaluated using deny-first logic: if a field appears in <see cref="DeniedFields"/>,
+/// access is blocked regardless of <see cref="AllowedFields"/>. If <see cref="AllowedFields"/> is
+/// non-empty, only listed fields are accessible (whitelist mode).
+/// </para>
+/// </remarks>
 public class DataIsolationPolicy
 {
     /// <summary>
