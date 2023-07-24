@@ -7,6 +7,7 @@
 
 using System.Linq.Expressions;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection; // For service provider to resolve factory
 
 namespace TenantIsolation.Data;
 
@@ -15,15 +16,26 @@ namespace TenantIsolation.Data;
 /// </summary>
 public abstract class Repository<TEntity> where TEntity : class
 {
-    protected readonly TenantDbContext Context;
-    protected readonly DbSet<TEntity> DbSet;
-    protected readonly Guid? CurrentTenantId;
+    private readonly ITenantDbContextFactory<TenantDbContext> _contextFactory;
+    private TenantDbContext? _context; // Lazy-loaded DbContext instance
 
-    protected Repository(TenantDbContext context, Guid? tenantId = null)
+    protected TenantDbContext Context
     {
-        Context = context;
-        DbSet = context.Set<TEntity>();
-        CurrentTenantId = tenantId;
+        get
+        {
+            // Create a new DbContext instance on first access within the current scope,
+            // ensuring it's tenant-aware.
+            _context ??= _contextFactory.Create();
+            return _context;
+        }
+    }
+
+    protected readonly DbSet<TEntity> DbSet;
+
+    protected Repository(ITenantDbContextFactory<TenantDbContext> contextFactory)
+    {
+        _contextFactory = contextFactory;
+        DbSet = Context.Set<TEntity>(); // Use the lazy-loaded Context
     }
 
     /// <summary>
