@@ -8,6 +8,7 @@
 using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Hosting; // Add this for IHostedService
 using TenantIsolation.BackgroundTasks;
 using TenantIsolation.Caching;
 using TenantIsolation.Configuration;
@@ -78,6 +79,12 @@ public class TenantIsolationOptions
     /// Maximum background task queue size
     /// </summary>
     public int MaxBackgroundTaskQueueSize { get; set; } = 1000;
+
+    /// <summary>
+    /// Interval in minutes for the dynamic tenant store to reload tenant data.
+    /// Set to 0 or less to disable dynamic reloading.
+    /// </summary>
+    public int DynamicTenantStoreReloadIntervalMinutes { get; set; } = 5;
 }
 
 /// <summary>
@@ -118,6 +125,10 @@ public static class ServiceRegistrationExtensions
         {
             services.AddTenantAwareCachingService();
         }
+
+        // Register dynamic tenant store and its background service
+        services.AddSingleton<IDynamicTenantStore, DynamicTenantStore>();
+        services.AddHostedService<TenantStoreBackgroundReloadService>();
 
         // Register event bus
         if (options.EnableEventBus)
