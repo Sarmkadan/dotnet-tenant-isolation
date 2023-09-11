@@ -1,0 +1,105 @@
+version: '3.8'
+
+services:
+  # ASP.NET Core API
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: tenant-isolation-api
+    ports:
+      - "5000:5000"
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ASPNETCORE_URLS: http://+:5000
+      ConnectionStrings__DefaultConnection: >
+        Server=mssql;
+        Database=TenantIsolationDb;
+        User Id=sa;
+        Password=YourStrong@Pass123;
+        TrustServerCertificate=true;
+      TenantIsolation__AutoMigrate: "true"
+      TenantIsolation__EnableAuditLogging: "true"
+      TenantIsolation__CacheDurationMinutes: "60"
+      TenantIsolation__TenantIdentificationStrategy: "Header"
+      TenantIsolation__DefaultIsolationStrategy: "RowLevelSecurity"
+    depends_on:
+      mssql:
+        condition: service_healthy
+    volumes:
+      - ./src/TenantIsolation:/app/src:ro
+    networks:
+      - tenant-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # SQL Server Database
+  mssql:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    container_name: tenant-isolation-mssql
+    ports:
+      - "1433:1433"
+    environment:
+      SA_PASSWORD: "YourStrong@Pass123"
+      ACCEPT_EULA: "Y"
+      MSSQL_AGENT_ENABLED: "true"
+    volumes:
+      - mssql-data:/var/opt/mssql
+    networks:
+      - tenant-network
+    restart: unless-stopped
+    healthcheck:
+      test: [
+        "CMD",
+        "/opt/mssql-tools18/bin/sqlcmd",
+        "-S",
+        "localhost",
+        "-U",
+        "sa",
+        "-P",
+        "YourStrong@Pass123",
+        "-Q",
+        "SELECT 1"
+      ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # PostgreSQL Database (Alternative)
+  # Uncomment to use PostgreSQL instead of SQL Server
+  # postgres:
+  #   image: postgres:15-alpine
+  #   container_name: tenant-isolation-postgres
+  #   ports:
+  #     - "5432:5432"
+  #   environment:
+  #     POSTGRES_DB: TenantIsolationDb
+  #     POSTGRES_USER: postgres
+  #     POSTGRES_PASSWORD: YourStrong@Pass123
+  #   volumes:
+  #     - postgres-data:/var/lib/postgresql/data
+  #   networks:
+  #     - tenant-network
+  #   restart: unless-stopped
+  #   healthcheck:
+  #     test: ["CMD-SHELL", "pg_isready -U postgres"]
+  #     interval: 30s
+  #     timeout: 10s
+  #     retries: 3
+  #     start_period: 40s
+
+volumes:
+  mssql-data:
+    driver: local
+  # postgres-data:
+  #   driver: local
+
+networks:
+  tenant-network:
+    driver: bridge
