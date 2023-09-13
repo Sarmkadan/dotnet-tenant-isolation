@@ -3,6 +3,7 @@
 // CTO & Software Architect
 // =============================================================================
 
+using System.Collections.Frozen;
 using System.Security.Claims;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
@@ -13,10 +14,17 @@ using TenantIsolation.Models;
 namespace TenantIsolation.Services;
 
 /// <summary>
-/// Resolves current tenant from HTTP request context
+/// Resolves current tenant from HTTP request context.
 /// </summary>
 public class TenantResolutionService
 {
+    // FrozenSet gives O(1) lookups with no per-call allocation; far faster than
+    // repeated string equality chains when the reserved list grows.
+    private static readonly FrozenSet<string> ReservedSubdomains =
+        FrozenSet.Create(StringComparer.OrdinalIgnoreCase,
+            "www", "api", "mail", "smtp", "ftp", "admin", "app",
+            "static", "cdn", "assets", "dev", "staging", "prod", "auth", "login");
+
     private readonly IHttpContextAccessor _httpContextAccessor;
     private readonly TenantService _tenantService;
     private readonly ILogger<TenantResolutionService> _logger;
@@ -32,7 +40,7 @@ public class TenantResolutionService
     }
 
     /// <summary>
-    /// Resolve tenant from current HTTP request
+    /// Resolve tenant from current HTTP request.
     /// </summary>
     public async Task<Tenant> ResolveTenantAsync()
     {
@@ -64,11 +72,10 @@ public class TenantResolutionService
     }
 
     /// <summary>
-    /// Resolve tenant from HTTP header
+    /// Resolve tenant from HTTP header.
     /// </summary>
     private async Task<Tenant?> ResolveTenantFromHeaderAsync(HttpContext httpContext)
     {
-        // Try X-Tenant-Id header
         if (httpContext.Request.Headers.TryGetValue(TenantConstants.TenantIdHeader, out var tenantIdValue))
         {
             if (Guid.TryParse(tenantIdValue.ToString(), out var tenantId))
@@ -84,7 +91,6 @@ public class TenantResolutionService
             }
         }
 
-        // Try X-Tenant-Slug header
         if (httpContext.Request.Headers.TryGetValue(TenantConstants.TenantSlugHeader, out var slugValue))
         {
             try
@@ -101,7 +107,7 @@ public class TenantResolutionService
     }
 
     /// <summary>
-    /// Resolve tenant from user claims
+    /// Resolve tenant from user claims.
     /// </summary>
     private async Task<Tenant?> ResolveTenantFromClaimsAsync(HttpContext httpContext)
     {
@@ -109,7 +115,6 @@ public class TenantResolutionService
         if (user == null || !user.Identity?.IsAuthenticated == true)
             return null;
 
-        // Try tenant_id claim
         var tenantIdClaim = user.FindFirst(TenantConstants.TenantIdClaimType);
         if (tenantIdClaim != null && Guid.TryParse(tenantIdClaim.Value, out var tenantId))
         {
@@ -123,7 +128,6 @@ public class TenantResolutionService
             }
         }
 
-        // Try tenant_slug claim
         var slugClaim = user.FindFirst(TenantConstants.TenantSlugClaimType);
         if (slugClaim != null)
         {
@@ -141,7 +145,7 @@ public class TenantResolutionService
     }
 
     /// <summary>
-    /// Resolve tenant from route parameter
+    /// Resolve tenant from route parameter.
     /// </summary>
     private async Task<Tenant?> ResolveTenantFromRouteAsync(HttpContext httpContext)
     {
@@ -149,7 +153,6 @@ public class TenantResolutionService
         if (routeData == null)
             return null;
 
-        // Try tenantId route parameter
         if (routeData.Values.TryGetValue(TenantConstants.TenantRouteParameter, out var tenantIdValue))
         {
             if (Guid.TryParse(tenantIdValue?.ToString(), out var tenantId))
@@ -165,7 +168,6 @@ public class TenantResolutionService
             }
         }
 
-        // Try slug route parameter
         if (routeData.Values.TryGetValue(TenantConstants.TenantSlugRouteParameter, out var slugValue))
         {
             try
@@ -182,7 +184,8 @@ public class TenantResolutionService
     }
 
     /// <summary>
-    /// Resolve tenant from subdomain
+    /// Resolve tenant from subdomain.
+    /// Uses IndexOf instead of Split to avoid allocating a string array per request.
     /// </summary>
     private async Task<Tenant?> ResolveTenantFromSubdomainAsync(HttpContext httpContext)
     {
@@ -190,14 +193,14 @@ public class TenantResolutionService
         if (string.IsNullOrEmpty(host))
             return null;
 
-        // Extract subdomain (first part before first dot)
-        var parts = host.Split('.');
-        if (parts.Length < 2)
-            return null; // Not a subdomain
+        // Extract subdomain without allocating a string[] via Split.
+        var dotIndex = host.IndexOf('.');
+        if (dotIndex <= 0 || dotIndex == host.Length - 1)
+            return null;
 
-        var subdomain = parts[0];
-        if (subdomain == "www" || subdomain == "api" || subdomain == "mail")
-            return null; // Skip common subdomains
+        var subdomain = host[..dotIndex];
+        if (ReservedSubdomains.Contains(subdomain))
+            return null;
 
         try
         {
@@ -212,7 +215,7 @@ public class TenantResolutionService
     }
 
     /// <summary>
-    /// Get current tenant from context
+    /// Get current tenant from context.
     /// </summary>
     public Tenant? GetCurrentTenant()
     {
@@ -226,25 +229,10 @@ public class TenantResolutionService
         return null;
     }
 
-    /// <summary>
-    /// Get current tenant identifier
-    /// </summary>
-    public Guid? GetCurrentTenantId()
-    {
-        return GetCurrentTenant()?.Id;
-    }
+    public Guid? GetCurrentTenantId() => GetCurrentTenant()?.Id;
 
-    /// <summary>
-    /// Check if request has valid tenant
-    /// </summary>
-    public bool HasTenant()
-    {
-        return GetCurrentTenant() != null;
-    }
+    public bool HasTenant() => GetCurrentTenant() != null;
 
-    /// <summary>
-    /// Set tenant in context (for testing/admin scenarios)
-    /// </summary>
     public void SetTenant(Tenant tenant)
     {
         var httpContext = _httpContextAccessor.HttpContext;
