@@ -33,11 +33,16 @@ public class TenantService
     public async Task<Tenant> CreateTenantAsync(string name, string slug, string adminEmail,
         TenantIsolationStrategy strategy = TenantIsolationStrategy.DatabasePerTenant)
     {
+        // Fix: Changed ArgumentNullException to ArgumentException for string validation.
         if (string.IsNullOrWhiteSpace(name))
-            throw new TenantIsolationException("Tenant name is required");
+            throw new ArgumentException("Tenant name is required.", nameof(name));
 
+        // Fix: Changed ArgumentNullException to ArgumentException for string validation.
         if (string.IsNullOrWhiteSpace(slug))
-            throw new TenantIsolationException("Tenant slug is required");
+            throw new ArgumentException("Tenant slug is required.", nameof(slug));
+
+        if (string.IsNullOrWhiteSpace(adminEmail))
+            throw new ArgumentNullException(nameof(adminEmail), "Admin email is required.");
 
         if (!await _tenantRepository.IsSlugUniqueAsync(slug))
             throw new TenantIsolationException($"Tenant slug '{slug}' is already in use");
@@ -84,8 +89,9 @@ public class TenantService
     /// </summary>
     public async Task<Tenant> GetTenantBySlugAsync(string slug)
     {
+        // Fix: Changed TenantNotResolvedException to ArgumentException for string validation.
         if (string.IsNullOrWhiteSpace(slug))
-            throw new TenantNotResolvedException("slug", null);
+            throw new ArgumentException("Tenant slug cannot be null or whitespace.", nameof(slug));
 
         var tenant = await _tenantRepository.GetBySlugAsync(slug);
         if (tenant == null)
@@ -133,6 +139,10 @@ public class TenantService
     /// </summary>
     public async Task<Tenant> UpdateTenantAsync(Guid tenantId, Action<Tenant> updateAction)
     {
+        // Fix: Added null check for updateAction parameter.
+        if (updateAction == null)
+            throw new ArgumentNullException(nameof(updateAction));
+        
         var tenant = await GetTenantAsync(tenantId);
         updateAction(tenant);
         tenant.UpdatedAt = DateTime.UtcNow;

@@ -92,6 +92,10 @@ public class ConfigurationValidator : IConfigurationValidator
 
     public ValidationResult ValidateSection(string sectionName)
     {
+        // Fix: Validate sectionName parameter to prevent null or whitespace issues when accessing configuration.
+        if (string.IsNullOrWhiteSpace(sectionName))
+            throw new ArgumentException("Section name cannot be null or whitespace.", nameof(sectionName));
+
         var result = new ValidationResult { IsValid = true };
 
         var section = _configuration.GetSection(sectionName);
