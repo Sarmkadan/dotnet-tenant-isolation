@@ -5,6 +5,7 @@ updates:
     schedule:
       interval: "weekly"
     open-pull-requests-limit: 10
+    auto-merge: true
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
