@@ -7,6 +7,7 @@
 
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions; // Add this for TryAddScoped
 using TenantIsolation.Data;
 using TenantIsolation.Middleware;
 using TenantIsolation.Services;
@@ -29,8 +30,18 @@ public static class DependencyInjectionExtensions
         var options = new TenantIsolationOptions();
         configureOptions?.Invoke(options);
 
-        // Register DbContext
-        services.AddDbContext<TenantDbContext>(configureDbContext);
+        // Register the base DbContextOptions for TenantDbContext.
+        // This will be used by the TenantDbContextFactory.
+        services.AddSingleton(new DbContextOptions<TenantDbContext>(
+            new DbContextOptionsBuilder<TenantDbContext>()
+                .Apply(configureDbContext)
+                .Options));
+
+        // Register the tenant-aware DbContext factory
+        services.TryAddScoped<ITenantDbContextFactory<TenantDbContext>, TenantDbContextFactory>();
+
+        // Register TenantDbContext to be resolved from the factory for scoped lifetime
+        services.AddScoped(sp => sp.GetRequiredService<ITenantDbContextFactory<TenantDbContext>>().Create());
 
         // Register repositories
         services.AddScoped<TenantRepository>();
@@ -46,9 +57,9 @@ public static class DependencyInjectionExtensions
         // Register HTTP context accessor
         services.AddHttpContextAccessor();
 
-        // Register memory cache if not already registered
-        if (!services.Any(x => x.ServiceType == typeof(IMemoryCache)))
-            services.AddMemoryCache();
+        // Register memory cache if not already registered (this is handled by ServiceRegistrationExtensions now)
+        // if (!services.Any(x => x.ServiceType == typeof(IMemoryCache)))
+        //    services.AddMemoryCache();
 
         // Store options in services for later use
         services.AddSingleton(options);
