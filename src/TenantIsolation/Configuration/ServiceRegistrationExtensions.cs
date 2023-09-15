@@ -5,6 +5,9 @@
 // CTO & Software Architect
 // =============================================================================
 
+using Microsoft.Extensions.Caching.Distributed;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using TenantIsolation.BackgroundTasks;
 using TenantIsolation.Caching;
 using TenantIsolation.Configuration;
@@ -176,6 +179,28 @@ public static class ServiceRegistrationExtensions
     }
 
     /// <summary>
+    /// Registers the appropriate cache provider (distributed or in-memory) based on
+    /// whether IDistributedCache has been registered by the application.
+    /// </summary>
+    public static IServiceCollection AddTenantAwareCacheProvider(this IServiceCollection services)
+    {
+        // Check if IDistributedCache is already registered by the application.
+        // If so, use our tenant-aware distributed cache provider.
+        if (services.Any(s => s.ServiceType == typeof(IDistributedCache)))
+        {
+            services.TryAddSingleton<ITenantAwareDistributedCacheProvider, TenantAwareDistributedCacheProvider>();
+            services.TryAddSingleton<ICacheProvider>(sp => sp.GetRequiredService<ITenantAwareDistributedCacheProvider>());
+        }
+        else
+        {
+            // Otherwise, fall back to the in-memory cache provider.
+            services.TryAddSingleton<ICacheProvider, MemoryCacheProvider>();
+        }
+
+        return services;
+    }
+
+    /// <summary>
     /// Register utility services
     /// </summary>
     private static void RegisterUtilities(IServiceCollection services)
@@ -264,3 +289,4 @@ public static class ServiceRegistrationExtensions
         public IDisposable? BeginScope<TState>(TState state) where TState : notnull => null;
     }
 }
+
