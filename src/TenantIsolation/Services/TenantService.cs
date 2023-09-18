@@ -10,6 +10,7 @@ using TenantIsolation.Constants;
 using TenantIsolation.Data;
 using TenantIsolation.Exceptions;
 using TenantIsolation.Models;
+using System.Linq;
 
 namespace TenantIsolation.Services;
 
@@ -18,14 +19,17 @@ namespace TenantIsolation.Services;
 /// </summary>
 public class TenantService
 {
-    private readonly TenantRepository _tenantRepository;
-    private readonly TenantDbContext _context;
+    private readonly TenantRepository _tenantRepository; // For write operations and direct DB access if needed
+    private readonly IDynamicTenantStore _dynamicTenantStore; // For read operations with caching
     private readonly ILogger<TenantService> _logger;
 
-    public TenantService(TenantRepository tenantRepository, TenantDbContext context, ILogger<TenantService> logger)
+    public TenantService(
+        TenantRepository tenantRepository,
+        IDynamicTenantStore dynamicTenantStore,
+        ILogger<TenantService> logger)
     {
         _tenantRepository = tenantRepository;
-        _context = context;
+        _dynamicTenantStore = dynamicTenantStore;
         _logger = logger;
     }
 
@@ -46,7 +50,7 @@ public class TenantService
         if (string.IsNullOrWhiteSpace(adminEmail))
             throw new ArgumentNullException(nameof(adminEmail), "Admin email is required.");
 
-        if (!await _tenantRepository.IsSlugUniqueAsync(slug))
+        if (!await _tenantRepository.IsSlugUniqueAsync(slug)) // Use repository for uniqueness check as it's a write concern
             throw new TenantIsolationException($"Tenant slug '{slug}' is already in use");
 
         var tenant = new Tenant
@@ -79,7 +83,7 @@ public class TenantService
     /// </summary>
     public async Task<Tenant> GetTenantAsync(Guid tenantId)
     {
-        var tenant = await _tenantRepository.GetByIdAsync(tenantId);
+        var tenant = await _dynamicTenantStore.GetTenantByIdAsync(tenantId);
         if (tenant == null)
             throw new TenantNotResolvedException(tenantId.ToString());
 
@@ -95,7 +99,9 @@ public class TenantService
         if (string.IsNullOrWhiteSpace(slug))
             throw new ArgumentException("Tenant slug cannot be null or whitespace.", nameof(slug));
 
-        var tenant = await _tenantRepository.GetBySlugAsync(slug);
+        var tenants = await _dynamicTenantStore.GetAllActiveTenantsAsync();
+        var tenant = tenants.FirstOrDefault(t => t.Slug.Equals(slug, StringComparison.OrdinalIgnoreCase));
+
         if (tenant == null)
             throw new TenantNotResolvedException("slug", slug);
 
@@ -144,7 +150,7 @@ public class TenantService
         // Fix: Added null check for updateAction parameter.
         if (updateAction == null)
             throw new ArgumentNullException(nameof(updateAction));
-        
+
         var tenant = await GetTenantAsync(tenantId);
         updateAction(tenant);
         tenant.UpdatedAt = DateTime.UtcNow;
@@ -166,7 +172,7 @@ public class TenantService
     /// </summary>
     public async Task<List<Tenant>> GetActiveTenantsAsync()
     {
-        return await _tenantRepository.GetActiveTenantAsync();
+        return (await _dynamicTenantStore.GetAllActiveTenantsAsync()).ToList();
     }
 
     /// <summary>
@@ -174,7 +180,8 @@ public class TenantService
     /// </summary>
     public async Task<List<Tenant>> GetTenantsByStatusAsync(TenantStatus status)
     {
-        return await _tenantRepository.GetByStatusAsync(status);
+        // This will query the cached tenants, might need to hit repo if a fresh list is required always
+        return (await _dynamicTenantStore.GetAllActiveTenantsAsync()).Where(t => t.Status == status).ToList();
     }
 
     /// <summary>
@@ -186,22 +193,6 @@ public class TenantService
     }
 
     /// <summary>
-    /// Set current tenant in context
-    /// </summary>
-    public void SetCurrentTenant(Guid tenantId)
-    {
-        _context.SetCurrentTenant(tenantId);
-    }
-
-    /// <summary>
-    /// Clear current tenant context
-    /// </summary>
-    public void ClearCurrentTenant()
-    {
-        _context.ClearCurrentTenant();
-    }
-
-    /// <summary>
     /// Search tenants
     /// </summary>
     public async Task<List<Tenant>> SearchTenantsAsync(string query)
@@ -209,7 +200,13 @@ public class TenantService
         if (string.IsNullOrWhiteSpace(query))
             return new List<Tenant>();
 
-        return await _tenantRepository.SearchAsync(query);
+        // This will search in cached tenants
+        var searchTerm = query.ToLower();
+        return (await _dynamicTenantStore.GetAllActiveTenantsAsync())
+            .Where(t => (t.Name != null && t.Name.ToLower().Contains(searchTerm)) ||
+                       (t.Slug != null && t.Slug.ToLower().Contains(searchTerm)) ||
+                       (t.AdminEmail != null && t.AdminEmail.ToLower().Contains(searchTerm)))
+            .ToList();
     }
 
     /// <summary>
@@ -226,6 +223,7 @@ public class TenantService
     /// </summary>
     public async Task<object> GetTenantStatisticsAsync()
     {
+        // For statistics, it's better to hit the repository directly for fresh data
         var statusCounts = await _tenantRepository.GetStatusCountsAsync();
         var totalTenants = statusCounts.Values.Sum();
         var activeTenants = statusCounts.TryGetValue(TenantStatus.Active, out var count) ? count : 0;
