@@ -15,7 +15,14 @@ namespace TenantIsolation.Data;
 /// </summary>
 public class TenantDbContext : DbContext
 {
+    public TenantDbContext()
+    {
+    }
 
+    public TenantDbContext(DbContextOptions<TenantDbContext> options)
+        : base(options)
+    {
+    }
 
     // DbSets for domain models
     public DbSet<Tenant> Tenants { get; set; }

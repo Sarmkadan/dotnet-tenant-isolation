@@ -8,6 +8,7 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions; // Add this for TryAddScoped
+using Microsoft.Extensions.Options;
 using TenantIsolation.Data;
 using TenantIsolation.Middleware;
 using TenantIsolation.Services;
@@ -32,10 +33,12 @@ public static class DependencyInjectionExtensions
 
         // Register the base DbContextOptions for TenantDbContext.
         // This will be used by the TenantDbContextFactory.
-        services.AddSingleton(new DbContextOptions<TenantDbContext>(
-            new DbContextOptionsBuilder<TenantDbContext>()
-                .Apply(configureDbContext)
-                .Options));
+        services.AddSingleton(sp =>
+        {
+            var dbContextOptionsBuilder = new DbContextOptionsBuilder<TenantDbContext>();
+            configureDbContext(dbContextOptionsBuilder);
+            return dbContextOptionsBuilder.Options;
+        });
 
         // Register the tenant-aware DbContext factory
         services.TryAddScoped<ITenantDbContextFactory<TenantDbContext>, TenantDbContextFactory>();
@@ -63,6 +66,7 @@ public static class DependencyInjectionExtensions
 
         // Store options in services for later use
         services.AddSingleton(options);
+        services.AddSingleton<IOptions<TenantIsolationOptions>>(Options.Create(options));
 
         return services;
     }
@@ -110,9 +114,7 @@ public static class DependencyInjectionExtensions
         string connectionString,
         Action<TenantIsolationOptions>? configureOptions = null)
     {
-        return services.AddTenantIsolation(
-            options => options.UseNpgsql(connectionString),
-            configureOptions);
+        throw new NotSupportedException("PostgreSQL support requires adding the EF Core PostgreSQL provider package.");
     }
 
     /// <summary>
@@ -175,4 +177,60 @@ public class TenantIsolationOptions
         "/api/health",
         "/.well-known"
     };
+
+    /// <summary>
+    /// Enable webhook support
+    /// </summary>
+    public bool EnableWebhooks { get; set; } = true;
+
+    /// <summary>
+    /// Enable caching layer
+    /// </summary>
+    public bool EnableCaching { get; set; } = true;
+
+    /// <summary>
+    /// Enable event bus
+    /// </summary>
+    public bool EnableEventBus { get; set; } = true;
+
+    /// <summary>
+    /// Enable background task processing
+    /// </summary>
+    public bool EnableBackgroundTasks { get; set; } = true;
+
+    /// <summary>
+    /// Enable notification service
+    /// </summary>
+    public bool EnableNotifications { get; set; } = true;
+
+    /// <summary>
+    /// Enable distributed tracing
+    /// </summary>
+    public bool EnableDistributedTracing { get; set; } = true;
+
+    /// <summary>
+    /// Enable health checks
+    /// </summary>
+    public bool EnableHealthChecks { get; set; } = true;
+
+    /// <summary>
+    /// Enable external API client
+    /// </summary>
+    public bool EnableExternalApiClient { get; set; } = true;
+
+    /// <summary>
+    /// Cache expiration time in minutes
+    /// </summary>
+    public int CacheExpirationMinutes { get; set; } = 60;
+
+    /// <summary>
+    /// Maximum background task queue size
+    /// </summary>
+    public int MaxBackgroundTaskQueueSize { get; set; } = 1000;
+
+    /// <summary>
+    /// Interval in minutes for the dynamic tenant store to reload tenant data.
+    /// Set to 0 or less to disable dynamic reloading.
+    /// </summary>
+    public int DynamicTenantStoreReloadIntervalMinutes { get; set; } = 5;
 }
