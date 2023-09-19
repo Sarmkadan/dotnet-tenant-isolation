@@ -7,6 +7,7 @@
 
 using System.Linq.Expressions;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Query;
 using Microsoft.Extensions.DependencyInjection; // For service provider to resolve factory
 
 namespace TenantIsolation.Data;
@@ -178,7 +179,7 @@ public abstract class Repository<TEntity> where TEntity : class
     /// </summary>
     public virtual async Task<int> BulkUpdateAsync(
         Expression<Func<TEntity, bool>> predicate,
-        Expression<Func<SetPropertyCalls<TEntity>, SetPropertyCalls<TEntity>>> setPropertyCalls)
+        Action<UpdateSettersBuilder<TEntity>> setPropertyCalls)
     {
         return await DbSet.Where(predicate).ExecuteUpdateAsync(setPropertyCalls);
     }
@@ -190,12 +191,4 @@ public abstract class Repository<TEntity> where TEntity : class
     {
         return await DbSet.Where(predicate).ExecuteDeleteAsync();
     }
-}
-
-/// <summary>
-/// Helper for constructing bulk update operations
-/// </summary>
-public static class SetPropertyCalls<T> where T : class
-{
-    public static SetPropertyCalls<T> Empty => throw new NotImplementedException();
 }

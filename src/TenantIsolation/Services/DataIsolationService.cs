@@ -7,6 +7,7 @@
 
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+using TenantIsolation.Constants;
 using TenantIsolation.Data;
 using TenantIsolation.Exceptions;
 using TenantIsolation.Models;

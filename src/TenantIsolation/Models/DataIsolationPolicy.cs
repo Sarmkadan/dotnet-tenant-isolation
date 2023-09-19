@@ -7,6 +7,7 @@
 
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
+using TenantIsolation.Constants;
 
 namespace TenantIsolation.Models;
 
