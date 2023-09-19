@@ -43,7 +43,7 @@ public class TenantServiceTests
             .ReturnsAsync(true);
 
         _mockTenantRepository.Setup(r => r.AddAsync(It.IsAny<Tenant>()))
-            .Returns(Task.CompletedTask);
+            .ReturnsAsync((Tenant t) => t);
 
         // Act
         var result = await _sut.CreateTenantAsync(name, slug, adminEmail);
@@ -74,7 +74,7 @@ public class TenantServiceTests
             .ReturnsAsync(true);
 
         _mockTenantRepository.Setup(r => r.AddAsync(It.IsAny<Tenant>()))
-            .Returns(Task.CompletedTask);
+            .ReturnsAsync((Tenant t) => t);
 
         // Act
         var result = await _sut.CreateTenantAsync(name, slug, adminEmail, strategy);
@@ -165,7 +165,7 @@ public class TenantServiceTests
             .ReturnsAsync(true);
 
         _mockTenantRepository.Setup(r => r.AddAsync(It.IsAny<Tenant>()))
-            .Returns(Task.CompletedTask);
+            .ReturnsAsync((Tenant t) => t);
 
         // Act
         var result = await _sut.CreateTenantAsync("Test Tenant", mixedCaseSlug, "admin@example.com");
@@ -422,7 +422,7 @@ public class TenantServiceTests
             .ReturnsAsync(tenant);
 
         _mockTenantRepository.Setup(r => r.UpdateAsync(It.IsAny<Tenant>()))
-            .Returns(Task.CompletedTask);
+            .ReturnsAsync((Tenant t) => t);
 
         // Act
         var result = await _sut.DeleteTenantAsync(tenantId);
@@ -455,7 +455,7 @@ public class TenantServiceTests
             .ReturnsAsync(originalTenant);
 
         _mockTenantRepository.Setup(r => r.UpdateAsync(It.IsAny<Tenant>()))
-            .Returns(Task.CompletedTask);
+            .ReturnsAsync((Tenant t) => t);
 
         // Act
         var result = await _sut.UpdateTenantAsync(tenantId, t => t.Name = "New Name");
