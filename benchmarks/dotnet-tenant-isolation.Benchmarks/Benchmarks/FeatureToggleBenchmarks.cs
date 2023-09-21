@@ -4,10 +4,10 @@
 // Author: Vladyslav Zaiets | https://sarmkadan.com
 // CTO & Software Architect
 // =====================================================================
-
 using BenchmarkDotNet.Attributes;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using TenantIsolation.Configuration;
 using TenantIsolation.Models;
 using TenantIsolation.Services;
 
@@ -40,6 +40,8 @@ public class FeatureToggleBenchmarks : IDisposable
             options.AutoMigrate = true;
             options.EnableAuditLogging = false;
         });
+
+        services.AddTenantFeatureToggle();
 
         _serviceProvider = services.BuildServiceProvider();
         _scope = _serviceProvider.CreateScope();
@@ -132,10 +134,10 @@ public class FeatureToggleBenchmarks : IDisposable
     /// Tests collection operations.
     /// </summary>
     [Benchmark]
-    public async ValueTask GetStatistics()
+    public async ValueTask<int> GetStatistics()
     {
         var stats = await _featureService!.GetStatisticsAsync(_tenantId);
-        return stats.Count > 0;
+        return (int)stats.GetType().GetProperty("TotalFeatures")?.GetValue(stats)!;
     }
 
     [GlobalCleanup]
