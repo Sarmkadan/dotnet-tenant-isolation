@@ -6,17 +6,16 @@
     <Nullable>enable</Nullable>
     <LangVersion>latest</LangVersion>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
-    <PackageId>Zaiets.dotnet.tenant.isolation</PackageId>
-    <Title>Multi-Tenancy Framework for ASP.NET Core</Title>
+    <PackageId>dotnet-tenant-isolation</PackageId>
+    <Version>1.0.0</Version>
     <Authors>Vladyslav Zaiets</Authors>
-    <Version>2.0.2</Version>
-    <PackageProjectUrl>https://github.com/sarmkadan/dotnet-tenant-isolation</PackageProjectUrl>
+    <PackageDescription>A robust framework for implementing multi-tenancy in ASP.NET Core applications, providing comprehensive data isolation, dynamic configuration, and tenant-aware services.</PackageDescription>
+    <PackageTags>multi-tenancy;asp-net-core;data-isolation;enterprise;configuration-management;middleware;database-isolation;saas</PackageTags>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageProjectUrl>https://github.com/sarmkadan/dotnet-tenant-isolation</PackageProjectUrl>
     <RepositoryUrl>https://github.com/sarmkadan/dotnet-tenant-isolation</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
     <PackageReadmeFile>README.md</PackageReadmeFile>
-    <PackageTags>multi-tenancy;asp-net-core;data-isolation;enterprise;configuration-management;middleware;database-isolation;saas</PackageTags>
-    <PackageDescription>Multi-tenancy framework for ASP.NET - per-tenant DB, config, middleware pipeline, data isolation strategies</PackageDescription>
   </PropertyGroup>
 
   <ItemGroup>
