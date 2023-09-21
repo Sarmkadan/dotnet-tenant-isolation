@@ -160,3 +160,315 @@
 +- Push to main when done
 +
 +IMPORTANT: Do NOT run the benchmarks. Only write the benchmark code and verify it compiles with dotnet build.
+
+# 2026-07-04 08:56:38.090112
++Improve error handling in sarmkadan/dotnet-tenant-isolation.
++Work in: /home/redrocket/task-factory/workdir/dotnet-tenant-isolation
++
++1. Review the main service classes for error handling gaps
++2. Add custom exception types in an Exceptions/ folder:
++   - DotnetTenantIsolationException (base)
++   - ConfigurationException
++   - ValidationException (if applicable)
++3. Add proper try-catch blocks where external calls happen (HTTP, DB, file I/O)
++4. Add guard clauses (ArgumentNullException) to public methods missing them
++5. Do NOT over-engineer - only add where genuinely needed
++
++Commit as: "fix: improve error handling with custom exceptions"
++
++Git config:
++  git config user.name "Vladyslav Zaiets"
++  git config user.email "rutova2@gmail.com"
++
++CRITICAL RULES:
++- Do NOT add Co-Authored-By headers
++- Do NOT mention AI, Claude, GPT, Copilot, generated, automated anywhere in code or commits
++- Do NOT mention Red Rocket or Amdaris anywhere
++- Write natural commit messages
++- Push to main when done
+
+# 2026-07-04 08:56:38.090178
++Improve error handling in sarmkadan/dotnet-tenant-isolation.
++Work in: /home/redrocket/task-factory/workdir/dotnet-tenant-isolation
++
++1. Review the main service classes for error handling gaps
++2. Add custom exception types in an Exceptions/ folder:
++   - DotnetTenantIsolationException (base)
++   - ConfigurationException
++   - ValidationException (if applicable)
++3. Add proper try-catch blocks where external calls happen (HTTP, DB, file I/O)
++4. Add guard clauses (ArgumentNullException) to public methods missing them
++5. Do NOT over-engineer - only add where genuinely needed
++
++Commit as: "fix: improve error handling with custom exceptions"
++
++Git config:
++  git config user.name "Vladyslav Zaiets"
++  git config user.email "rutova2@gmail.com"
++
++CRITICAL RULES:
++- Do NOT add Co-Authored-By headers
++- Do NOT mention AI, Claude, GPT, Copilot, generated, automated anywhere in code or commits
++- Do NOT mention Red Rocket or Amdaris anywhere
++- Write natural commit messages
++- Push to main when done
+
+# 2026-07-04 08:57:49.318695
++Improve error handling in sarmkadan/dotnet-tenant-isolation.
++Work in: /home/redrocket/task-factory/workdir/dotnet-tenant-isolation
++
++1. Review the main service classes for error handling gaps
++2. Add custom exception types in an Exceptions/ folder:
++   - DotnetTenantIsolationException (base)
++   - ConfigurationException
++   - ValidationException (if applicable)
++3. Add proper try-catch blocks where external calls happen (HTTP, DB, file I/O)
++4. Add guard clauses (ArgumentNullException) to public methods missing them
++5. Do NOT over-engineer - only add where genuinely needed
++
++Commit as: "fix: improve error handling with custom exceptions"
++
++Git config:
++  git config user.name "Vladyslav Zaiets"
++  git config user.email "rutova2@gmail.com"
++
++CRITICAL RULES:
++- Do NOT add Co-Authored-By headers
++- Do NOT mention AI, Claude, GPT, Copilot, generated, automated anywhere in code or commits
++- Do NOT mention Red Rocket or Amdaris anywhere
++- Write natural commit messages
++- Push to main when done
+
+# 2026-07-04 08:57:49.318769
++Improve error handling in sarmkadan/dotnet-tenant-isolation.
++Work in: /home/redrocket/task-factory/workdir/dotnet-tenant-isolation
++
++1. Review the main service classes for error handling gaps
++2. Add custom exception types in an Exceptions/ folder:
++   - DotnetTenantIsolationException (base)
++   - ConfigurationException
++   - ValidationException (if applicable)
++3. Add proper try-catch blocks where external calls happen (HTTP, DB, file I/O)
++4. Add guard clauses (ArgumentNullException) to public methods missing them
++5. Do NOT over-engineer - only add where genuinely needed
++
++Commit as: "fix: improve error handling with custom exceptions"
++
++Git config:
++  git config user.name "Vladyslav Zaiets"
++  git config user.email "rutova2@gmail.com"
++
++CRITICAL RULES:
++- Do NOT add Co-Authored-By headers
++- Do NOT mention AI, Claude, GPT, Copilot, generated, automated anywhere in code or commits
++- Do NOT mention Red Rocket or Amdaris anywhere
++- Write natural commit messages
++- Push to main when done
+
+# 2026-07-04 08:59:00.263192
++Improve error handling in sarmkadan/dotnet-tenant-isolation.
++Work in: /home/redrocket/task-factory/workdir/dotnet-tenant-isolation
++
++1. Review the main service classes for error handling gaps
++2. Add custom exception types in an Exceptions/ folder:
++   - DotnetTenantIsolationException (base)
++   - ConfigurationException
++   - ValidationException (if applicable)
++3. Add proper try-catch blocks where external calls happen (HTTP, DB, file I/O)
++4. Add guard clauses (ArgumentNullException) to public methods missing them
++5. Do NOT over-engineer - only add where genuinely needed
++
++Commit as: "fix: improve error handling with custom exceptions"
++
++Git config:
++  git config user.name "Vladyslav Zaiets"
++  git config user.email "rutova2@gmail.com"
++
++CRITICAL RULES:
++- Do NOT add Co-Authored-By headers
++- Do NOT mention AI, Claude, GPT, Copilot, generated, automated anywhere in code or commits
++- Do NOT mention Red Rocket or Amdaris anywhere
++- Write natural commit messages
++- Push to main when done
+
+# 2026-07-04 08:59:00.263265
++Improve error handling in sarmkadan/dotnet-tenant-isolation.
++Work in: /home/redrocket/task-factory/workdir/dotnet-tenant-isolation
++
++1. Review the main service classes for error handling gaps
++2. Add custom exception types in an Exceptions/ folder:
++   - DotnetTenantIsolationException (base)
++   - ConfigurationException
++   - ValidationException (if applicable)
++3. Add proper try-catch blocks where external calls happen (HTTP, DB, file I/O)
++4. Add guard clauses (ArgumentNullException) to public methods missing them
++5. Do NOT over-engineer - only add where genuinely needed
++
++Commit as: "fix: improve error handling with custom exceptions"
++
++Git config:
++  git config user.name "Vladyslav Zaiets"
++  git config user.email "rutova2@gmail.com"
++
++CRITICAL RULES:
++- Do NOT add Co-Authored-By headers
++- Do NOT mention AI, Claude, GPT, Copilot, generated, automated anywhere in code or commits
++- Do NOT mention Red Rocket or Amdaris anywhere
++- Write natural commit messages
++- Push to main when done
+
+# 2026-07-04 09:02:09.773910
++Improve error handling in sarmkadan/dotnet-tenant-isolation.
++Work in: /home/redrocket/task-factory/workdir/dotnet-tenant-isolation
++
++1. Review the main service classes for error handling gaps
++2. Add custom exception types in an Exceptions/ folder:
++   - DotnetTenantIsolationException (base)
++   - ConfigurationException
++   - ValidationException (if applicable)
++3. Add proper try-catch blocks where external calls happen (HTTP, DB, file I/O)
++4. Add guard clauses (ArgumentNullException) to public methods missing them
++5. Do NOT over-engineer - only add where genuinely needed
++
++Commit as: "fix: improve error handling with custom exceptions"
++
++Git config:
++  git config user.name "Vladyslav Zaiets"
++  git config user.email "rutova2@gmail.com"
++
++CRITICAL RULES:
++- Do NOT add Co-Authored-By headers
++- Do NOT mention AI, Claude, GPT, Copilot, generated, automated anywhere in code or commits
++- Do NOT mention Red Rocket or Amdaris anywhere
++- Write natural commit messages
++- Push to main when done
+
+# 2026-07-04 09:02:09.773963
++Improve error handling in sarmkadan/dotnet-tenant-isolation.
++Work in: /home/redrocket/task-factory/workdir/dotnet-tenant-isolation
++
++1. Review the main service classes for error handling gaps
++2. Add custom exception types in an Exceptions/ folder:
++   - DotnetTenantIsolationException (base)
++   - ConfigurationException
++   - ValidationException (if applicable)
++3. Add proper try-catch blocks where external calls happen (HTTP, DB, file I/O)
++4. Add guard clauses (ArgumentNullException) to public methods missing them
++5. Do NOT over-engineer - only add where genuinely needed
++
++Commit as: "fix: improve error handling with custom exceptions"
++
++Git config:
++  git config user.name "Vladyslav Zaiets"
++  git config user.email "rutova2@gmail.com"
++
++CRITICAL RULES:
++- Do NOT add Co-Authored-By headers
++- Do NOT mention AI, Claude, GPT, Copilot, generated, automated anywhere in code or commits
++- Do NOT mention Red Rocket or Amdaris anywhere
++- Write natural commit messages
++- Push to main when done
+
+# 2026-07-04 09:03:20.408802
++Improve error handling in sarmkadan/dotnet-tenant-isolation.
++Work in: /home/redrocket/task-factory/workdir/dotnet-tenant-isolation
++
++1. Review the main service classes for error handling gaps
++2. Add custom exception types in an Exceptions/ folder:
++   - DotnetTenantIsolationException (base)
++   - ConfigurationException
++   - ValidationException (if applicable)
++3. Add proper try-catch blocks where external calls happen (HTTP, DB, file I/O)
++4. Add guard clauses (ArgumentNullException) to public methods missing them
++5. Do NOT over-engineer - only add where genuinely needed
++
++Commit as: "fix: improve error handling with custom exceptions"
++
++Git config:
++  git config user.name "Vladyslav Zaiets"
++  git config user.email "rutova2@gmail.com"
++
++CRITICAL RULES:
++- Do NOT add Co-Authored-By headers
++- Do NOT mention AI, Claude, GPT, Copilot, generated, automated anywhere in code or commits
++- Do NOT mention Red Rocket or Amdaris anywhere
++- Write natural commit messages
++- Push to main when done
+
+# 2026-07-04 09:03:20.408876
++Improve error handling in sarmkadan/dotnet-tenant-isolation.
++Work in: /home/redrocket/task-factory/workdir/dotnet-tenant-isolation
++
++1. Review the main service classes for error handling gaps
++2. Add custom exception types in an Exceptions/ folder:
++   - DotnetTenantIsolationException (base)
++   - ConfigurationException
++   - ValidationException (if applicable)
++3. Add proper try-catch blocks where external calls happen (HTTP, DB, file I/O)
++4. Add guard clauses (ArgumentNullException) to public methods missing them
++5. Do NOT over-engineer - only add where genuinely needed
++
++Commit as: "fix: improve error handling with custom exceptions"
++
++Git config:
++  git config user.name "Vladyslav Zaiets"
++  git config user.email "rutova2@gmail.com"
++
++CRITICAL RULES:
++- Do NOT add Co-Authored-By headers
++- Do NOT mention AI, Claude, GPT, Copilot, generated, automated anywhere in code or commits
++- Do NOT mention Red Rocket or Amdaris anywhere
++- Write natural commit messages
++- Push to main when done
+
+# 2026-07-04 09:04:29.906494
++Improve error handling in sarmkadan/dotnet-tenant-isolation.
++Work in: /home/redrocket/task-factory/workdir/dotnet-tenant-isolation
++
++1. Review the main service classes for error handling gaps
++2. Add custom exception types in an Exceptions/ folder:
++   - DotnetTenantIsolationException (base)
++   - ConfigurationException
++   - ValidationException (if applicable)
++3. Add proper try-catch blocks where external calls happen (HTTP, DB, file I/O)
++4. Add guard clauses (ArgumentNullException) to public methods missing them
++5. Do NOT over-engineer - only add where genuinely needed
++
++Commit as: "fix: improve error handling with custom exceptions"
++
++Git config:
++  git config user.name "Vladyslav Zaiets"
++  git config user.email "rutova2@gmail.com"
++
++CRITICAL RULES:
++- Do NOT add Co-Authored-By headers
++- Do NOT mention AI, Claude, GPT, Copilot, generated, automated anywhere in code or commits
++- Do NOT mention Red Rocket or Amdaris anywhere
++- Write natural commit messages
++- Push to main when done
+
+# 2026-07-04 09:04:29.906593
++Improve error handling in sarmkadan/dotnet-tenant-isolation.
++Work in: /home/redrocket/task-factory/workdir/dotnet-tenant-isolation
++
++1. Review the main service classes for error handling gaps
++2. Add custom exception types in an Exceptions/ folder:
++   - DotnetTenantIsolationException (base)
++   - ConfigurationException
++   - ValidationException (if applicable)
++3. Add proper try-catch blocks where external calls happen (HTTP, DB, file I/O)
++4. Add guard clauses (ArgumentNullException) to public methods missing them
++5. Do NOT over-engineer - only add where genuinely needed
++
++Commit as: "fix: improve error handling with custom exceptions"
++
++Git config:
++  git config user.name "Vladyslav Zaiets"
++  git config user.email "rutova2@gmail.com"
++
++CRITICAL RULES:
++- Do NOT add Co-Authored-By headers
++- Do NOT mention AI, Claude, GPT, Copilot, generated, automated anywhere in code or commits
++- Do NOT mention Red Rocket or Amdaris anywhere
++- Write natural commit messages
++- Push to main when done
