@@ -112,3 +112,6 @@ launchSettings.json
 appsettings.Development.json
 packages/
 *.DotSettings.user
+
+# aider internal state - never commit
+.aider*
