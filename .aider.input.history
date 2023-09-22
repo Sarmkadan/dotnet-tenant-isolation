@@ -472,3 +472,49 @@
 +- Do NOT mention Red Rocket or Amdaris anywhere
 +- Write natural commit messages
 +- Push to main when done
+
+# 2026-07-04 17:00:56.495316
++Improve configuration in sarmkadan/dotnet-tenant-isolation.
++Work in: /home/redrocket/task-factory/workdir/dotnet-tenant-isolation
++
++1. Create an Options class (DotnetTenantIsolationOptions) with IOptions pattern if missing
++2. Add appsettings.json example (appsettings.example.json) showing all configurable values
++3. Add validation to options (DataAnnotations or FluentValidation)
++4. Add a Configuration section to README showing all available settings
++5. Ensure sensitive defaults are not hardcoded
++
++Commit as: "feat: add configuration options with validation"
++
++Git config:
++  git config user.name "Vladyslav Zaiets"
++  git config user.email "rutova2@gmail.com"
++
++CRITICAL RULES:
++- Do NOT add Co-Authored-By headers
++- Do NOT mention AI, Claude, GPT, Copilot, generated, automated anywhere in code or commits
++- Do NOT mention Red Rocket or Amdaris anywhere
++- Write natural commit messages
++- Push to main when done
+
+# 2026-07-04 17:00:56.495708
++Improve configuration in sarmkadan/dotnet-tenant-isolation.
++Work in: /home/redrocket/task-factory/workdir/dotnet-tenant-isolation
++
++1. Create an Options class (DotnetTenantIsolationOptions) with IOptions pattern if missing
++2. Add appsettings.json example (appsettings.example.json) showing all configurable values
++3. Add validation to options (DataAnnotations or FluentValidation)
++4. Add a Configuration section to README showing all available settings
++5. Ensure sensitive defaults are not hardcoded
++
++Commit as: "feat: add configuration options with validation"
++
++Git config:
++  git config user.name "Vladyslav Zaiets"
++  git config user.email "rutova2@gmail.com"
++
++CRITICAL RULES:
++- Do NOT add Co-Authored-By headers
++- Do NOT mention AI, Claude, GPT, Copilot, generated, automated anywhere in code or commits
++- Do NOT mention Red Rocket or Amdaris anywhere
++- Write natural commit messages
++- Push to main when done
