@@ -112,17 +112,6 @@ public class RequestContextMiddleware
 }
 
 /// <summary>
-/// Extension method to register request context middleware
-/// </summary>
-public static class RequestContextMiddlewareExtensions
-{
-    public static IApplicationBuilder UseRequestContext(this IApplicationBuilder builder)
-    {
-        return builder.UseMiddleware<RequestContextMiddleware>();
-    }
-}
-
-/// <summary>
 /// Utility to access context from dependency injection
 /// Provides scoped access to current request context
 /// </summary>
