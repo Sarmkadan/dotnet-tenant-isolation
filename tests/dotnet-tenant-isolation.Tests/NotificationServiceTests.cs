@@ -9,7 +9,7 @@ namespace TenantIsolation.Tests;
 public class NotificationServiceTests
 {
     private readonly Mock<ILogger<NotificationService>> _loggerMock;
-    private readonly NotificationService _notificationService;
+    internal readonly NotificationService _notificationService;
 
     public NotificationServiceTests()
     {
