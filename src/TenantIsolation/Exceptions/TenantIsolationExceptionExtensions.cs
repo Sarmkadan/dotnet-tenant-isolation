@@ -14,17 +14,12 @@ public static class TenantIsolationExceptionExtensions
     /// <param name="key">The key for the error detail</param>
     /// <param name="value">The value to store</param>
     /// <returns>The same exception instance for method chaining</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="exception"/> is <see langword="null"/></exception>
+    /// <exception cref="ArgumentNullException"><paramref name="key"/> is <see langword="null"/></exception>
     public static TenantIsolationException WithDetail(this TenantIsolationException exception, string key, object? value)
     {
-        if (exception == null)
-        {
-            throw new ArgumentNullException(nameof(exception));
-        }
-
-        if (key == null)
-        {
-            throw new ArgumentNullException(nameof(key));
-        }
+        ArgumentNullException.ThrowIfNull(exception);
+        ArgumentNullException.ThrowIfNull(key);
 
         exception.ErrorDetails ??= new Dictionary<string, object?>();
         exception.ErrorDetails[key] = value;
@@ -37,17 +32,12 @@ public static class TenantIsolationExceptionExtensions
     /// <param name="exception">The exception instance</param>
     /// <param name="details">Dictionary of key-value pairs to add</param>
     /// <returns>The same exception instance for method chaining</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="exception"/> is <see langword="null"/></exception>
+    /// <exception cref="ArgumentNullException"><paramref name="details"/> is <see langword="null"/></exception>
     public static TenantIsolationException WithDetails(this TenantIsolationException exception, Dictionary<string, object?> details)
     {
-        if (exception == null)
-        {
-            throw new ArgumentNullException(nameof(exception));
-        }
-
-        if (details == null)
-        {
-            throw new ArgumentNullException(nameof(details));
-        }
+        ArgumentNullException.ThrowIfNull(exception);
+        ArgumentNullException.ThrowIfNull(details);
 
         exception.ErrorDetails ??= new Dictionary<string, object?>();
         foreach (var kvp in details)
@@ -63,19 +53,15 @@ public static class TenantIsolationExceptionExtensions
     /// <param name="exception">The exception instance</param>
     /// <param name="newErrorCode">The new error code to set</param>
     /// <returns>A new exception instance with the specified error code</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="exception"/> is <see langword="null"/></exception>
+    /// <exception cref="ArgumentNullException"><paramref name="newErrorCode"/> is <see langword="null"/></exception>
     public static TenantIsolationException WithErrorCode(this TenantIsolationException exception, string newErrorCode)
     {
-        if (exception == null)
-        {
-            throw new ArgumentNullException(nameof(exception));
-        }
+        ArgumentNullException.ThrowIfNull(exception);
+        ArgumentNullException.ThrowIfNull(newErrorCode);
 
-        if (newErrorCode == null)
-        {
-            throw new ArgumentNullException(nameof(newErrorCode));
-        }
-
-        return new TenantIsolationException(exception.Message, newErrorCode, exception.ErrorDetails?.ToDictionary(kvp => kvp.Key, kvp => kvp.Value))
+        var errorDetails = exception.ErrorDetails?.ToDictionary(kvp => kvp.Key, kvp => kvp.Value) ?? new Dictionary<string, object?>();
+        return new TenantIsolationException(exception.Message, newErrorCode, errorDetails)
         {
             Source = exception.Source,
             HelpLink = exception.HelpLink,
@@ -90,19 +76,15 @@ public static class TenantIsolationExceptionExtensions
     /// <param name="exception">The exception instance</param>
     /// <param name="context">Additional context to append to the message</param>
     /// <returns>A new exception instance with enhanced message</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="exception"/> is <see langword="null"/></exception>
+    /// <exception cref="ArgumentNullException"><paramref name="context"/> is <see langword="null"/></exception>
     public static TenantIsolationException WithContext(this TenantIsolationException exception, string context)
     {
-        if (exception == null)
-        {
-            throw new ArgumentNullException(nameof(exception));
-        }
+        ArgumentNullException.ThrowIfNull(exception);
+        ArgumentNullException.ThrowIfNull(context);
 
-        if (context == null)
-        {
-            throw new ArgumentNullException(nameof(context));
-        }
-
-        return new TenantIsolationException(exception.Message + " " + context, exception.ErrorCode, exception.ErrorDetails?.ToDictionary(kvp => kvp.Key, kvp => kvp.Value))
+        var errorDetails = exception.ErrorDetails?.ToDictionary(kvp => kvp.Key, kvp => kvp.Value) ?? new Dictionary<string, object?>();
+        return new TenantIsolationException(exception.Message + " " + context, exception.ErrorCode ?? string.Empty, errorDetails)
         {
             Source = exception.Source,
             HelpLink = exception.HelpLink,
@@ -117,13 +99,11 @@ public static class TenantIsolationExceptionExtensions
     /// <param name="exception">The exception instance</param>
     /// <param name="tenantId">Output parameter containing the tenant ID if available</param>
     /// <returns>True if tenant ID is available and was retrieved; false otherwise</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="exception"/> is <see langword="null"/></exception>
     public static bool TryGetTenantId(this TenantIsolationException exception, out Guid tenantId)
     {
+        ArgumentNullException.ThrowIfNull(exception);
         tenantId = Guid.Empty;
-        if (exception == null)
-        {
-            return false;
-        }
 
         switch (exception)
         {
@@ -146,13 +126,11 @@ public static class TenantIsolationExceptionExtensions
     /// <param name="exception">The exception instance</param>
     /// <param name="entityType">Output parameter containing the entity type if available</param>
     /// <returns>True if entity type is available and was retrieved; false otherwise</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="exception"/> is <see langword="null"/></exception>
     public static bool TryGetEntityType(this TenantIsolationException exception, out string? entityType)
     {
+        ArgumentNullException.ThrowIfNull(exception);
         entityType = null;
-        if (exception == null)
-        {
-            return false;
-        }
 
         if (exception is DataIsolationViolationException dataViolation)
         {
