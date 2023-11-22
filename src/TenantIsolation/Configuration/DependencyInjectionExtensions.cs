@@ -7,7 +7,7 @@
 
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.DependencyInjection.Extensions; // Add this for TryAddScoped
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Options;
 using TenantIsolation.Data;
 using TenantIsolation.Middleware;
@@ -23,11 +23,19 @@ public static class DependencyInjectionExtensions
     /// <summary>
     /// Register tenant isolation services with DbContext
     /// </summary>
+    /// <param name="services">The service collection</param>
+    /// <param name="configureDbContext">Configuration action for DbContext options</param>
+    /// <param name="configureOptions">Optional configuration action for TenantIsolationOptions</param>
+    /// <exception cref="ArgumentNullException">Thrown if services or configureDbContext is null</exception>
+    /// <returns>The configured service collection</returns>
     public static IServiceCollection AddTenantIsolation(
         this IServiceCollection services,
         Action<DbContextOptionsBuilder> configureDbContext,
         Action<TenantIsolationOptions>? configureOptions = null)
     {
+        ArgumentNullException.ThrowIfNull(services);
+        ArgumentNullException.ThrowIfNull(configureDbContext);
+
         var options = new TenantIsolationOptions();
         configureOptions?.Invoke(options);
 
@@ -62,7 +70,7 @@ public static class DependencyInjectionExtensions
 
         // Register memory cache if not already registered (this is handled by ServiceRegistrationExtensions now)
         // if (!services.Any(x => x.ServiceType == typeof(IMemoryCache)))
-        //    services.AddMemoryCache();
+        //     services.AddMemoryCache();
 
         // Store options in services for later use
         services.AddSingleton(options);
@@ -74,8 +82,13 @@ public static class DependencyInjectionExtensions
     /// <summary>
     /// Use tenant resolution middleware
     /// </summary>
+    /// <param name="app">The application builder</param>
+    /// <returns>The configured application builder</returns>
+    /// <exception cref="ArgumentNullException">Thrown if app is null</exception>
     public static IApplicationBuilder UseTenantResolution(this IApplicationBuilder app)
     {
+        ArgumentNullException.ThrowIfNull(app);
+
         app.UseMiddleware<TenantResolutionMiddleware>();
         return app;
     }
@@ -83,11 +96,18 @@ public static class DependencyInjectionExtensions
     /// <summary>
     /// Configure tenant isolation with in-memory database (for testing)
     /// </summary>
+    /// <param name="services">The service collection</param>
+    /// <param name="databaseName">The in-memory database name</param>
+    /// <param name="configureOptions">Optional configuration action</param>
+    /// <returns>The configured service collection</returns>
+    /// <exception cref="ArgumentNullException">Thrown if services is null</exception>
     public static IServiceCollection AddTenantIsolationInMemory(
         this IServiceCollection services,
         string databaseName = "TenantIsolationDb",
         Action<TenantIsolationOptions>? configureOptions = null)
     {
+        ArgumentNullException.ThrowIfNull(services);
+
         return services.AddTenantIsolation(
             options => options.UseInMemoryDatabase(databaseName),
             configureOptions);
@@ -96,11 +116,19 @@ public static class DependencyInjectionExtensions
     /// <summary>
     /// Configure tenant isolation with SQL Server
     /// </summary>
+    /// <param name="services">The service collection</param>
+    /// <param name="connectionString">The SQL Server connection string</param>
+    /// <param name="configureOptions">Optional configuration action</param>
+    /// <returns>The configured service collection</returns>
+    /// <exception cref="ArgumentNullException">Thrown if services or connectionString is null</exception>
     public static IServiceCollection AddTenantIsolationSqlServer(
         this IServiceCollection services,
         string connectionString,
         Action<TenantIsolationOptions>? configureOptions = null)
     {
+        ArgumentNullException.ThrowIfNull(services);
+        ArgumentException.ThrowIfNullOrEmpty(connectionString);
+
         return services.AddTenantIsolation(
             options => options.UseSqlServer(connectionString),
             configureOptions);
@@ -109,20 +137,35 @@ public static class DependencyInjectionExtensions
     /// <summary>
     /// Configure tenant isolation with PostgreSQL
     /// </summary>
+    /// <param name="services">The service collection</param>
+    /// <param name="connectionString">The PostgreSQL connection string</param>
+    /// <param name="configureOptions">Optional configuration action</param>
+    /// <exception cref="ArgumentNullException">Thrown if services or connectionString is null</exception>
+    /// <exception cref="InvalidOperationException">Thrown if Npgsql provider is not referenced</exception>
     public static IServiceCollection AddTenantIsolationPostgres(
         this IServiceCollection services,
         string connectionString,
         Action<TenantIsolationOptions>? configureOptions = null)
     {
-        throw new NotSupportedException("PostgreSQL support requires adding the EF Core PostgreSQL provider package.");
+        ArgumentNullException.ThrowIfNull(services);
+        ArgumentException.ThrowIfNullOrEmpty(connectionString);
+
+        throw new InvalidOperationException(
+            "PostgreSQL support requires adding the Npgsql.EntityFrameworkCore.PostgreSQL package. " +
+            "Add package reference: Npgsql.EntityFrameworkCore.PostgreSQL");
     }
 
     /// <summary>
     /// Register tenant feature service
     /// </summary>
+    /// <param name="services">The service collection</param>
+    /// <returns>The configured service collection</returns>
+    /// <exception cref="ArgumentNullException">Thrown if services is null</exception>
     public static IServiceCollection AddTenantFeatureToggle(
         this IServiceCollection services)
     {
+        ArgumentNullException.ThrowIfNull(services);
+
         services.AddScoped<TenantFeatureService>();
         return services;
     }
