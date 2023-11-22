@@ -52,8 +52,12 @@ public static class UsageMeteringExtensions
     /// </summary>
     /// <param name="services">The service collection to register into.</param>
     /// <returns>The same <see cref="IServiceCollection"/> for chaining.</returns>
+    /// <exception cref="ArgumentNullException">Thrown if <paramref name="services"/> is <see langword="null"/>.</exception>
     public static IServiceCollection AddTenantUsageMetering(this IServiceCollection services)
-        => services.AddTenantUsageMetering(_ => { });
+    {
+        ArgumentNullException.ThrowIfNull(services);
+        return services.AddTenantUsageMetering(_ => { });
+    }
 
     /// <summary>
     /// Registers <see cref="ITenantUsageMeteringService"/> with configurable options.
@@ -67,6 +71,7 @@ public static class UsageMeteringExtensions
     /// <param name="services">The service collection to register into.</param>
     /// <param name="configureOptions">Delegate to customise <see cref="UsageMeteringOptions"/>.</param>
     /// <returns>The same <see cref="IServiceCollection"/> for chaining.</returns>
+    /// <exception cref="ArgumentNullException">Thrown if <paramref name="services"/> or <paramref name="configureOptions"/> is <see langword="null"/>.</exception>
     public static IServiceCollection AddTenantUsageMetering(
         this IServiceCollection services,
         Action<UsageMeteringOptions> configureOptions)
@@ -94,6 +99,7 @@ public static class UsageMeteringExtensions
     /// </typeparam>
     /// <param name="services">The service collection to register into.</param>
     /// <returns>The same <see cref="IServiceCollection"/> for chaining.</returns>
+    /// <exception cref="ArgumentNullException">Thrown if <paramref name="services"/> is <see langword="null"/>.</exception>
     public static IServiceCollection AddTenantUsageMetering<TImplementation>(
         this IServiceCollection services)
         where TImplementation : class, ITenantUsageMeteringService
