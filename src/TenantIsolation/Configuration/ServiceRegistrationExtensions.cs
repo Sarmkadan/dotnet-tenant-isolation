@@ -30,18 +30,31 @@ public static class ServiceRegistrationExtensions
     /// <summary>
     /// Register all Phase 2 services with default options
     /// </summary>
+    /// <param name="services">The service collection to register services with</param>
+    /// <returns>The service collection for method chaining</returns>
+    /// <exception cref="ArgumentNullException">Thrown if <paramref name="services"/> is null</exception>
     public static IServiceCollection AddTenantIsolationPhase2Services(this IServiceCollection services)
     {
+        ArgumentNullException.ThrowIfNull(services);
         return AddTenantIsolationPhase2Services(services, _ => { });
     }
 
     /// <summary>
     /// Register all Phase 2 services with custom options
     /// </summary>
+    /// <param name="services">The service collection to register services with</param>
+    /// <param name="configureOptions">Action to configure <see cref="TenantIsolationOptions"/></param>
+    /// <returns>The service collection for method chaining</returns>
+    /// <exception cref="ArgumentNullException">
+    /// Thrown if <paramref name="services"/> or <paramref name="configureOptions"/> is null
+    /// </exception>
     public static IServiceCollection AddTenantIsolationPhase2Services(
         this IServiceCollection services,
         Action<TenantIsolationOptions> configureOptions)
     {
+        ArgumentNullException.ThrowIfNull(services);
+        ArgumentNullException.ThrowIfNull(configureOptions);
+
         var options = new TenantIsolationOptions();
         configureOptions(options);
 
@@ -127,8 +140,13 @@ public static class ServiceRegistrationExtensions
     /// Registers the appropriate cache provider (distributed or in-memory) based on
     /// whether IDistributedCache has been registered by the application.
     /// </summary>
+    /// <param name="services">The service collection to register services with</param>
+    /// <returns>The service collection for method chaining</returns>
+    /// <exception cref="ArgumentNullException">Thrown if <paramref name="services"/> is null</exception>
     public static IServiceCollection AddTenantAwareCacheProvider(this IServiceCollection services)
     {
+        ArgumentNullException.ThrowIfNull(services);
+
         // Check if IDistributedCache is already registered by the application.
         // If so, use our tenant-aware distributed cache provider.
         if (services.Any(s => s.ServiceType == typeof(IDistributedCache)))
@@ -150,6 +168,8 @@ public static class ServiceRegistrationExtensions
     /// </summary>
     private static void RegisterUtilities(IServiceCollection services)
     {
+        ArgumentNullException.ThrowIfNull(services);
+
         // All utilities are static extension methods, but we can register helpers if needed
         services.AddHttpContextAccessor();
     }
@@ -159,14 +179,20 @@ public static class ServiceRegistrationExtensions
     /// </summary>
     private static void RegisterMiddlewareServices(IServiceCollection services)
     {
+        ArgumentNullException.ThrowIfNull(services);
         services.AddHttpContextAccessor();
     }
 
     /// <summary>
     /// Configure request pipeline with Phase 2 middleware
     /// </summary>
+    /// <param name="app">The application builder to configure</param>
+    /// <returns>The configured application builder</returns>
+    /// <exception cref="ArgumentNullException">Thrown if <paramref name="app"/> is null</exception>
     public static IApplicationBuilder UseTenantIsolationPhase2Middleware(this IApplicationBuilder app)
     {
+        ArgumentNullException.ThrowIfNull(app);
+
         // Error handling - should be first
         app.UseMiddleware<ErrorHandlingMiddleware>();
 
@@ -191,10 +217,16 @@ public static class ServiceRegistrationExtensions
     /// <summary>
     /// Log all registered Phase 2 services during startup
     /// </summary>
+    /// <param name="app">The application builder to configure</param>
+    /// <param name="logger">Optional logger for startup logging</param>
+    /// <returns>The configured application builder</returns>
+    /// <exception cref="ArgumentNullException">Thrown if <paramref name="app"/> is null</exception>
     public static IApplicationBuilder LogPhase2ServicesOnStartup(
         this IApplicationBuilder app,
         ILogger<IApplicationBuilder>? logger = null)
     {
+        ArgumentNullException.ThrowIfNull(app);
+
         var appLogger = logger ?? new NullLogger<IApplicationBuilder>();
 
         appLogger.LogInformation("=== Phase 2 Services Registered ===");
@@ -223,15 +255,21 @@ public static class ServiceRegistrationExtensions
     /// <summary>
     /// Null logger for startup logging
     /// </summary>
-    private class NullLogger<T> : ILogger<T>
+    /// <typeparam name="T">The type for logging</typeparam>
+    private sealed class NullLogger<T> : ILogger<T>
     {
-        public void Log<TState>(LogLevel logLevel, EventId eventId, TState state,
-            Exception? exception, Func<TState, Exception?, string> formatter)
+        public void Log<TState>(
+            LogLevel logLevel,
+            EventId eventId,
+            TState state,
+            Exception? exception,
+            Func<TState, Exception?, string> formatter)
         {
+            // No-op: intentionally discards all log messages
         }
 
         public bool IsEnabled(LogLevel logLevel) => false;
+
         public IDisposable? BeginScope<TState>(TState state) where TState : notnull => null;
     }
 }
-
