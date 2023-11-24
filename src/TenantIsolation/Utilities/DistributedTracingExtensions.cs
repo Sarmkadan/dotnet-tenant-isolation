@@ -14,22 +14,23 @@ namespace TenantIsolation.Utilities;
 /// Distributed tracing context containing correlation information
 /// Enables request tracing across multiple services and logs
 /// </summary>
-public class TracingContext
+public sealed class TracingContext
 {
     /// <summary>
     /// Correlation ID for tracking related requests
     /// </summary>
-    public string CorrelationId { get; set; } = Guid.NewGuid().ToString("N");
+    public string CorrelationId { get; set; } = string.Empty;
+
 
     /// <summary>
     /// Trace ID from W3C Trace Context standard
     /// </summary>
-    public string TraceId { get; set; } = ActivityTraceId.CreateRandom().ToString();
+    public string TraceId { get; set; } = string.Empty;
 
     /// <summary>
     /// Span ID for individual operation
     /// </summary>
-    public string SpanId { get; set; } = ActivitySpanId.CreateRandom().ToString();
+    public string SpanId { get; set; } = string.Empty;
 
     /// <summary>
     /// Parent span ID (if in nested operation)
@@ -56,10 +57,22 @@ public class TracingContext
     /// </summary>
     public DateTime StartTime { get; set; } = DateTime.UtcNow;
 
+
     /// <summary>
     /// Additional metadata for debugging
     /// </summary>
     public Dictionary<string, string> Metadata { get; set; } = new();
+
+    /// <summary>
+    /// Initializes a new tracing context with proper defaults
+    /// </summary>
+    public TracingContext()
+    {
+        CorrelationId = Guid.NewGuid().ToString("N");
+        TraceId = ActivityTraceId.CreateRandom().ToString();
+        SpanId = ActivitySpanId.CreateRandom().ToString();
+    }
+
 }
 
 /// <summary>
@@ -73,6 +86,7 @@ public static class DistributedTracingExtensions
     /// <summary>
     /// Get current tracing context
     /// </summary>
+    /// <returns>The current <see cref="TracingContext"/> or null if not set</returns>
     public static TracingContext? GetCurrentContext()
     {
         return CurrentContext.Value;
@@ -81,14 +95,18 @@ public static class DistributedTracingExtensions
     /// <summary>
     /// Set current tracing context
     /// </summary>
+    /// <param name="context">The tracing context to set</param>
+    /// <exception cref="ArgumentNullException">Thrown when context is null</exception>
     public static void SetCurrentContext(TracingContext context)
     {
+        ArgumentNullException.ThrowIfNull(context);
         CurrentContext.Value = context;
     }
 
     /// <summary>
     /// Create new tracing context from current or create new
     /// </summary>
+    /// <returns>A tracing context, either existing or new</returns>
     public static TracingContext GetOrCreateContext()
     {
         return CurrentContext.Value ?? new TracingContext();
@@ -97,6 +115,8 @@ public static class DistributedTracingExtensions
     /// <summary>
     /// Create child context for nested operations
     /// </summary>
+    /// <param name="operationName">Optional operation name to track</param>
+    /// <returns>A new child tracing context</returns>
     public static TracingContext CreateChildContext(string? operationName = null)
     {
         var parentContext = CurrentContext.Value;
@@ -112,7 +132,9 @@ public static class DistributedTracingExtensions
         };
 
         if (!string.IsNullOrEmpty(operationName))
+        {
             childContext.Metadata["operation"] = operationName;
+        }
 
         return childContext;
     }
@@ -121,16 +143,23 @@ public static class DistributedTracingExtensions
     /// Create scope that manages tracing context
     /// Useful for dependency injection and nested operations
     /// </summary>
+    /// <param name="context">The tracing context to manage</param>
+    /// <returns>A disposable scope that restores previous context on dispose</returns>
     public static IDisposable BeginTracingScope(TracingContext context)
     {
+        ArgumentNullException.ThrowIfNull(context);
         return new TracingScope(context);
     }
 
     /// <summary>
     /// Add value to tracing metadata
     /// </summary>
+    /// <param name="key">Metadata key</param>
+    /// <param name="value">Metadata value</param>
+    /// <exception cref="ArgumentNullException">Thrown when key is null</exception>
     public static void AddMetadata(string key, string value)
     {
+        ArgumentException.ThrowIfNullOrEmpty(key);
         var context = GetOrCreateContext();
         context.Metadata[key] = value;
         SetCurrentContext(context);
@@ -140,6 +169,11 @@ public static class DistributedTracingExtensions
     /// Log with tracing context information
     /// Automatically includes correlation ID in logs
     /// </summary>
+    /// <typeparam name="T">The logger type</typeparam>
+    /// <param name="logger">The logger instance</param>
+    /// <param name="logLevel">The log level</param>
+    /// <param name="message">The log message</param>
+    /// <param name="args">Optional message arguments</param>
     public static void LogWithTracing<T>(
         this ILogger<T> logger,
         LogLevel logLevel,
@@ -161,11 +195,22 @@ public static class DistributedTracingExtensions
     /// <summary>
     /// Measure execution time with tracing
     /// </summary>
+    /// <typeparam name="T">The return type of the operation</typeparam>
+    /// <param name="operationName">Name of the operation being traced</param>
+    /// <param name="operation">The async operation to execute</param>
+    /// <param name="logger">The logger for tracing output</param>
+    /// <returns>The result of the operation</returns>
+    /// <exception cref="ArgumentNullException">Thrown when operationName or operation is null</exception>
+    /// <exception cref="ArgumentException">Thrown when operationName is empty or whitespace</exception>
     public static async Task<T> ExecuteWithTracingAsync<T>(
         string operationName,
         Func<Task<T>> operation,
         ILogger logger)
     {
+        ArgumentException.ThrowIfNullOrWhiteSpace(operationName);
+        ArgumentNullException.ThrowIfNull(operation);
+        ArgumentNullException.ThrowIfNull(logger);
+
         var context = CreateChildContext(operationName);
         context.Metadata["operation_start"] = DateTime.UtcNow.ToString("O");
 
@@ -202,11 +247,14 @@ public static class DistributedTracingExtensions
     /// Get tracing information as structured log state
     /// Useful for logging frameworks
     /// </summary>
+    /// <returns>A dictionary containing tracing information</returns>
     public static Dictionary<string, object> GetTracingLogState()
     {
         var context = GetCurrentContext();
         if (context == null)
+        {
             return new Dictionary<string, object>();
+        }
 
         return new Dictionary<string, object>
         {
@@ -221,19 +269,20 @@ public static class DistributedTracingExtensions
     /// <summary>
     /// Tracing scope for managing context lifetime
     /// </summary>
-    private class TracingScope : IDisposable
+    private sealed class TracingScope : IDisposable
     {
         private readonly TracingContext? _previousContext;
 
         public TracingScope(TracingContext context)
         {
+            ArgumentNullException.ThrowIfNull(context);
             _previousContext = CurrentContext.Value;
-            SetCurrentContext(context);
+            CurrentContext.Value = context;
         }
 
         public void Dispose()
         {
-            SetCurrentContext(_previousContext);
+            CurrentContext.Value = _previousContext;
         }
     }
 }
@@ -246,8 +295,12 @@ public static class DistributedTracingServiceExtensions
     /// <summary>
     /// Add distributed tracing support
     /// </summary>
+    /// <param name="services">The service collection to configure</param>
+    /// <returns>The configured service collection</returns>
+    /// <exception cref="ArgumentNullException">Thrown when services is null</exception>
     public static IServiceCollection AddDistributedTracing(this IServiceCollection services)
     {
+        ArgumentNullException.ThrowIfNull(services);
         services.AddHttpContextAccessor();
         return services;
     }
@@ -255,8 +308,13 @@ public static class DistributedTracingServiceExtensions
     /// <summary>
     /// Configure distributed tracing in request pipeline
     /// </summary>
+    /// <param name="app">The application builder</param>
+    /// <returns>The configured application builder</returns>
+    /// <exception cref="ArgumentNullException">Thrown when app is null</exception>
     public static IApplicationBuilder UseDistributedTracing(this IApplicationBuilder app)
     {
+        ArgumentNullException.ThrowIfNull(app);
+
         return app.Use(async (context, next) =>
         {
             var tracingContext = new TracingContext
@@ -268,10 +326,14 @@ public static class DistributedTracingServiceExtensions
 
             // Try to extract trace context from headers
             if (context.Request.Headers.TryGetValue("X-Trace-Id", out var traceId))
+            {
                 tracingContext.TraceId = traceId.ToString();
+            }
 
             if (context.Request.Headers.TryGetValue("X-Correlation-Id", out var correlationId))
+            {
                 tracingContext.CorrelationId = correlationId.ToString();
+            }
 
             using (DistributedTracingExtensions.BeginTracingScope(tracingContext))
             {
