@@ -26,12 +26,16 @@ public static class AdminControllerExtensions
     /// <param name="tenantIds">List of tenant IDs to suspend</param>
     /// <param name="reason">Suspension reason</param>
     /// <returns>Action result with success/failure information</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="controller"/> or <paramref name="tenantIds"/> is null</exception>
     public static async Task<ActionResult<ApiResponse<object>>> BulkSuspendTenants(
         this AdminController controller,
         IEnumerable<Guid> tenantIds,
         string? reason = null)
     {
-        if (tenantIds == null || !tenantIds.Any())
+        ArgumentNullException.ThrowIfNull(controller);
+        ArgumentNullException.ThrowIfNull(tenantIds);
+
+        if (!tenantIds.Any())
         {
             return controller.BadRequest(new ApiResponse<object>
             {
@@ -41,6 +45,7 @@ public static class AdminControllerExtensions
         }
 
         var failedTenants = new List<Guid>();
+        var totalCount = tenantIds.Count();
 
         foreach (var tenantId in tenantIds)
         {
@@ -58,7 +63,7 @@ public static class AdminControllerExtensions
             }
         }
 
-        var successCount = tenantIds.Count() - failedTenants.Count;
+        var successCount = totalCount - failedTenants.Count;
         var message = failedTenants.Count == 0
             ? $"Successfully suspended {successCount} tenants"
             : $"Suspended {successCount} tenants, failed for {failedTenants.Count} tenants";
@@ -72,7 +77,7 @@ public static class AdminControllerExtensions
                 SuccessCount = successCount,
                 FailedCount = failedTenants.Count,
                 FailedTenants = failedTenants,
-                TotalProcessed = tenantIds.Count()
+                TotalProcessed = totalCount
             }
         });
     }
@@ -83,11 +88,15 @@ public static class AdminControllerExtensions
     /// <param name="controller">The admin controller instance</param>
     /// <param name="tenantIds">List of tenant IDs to activate</param>
     /// <returns>Action result with success/failure information</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="controller"/> or <paramref name="tenantIds"/> is null</exception>
     public static async Task<ActionResult<ApiResponse<object>>> BulkActivateTenants(
         this AdminController controller,
         IEnumerable<Guid> tenantIds)
     {
-        if (tenantIds == null || !tenantIds.Any())
+        ArgumentNullException.ThrowIfNull(controller);
+        ArgumentNullException.ThrowIfNull(tenantIds);
+
+        if (!tenantIds.Any())
         {
             return controller.BadRequest(new ApiResponse<object>
             {
@@ -97,6 +106,7 @@ public static class AdminControllerExtensions
         }
 
         var failedTenants = new List<Guid>();
+        var totalCount = tenantIds.Count();
 
         foreach (var tenantId in tenantIds)
         {
@@ -114,7 +124,7 @@ public static class AdminControllerExtensions
             }
         }
 
-        var successCount = tenantIds.Count() - failedTenants.Count;
+        var successCount = totalCount - failedTenants.Count;
         var message = failedTenants.Count == 0
             ? $"Successfully activated {successCount} tenants"
             : $"Activated {successCount} tenants, failed for {failedTenants.Count} tenants";
@@ -128,7 +138,7 @@ public static class AdminControllerExtensions
                 SuccessCount = successCount,
                 FailedCount = failedTenants.Count,
                 FailedTenants = failedTenants,
-                TotalProcessed = tenantIds.Count()
+                TotalProcessed = totalCount
             }
         });
     }
@@ -141,12 +151,17 @@ public static class AdminControllerExtensions
     /// <param name="page">Page number</param>
     /// <param name="pageSize">Items per page</param>
     /// <returns>Paginated response of tenants matching the status</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="controller"/> is null</exception>
+    /// <exception cref="ArgumentException"><paramref name="status"/> is invalid</exception>
     public static async Task<ActionResult<ApiResponse<PaginatedResponse<object>>>> GetTenantsByStatus(
         this AdminController controller,
         string status,
         int page = 1,
         int pageSize = 20)
     {
+        ArgumentNullException.ThrowIfNull(controller);
+        ArgumentException.ThrowIfNullOrEmpty(status);
+
         try
         {
             var tenants = status.ToLowerInvariant() switch
@@ -178,12 +193,16 @@ public static class AdminControllerExtensions
     /// <param name="tenantIds">Optional list of tenant IDs to associate with the task</param>
     /// <param name="priority">Task priority (1-5)</param>
     /// <returns>Action result with task information</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="controller"/> or <paramref name="taskName"/> is null</exception>
     public static ActionResult<ApiResponse<object>> EnqueueCleanupTask(
         this AdminController controller,
         string taskName,
         IEnumerable<Guid>? tenantIds = null,
         int priority = 3)
     {
+        ArgumentNullException.ThrowIfNull(controller);
+        ArgumentException.ThrowIfNullOrEmpty(taskName);
+
         try
         {
             var taskRequest = new AdminController.TaskRequest
