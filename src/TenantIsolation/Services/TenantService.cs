@@ -11,6 +11,7 @@ using TenantIsolation.Data;
 using TenantIsolation.Exceptions;
 using TenantIsolation.Models;
 using System.Linq;
+using TenantIsolation.Controllers;
 
 namespace TenantIsolation.Services;
 
@@ -229,19 +230,21 @@ public class TenantService
     /// <summary>
     /// Get tenant usage statistics
     /// </summary>
-    public async Task<object> GetTenantStatisticsAsync()
+    public async Task<TenantStatistics> GetTenantStatisticsAsync()
     {
         // For statistics, it's better to hit the repository directly for fresh data
         var statusCounts = await _tenantRepository.GetStatusCountsAsync();
         var totalTenants = statusCounts.Values.Sum();
         var activeTenants = statusCounts.TryGetValue(TenantStatus.Active, out var count) ? count : 0;
+        var suspendedTenants = statusCounts.TryGetValue(TenantStatus.Suspended, out var suspendedCount) ? suspendedCount : 0;
+        var deletedTenants = statusCounts.TryGetValue(TenantStatus.Archived, out var deletedCount) ? deletedCount : 0;
 
-        return new
+        return new TenantStatistics
         {
             TotalTenants = totalTenants,
             ActiveTenants = activeTenants,
-            StatusDistribution = statusCounts,
-            ExpiringSubscriptions = await _tenantRepository.GetExpiringSubscriptionsAsync(30)
+            SuspendedTenants = suspendedTenants,
+            DeletedTenants = deletedTenants
         };
     }
 }
