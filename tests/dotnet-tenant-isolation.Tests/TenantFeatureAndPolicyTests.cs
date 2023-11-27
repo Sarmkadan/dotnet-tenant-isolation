@@ -12,8 +12,14 @@ using Xunit;
 
 namespace TenantIsolation.Tests;
 
+/// <summary>
+/// Tests for the TenantFeature class.
+/// </summary>
 public class TenantFeatureTests
 {
+    /// <summary>
+    /// Tests that IsAvailable returns false when the feature is disabled.
+    /// </summary>
     [Fact]
     public void IsAvailable_WhenDisabled_ReturnsFalse()
     {
@@ -24,6 +30,9 @@ public class TenantFeatureTests
         feature.IsAvailable().Should().BeFalse();
     }
 
+    /// <summary>
+    /// Tests that IsAvailable returns false when the feature is deprecated before the current time.
+    /// </summary>
     [Fact]
     public void IsAvailable_WhenDeprecatedBeforeNow_ReturnsFalse()
     {
@@ -39,6 +48,9 @@ public class TenantFeatureTests
         feature.IsAvailable().Should().BeFalse();
     }
 
+    /// <summary>
+    /// Tests that IsAvailable returns false when the feature's available from date is in the future.
+    /// </summary>
     [Fact]
     public void IsAvailable_WhenAvailableFromIsInFuture_ReturnsFalse()
     {
@@ -54,6 +66,9 @@ public class TenantFeatureTests
         feature.IsAvailable().Should().BeFalse();
     }
 
+    /// <summary>
+    /// Tests that IsAvailable returns true when the feature is enabled with a full rollout.
+    /// </summary>
     [Fact]
     public void IsAvailable_WhenEnabledWithFullRollout_ReturnsTrue()
     {
@@ -68,6 +83,9 @@ public class TenantFeatureTests
         feature.IsAvailable().Should().BeTrue();
     }
 
+    /// <summary>
+    /// Tests that IsUsageLimitExceeded returns true when the current usage equals the limit.
+    /// </summary>
     [Fact]
     public void IsUsageLimitExceeded_WhenCurrentUsageEqualsLimit_ReturnsTrue()
     {
@@ -78,6 +96,9 @@ public class TenantFeatureTests
         feature.IsUsageLimitExceeded().Should().BeTrue();
     }
 
+    /// <summary>
+    /// Tests that IsUsageLimitExceeded returns false when the usage limit is null.
+    /// </summary>
     [Fact]
     public void IsUsageLimitExceeded_WhenUsageLimitIsNull_ReturnsFalse()
     {
@@ -88,6 +109,9 @@ public class TenantFeatureTests
         feature.IsUsageLimitExceeded().Should().BeFalse();
     }
 
+    /// <summary>
+    /// Tests that CanUseFeature returns false with a deprecation message when the feature is deprecated.
+    /// </summary>
     [Fact]
     public void CanUseFeature_WhenDeprecated_ReturnsFalseWithDeprecationMessage()
     {
@@ -107,6 +131,9 @@ public class TenantFeatureTests
         error.Should().Contain("deprecated");
     }
 
+    /// <summary>
+    /// Tests that CanUseFeature returns false with a limit message when the usage limit is reached.
+    /// </summary>
     [Fact]
     public void CanUseFeature_WhenUsageLimitReached_ReturnsFalseWithLimitMessage()
     {
@@ -127,6 +154,9 @@ public class TenantFeatureTests
         error.Should().Contain("10");
     }
 
+    /// <summary>
+    /// Tests that CanUseFeature returns true with a null error when the feature is available and within limits.
+    /// </summary>
     [Fact]
     public void CanUseFeature_WhenAvailableAndWithinLimits_ReturnsTrueWithNullError()
     {
@@ -147,6 +177,9 @@ public class TenantFeatureTests
         error.Should().BeNull();
     }
 
+    /// <summary>
+    /// Tests that RecordUsage increments the current usage by the specified amount.
+    /// </summary>
     [Fact]
     public void RecordUsage_IncrementsCurrentUsageBySpecifiedAmount()
     {
@@ -160,6 +193,9 @@ public class TenantFeatureTests
         feature.CurrentUsage.Should().Be(8);
     }
 
+    /// <summary>
+    /// Tests that ResetUsage sets the current usage back to zero.
+    /// </summary>
     [Fact]
     public void ResetUsage_SetsCurrentUsageBackToZero()
     {
@@ -173,6 +209,9 @@ public class TenantFeatureTests
         feature.CurrentUsage.Should().Be(0);
     }
 
+    /// <summary>
+    /// Tests that GetStatus returns "Deprecated" when the feature is deprecated in the past.
+    /// </summary>
     [Fact]
     public void GetStatus_WhenDeprecatedInPast_ReturnsDeprecated()
     {
@@ -187,6 +226,9 @@ public class TenantFeatureTests
         feature.GetStatus().Should().Be("Deprecated");
     }
 
+    /// <summary>
+    /// Tests that GetStatus returns "Disabled" when the feature is disabled.
+    /// </summary>
     [Fact]
     public void GetStatus_WhenDisabled_ReturnsDisabled()
     {
@@ -197,6 +239,9 @@ public class TenantFeatureTests
         feature.GetStatus().Should().Be("Disabled");
     }
 
+    /// <summary>
+    /// Tests that GetStatus returns "Beta (X%)" when the feature has a partial rollout.
+    /// </summary>
     [Fact]
     public void GetStatus_WhenPartialRollout_ReturnsBetaWithPercentage()
     {
@@ -207,6 +252,9 @@ public class TenantFeatureTests
         feature.GetStatus().Should().Be("Beta (50%)");
     }
 
+    /// <summary>
+    /// Tests that GetStatus returns "Active" when the feature is fully active.
+    /// </summary>
     [Fact]
     public void GetStatus_WhenFullyActiveFeature_ReturnsActive()
     {
@@ -218,8 +266,14 @@ public class TenantFeatureTests
     }
 }
 
+/// <summary>
+/// Tests for the DataIsolationPolicy class.
+/// </summary>
 public class DataIsolationPolicyTests
 {
+    /// <summary>
+    /// Tests that GetAllowedFields returns a list with trimmed entries when given a comma-separated string.
+    /// </summary>
     [Fact]
     public void GetAllowedFields_WithCommaSeparatedString_ReturnsListWithTrimmedEntries()
     {
@@ -234,6 +288,9 @@ public class DataIsolationPolicyTests
         fields.Should().ContainInOrder("Name", "Email", "Phone");
     }
 
+    /// <summary>
+    /// Tests that GetDeniedFields returns an empty list when the denied fields are null.
+    /// </summary>
     [Fact]
     public void GetDeniedFields_WhenNull_ReturnsEmptyList()
     {
@@ -247,6 +304,9 @@ public class DataIsolationPolicyTests
         fields.Should().BeEmpty();
     }
 
+    /// <summary>
+    /// Tests that IsFieldAccessAllowed returns false when the field is in the denied list.
+    /// </summary>
     [Fact]
     public void IsFieldAccessAllowed_WhenFieldInDeniedList_ReturnsFalse()
     {
@@ -257,6 +317,9 @@ public class DataIsolationPolicyTests
         policy.IsFieldAccessAllowed("Password").Should().BeFalse();
     }
 
+    /// <summary>
+    /// Tests that IsFieldAccessAllowed returns false when the field is not in the allowed list.
+    /// </summary>
     [Fact]
     public void IsFieldAccessAllowed_WhenFieldNotInAllowedList_ReturnsFalse()
     {
@@ -267,6 +330,9 @@ public class DataIsolationPolicyTests
         policy.IsFieldAccessAllowed("Password").Should().BeFalse();
     }
 
+    /// <summary>
+    /// Tests that IsFieldAccessAllowed returns true when there are no restrictions.
+    /// </summary>
     [Fact]
     public void IsFieldAccessAllowed_WhenNoRestrictions_ReturnsTrue()
     {
@@ -281,6 +347,9 @@ public class DataIsolationPolicyTests
         policy.IsFieldAccessAllowed("AnyField").Should().BeTrue();
     }
 
+    /// <summary>
+    /// Tests that IsFieldAccessAllowed is case-insensitive.
+    /// </summary>
     [Fact]
     public void IsFieldAccessAllowed_IsCaseInsensitive()
     {
@@ -292,6 +361,9 @@ public class DataIsolationPolicyTests
         policy.IsFieldAccessAllowed("PASSWORD").Should().BeFalse();
     }
 
+    /// <summary>
+    /// Tests that IsCrossTenantAccessAllowed always returns false for a strict policy.
+    /// </summary>
     [Fact]
     public void IsCrossTenantAccessAllowed_WhenStrictPolicy_AlwaysReturnsFalse()
     {
@@ -307,6 +379,9 @@ public class DataIsolationPolicyTests
         policy.IsCrossTenantAccessAllowed(otherTenantId).Should().BeFalse();
     }
 
+    /// <summary>
+    /// Tests that IsCrossTenantAccessAllowed returns true for a relaxed policy when the tenant ID is in the allowed list.
+    /// </summary>
     [Fact]
     public void IsCrossTenantAccessAllowed_WhenRelaxedAndTenantInAllowedList_ReturnsTrue()
     {
@@ -322,6 +397,9 @@ public class DataIsolationPolicyTests
         policy.IsCrossTenantAccessAllowed(otherTenantId).Should().BeTrue();
     }
 
+    /// <summary>
+    /// Tests that IsValidPolicy returns false with a message when a custom policy has no filter rule.
+    /// </summary>
     [Fact]
     public void IsValidPolicy_WhenCustomPolicyHasNoFilterRule_ReturnsFalseWithMessage()
     {
@@ -341,6 +419,9 @@ public class DataIsolationPolicyTests
         error.Should().Contain("Filter rule");
     }
 
+    /// <summary>
+    /// Tests that IsValidPolicy returns false with a message when the same field is in both the allowed and denied lists.
+    /// </summary>
     [Fact]
     public void IsValidPolicy_WhenSameFieldInAllowedAndDenied_ReturnsFalseWithOverlapMessage()
     {
@@ -361,6 +442,9 @@ public class DataIsolationPolicyTests
         error.Should().Contain("Email");
     }
 
+    /// <summary>
+    /// Tests that IsValidPolicy returns false with a message when the entity type is empty.
+    /// </summary>
     [Fact]
     public void IsValidPolicy_WhenEntityTypeIsEmpty_ReturnsFalseWithMessage()
     {
