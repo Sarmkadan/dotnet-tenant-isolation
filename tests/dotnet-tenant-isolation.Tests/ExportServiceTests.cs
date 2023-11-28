@@ -5,19 +5,26 @@ using TenantIsolation.Services;
 using System.Text;
 using Xunit;
 
-namespace TenantIsolation.Tests;
-
+/// <summary>
+/// Tests for the ExportService class.
+/// </summary>
 public class ExportServiceTests
 {
     private readonly Mock<ILogger<ExportService>> _loggerMock;
     private readonly ExportService _exportService;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ExportServiceTests"/> class.
+    /// </summary>
     public ExportServiceTests()
     {
         _loggerMock = new Mock<ILogger<ExportService>>();
         _exportService = new ExportService(_loggerMock.Object);
     }
 
+    /// <summary>
+    /// Tests that ExportAsync throws an ArgumentNullException when the request is null.
+    /// </summary>
     [Fact]
     public async Task ExportAsync_WithNullRequest_ThrowsArgumentNullException()
     {
@@ -28,6 +35,9 @@ public class ExportServiceTests
         await act.Should().ThrowAsync<ArgumentNullException>();
     }
 
+    /// <summary>
+    /// Tests that ExportAsync returns a valid JSON response when the format is JSON.
+    /// </summary>
     [Fact]
     public async Task ExportAsync_JsonFormat_ReturnsValidJson()
     {
@@ -45,6 +55,9 @@ public class ExportServiceTests
         Encoding.UTF8.GetString(result.Content).Should().Contain("TestItem");
     }
 
+    /// <summary>
+    /// Tests that ExportAsync returns a valid CSV response when the format is CSV.
+    /// </summary>
     [Fact]
     public async Task ExportAsync_CsvFormat_ReturnsValidCsv()
     {
@@ -63,6 +76,9 @@ public class ExportServiceTests
         csvContent.Should().Contain("TestItem,1");
     }
 
+    /// <summary>
+    /// Tests that ExportAsync returns a valid XML response when the format is XML.
+    /// </summary>
     [Fact]
     public async Task ExportAsync_XmlFormat_ReturnsValidXml()
     {
@@ -80,6 +96,9 @@ public class ExportServiceTests
         Encoding.UTF8.GetString(result.Content).Should().Contain("<Name>TestItem</Name>");
     }
 
+    /// <summary>
+    /// Tests that GetSupportedFormats returns all supported formats.
+    /// </summary>
     [Fact]
     public void GetSupportedFormats_ReturnsAllFormats()
     {
