@@ -10,10 +10,16 @@ using TenantIsolation.Constants;
 using TenantIsolation.Models;
 using Xunit;
 
+/// <summary>
+/// Tests for the Tenant model.
+/// </summary>
 namespace TenantIsolation.Tests;
 
 public class TenantModelTests
 {
+    /// <summary>
+    /// Tests the CanActivate method when the tenant is active and not deleted.
+    /// </summary>
     [Fact]
     public void CanActivate_WhenActiveAndNotDeleted_ReturnsTrue()
     {
@@ -32,6 +38,9 @@ public class TenantModelTests
         result.Should().BeTrue();
     }
 
+    /// <summary>
+    /// Tests the CanActivate method when the tenant is deleted.
+    /// </summary>
     [Fact]
     public void CanActivate_WhenDeleted_ReturnsFalse()
     {
@@ -49,6 +58,9 @@ public class TenantModelTests
         result.Should().BeFalse();
     }
 
+    /// <summary>
+    /// Tests the CanActivate method when the tenant's status is archived.
+    /// </summary>
     [Fact]
     public void CanActivate_WhenStatusIsArchived_ReturnsFalse()
     {
@@ -66,6 +78,9 @@ public class TenantModelTests
         result.Should().BeFalse();
     }
 
+    /// <summary>
+    /// Tests the CanActivate method when the tenant's subscription has expired.
+    /// </summary>
     [Fact]
     public void CanActivate_WhenSubscriptionExpired_ReturnsFalse()
     {
@@ -84,6 +99,9 @@ public class TenantModelTests
         result.Should().BeFalse();
     }
 
+    /// <summary>
+    /// Tests the CanActivate method when the tenant's subscription expiry is null.
+    /// </summary>
     [Fact]
     public void CanActivate_WhenSubscriptionExpiryIsNull_ReturnsTrue()
     {
@@ -102,6 +120,9 @@ public class TenantModelTests
         result.Should().BeTrue();
     }
 
+    /// <summary>
+    /// Tests the IsUserLimitExceeded method when the current usage is at the exact limit.
+    /// </summary>
     [Fact]
     public void IsUserLimitExceeded_WhenCurrentUsageAtExactLimit_ReturnsTrue()
     {
@@ -115,6 +136,9 @@ public class TenantModelTests
         result.Should().BeTrue();
     }
 
+    /// <summary>
+    /// Tests the IsUserLimitExceeded method when the current usage is one below the limit.
+    /// </summary>
     [Fact]
     public void IsUserLimitExceeded_WhenCurrentUsageOneBelowLimit_ReturnsFalse()
     {
@@ -128,6 +152,9 @@ public class TenantModelTests
         result.Should().BeFalse();
     }
 
+    /// <summary>
+    /// Tests the IsUserLimitExceeded method when the tenant's max users is null.
+    /// </summary>
     [Fact]
     public void IsUserLimitExceeded_WhenMaxUsersIsNull_ReturnsFalse()
     {
@@ -141,6 +168,9 @@ public class TenantModelTests
         result.Should().BeFalse();
     }
 
+    /// <summary>
+    /// Tests the IsSubscriptionValid method when the subscription expiry is null.
+    /// </summary>
     [Fact]
     public void IsSubscriptionValid_WhenExpiryIsNull_ReturnsTrue()
     {
@@ -151,6 +181,9 @@ public class TenantModelTests
         tenant.IsSubscriptionValid().Should().BeTrue();
     }
 
+    /// <summary>
+    /// Tests the IsSubscriptionValid method when the subscription has expired yesterday.
+    /// </summary>
     [Fact]
     public void IsSubscriptionValid_WhenExpiredYesterday_ReturnsFalse()
     {
@@ -161,6 +194,9 @@ public class TenantModelTests
         tenant.IsSubscriptionValid().Should().BeFalse();
     }
 
+    /// <summary>
+    /// Tests the Delete method.
+    /// </summary>
     [Fact]
     public void Delete_SetsIsDeletedTrueAndArchivesStatus()
     {
@@ -181,6 +217,9 @@ public class TenantModelTests
         tenant.DeletedAt.Should().BeCloseTo(DateTime.UtcNow, TimeSpan.FromSeconds(5));
     }
 
+    /// <summary>
+    /// Tests the Restore method.
+    /// </summary>
     [Fact]
     public void Restore_ClearsDeletedFlagAndSetsStatusToActive()
     {
@@ -201,6 +240,9 @@ public class TenantModelTests
         tenant.Status.Should().Be(TenantStatus.Active);
     }
 
+    /// <summary>
+    /// Tests the Suspend method.
+    /// </summary>
     [Fact]
     public void Suspend_TransitionsStatusToSuspended()
     {
@@ -214,6 +256,9 @@ public class TenantModelTests
         tenant.Status.Should().Be(TenantStatus.Suspended);
     }
 
+    /// <summary>
+    /// Tests the IsInTrial method when the tenant's status is trial.
+    /// </summary>
     [Fact]
     public void IsInTrial_WhenStatusIsTrial_ReturnsTrue()
     {
@@ -224,6 +269,9 @@ public class TenantModelTests
         tenant.IsInTrial().Should().BeTrue();
     }
 
+    /// <summary>
+    /// Tests the IsInTrial method when the tenant's status is active.
+    /// </summary>
     [Fact]
     public void IsInTrial_WhenStatusIsActive_ReturnsFalse()
     {
