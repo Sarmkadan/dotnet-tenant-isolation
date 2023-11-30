@@ -285,6 +285,56 @@ You can find complete, runnable examples in the `examples/` directory:
 
 ## API Reference
 
+### RequestContextMiddlewareExtensions
+
+Extension methods for configuring and using the `RequestContextMiddleware` in ASP.NET Core applications. These methods enable detailed request context tracking, including tenant identification, correlation IDs, request timing, and custom header injection for observability and debugging purposes.
+
+Example usage:
+
+```csharp
+var builder = WebApplication.CreateBuilder(args);
+
+// Configure request context with diagnostics enabled
+builder.Services.AddRequestContext(options =>
+{
+    options.EnableRequestTiming = true;
+    options.IncludeTenantInHeaders = true;
+    options.IncludeUserInHeaders = true;
+    options.EnableCorrelationId = true;
+    options.EnableTenantFromHeader = true;
+    options.EnableTenantFromRoute = true;
+    options.EnableTenantFromSubdomain = true;
+});
+
+var app = builder.Build();
+
+// Use request context middleware with diagnostics
+app.UseRequestContextWithDiagnostics();
+
+app.MapGet("/api/status", (HttpContext context) =>
+{
+    // Access request context from HTTP context
+    var requestContext = context.GetRequestContext();
+    
+    if (requestContext != null)
+    {
+        return Results.Ok(new
+        {
+            TenantId = requestContext.GetTenantId(),
+            CorrelationId = requestContext.GetCorrelationId(),
+            HasTenantContext = requestContext.HasTenantContext,
+            RequestDuration = requestContext.EnableRequestTiming 
+                ? context.Request.Headers["X-Request-Duration"].FirstOrDefault()
+                : null
+        });
+    }
+    
+    return Results.Ok(new { NoTenantContext = true });
+});
+
+app.Run();
+```
+
 ### TenantIsolationExceptionExtensions
 
 Extension methods for enhancing and inspecting `TenantIsolationException` instances. These methods allow you to add error details, modify error codes, append context to error messages, and extract tenant-specific information from exception instances.
