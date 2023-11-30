@@ -360,6 +360,42 @@ catch (TenantIsolationException ex) when (ex.TryGetTenantId(out var tenantId))
 }
 ```
 
+### ConfigurationServiceExtensions
+
+Extension methods for `ConfigurationService` that provide type-safe configuration access patterns, automatic type conversion, and convenient helper methods for common configuration scenarios. These extensions simplify working with tenant-specific settings by offering strongly-typed getters, automatic value type detection, and exception handling for missing configurations.
+
+Example usage:
+
+```csharp
+var builder = WebApplication.CreateBuilder(args);
+
+// Register tenant isolation services
+builder.Services.AddTenantIsolationSqlServer(connectionString);
+
+var app = builder.Build();
+
+// Resolve services from DI
+var configurationService = app.Services.GetRequiredService<ConfigurationService>();
+var tenantId = Guid.Parse("550e8400-e29b-41d4-a716-446655440000");
+
+// Set configuration with automatic type detection
+await configurationService.SetConfigurationAutoAsync(tenantId, "MaxConcurrentJobs", 10);
+
+// Get typed configuration values with defaults
+var maxJobs = await configurationService.GetIntAsync(tenantId, "MaxConcurrentJobs", 5);
+var featureEnabled = await configurationService.GetBooleanAsync(tenantId, "EnableAdvancedFeatures", false);
+var timeout = await configurationService.GetDoubleAsync(tenantId, "RequestTimeoutSeconds", 30.0);
+
+// Check if configuration exists
+var hasFeatureFlag = await configurationService.HasValueAsync(tenantId, "EnableNewDashboard");
+
+// Get configuration or throw if not found
+var config = await configurationService.GetConfigurationOrThrowAsync(tenantId, "ApiKey");
+
+// Get strongly-typed configuration with exception on missing/invalid
+var apiKey = await configurationService.GetAsync<string>(tenantId, "ApiKey");
+```
+
 ### TenantService
 
 **CreateTenantAsync(string name, string slug, string adminEmail)**
