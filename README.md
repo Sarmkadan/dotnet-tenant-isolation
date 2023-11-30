@@ -360,6 +360,47 @@ catch (TenantIsolationException ex) when (ex.TryGetTenantId(out var tenantId))
 }
 ```
 
+### ExportRequestExtensions
+
+Extension methods for `ExportRequest` that provide common operations for validating export requests, generating filenames, determining content types, and managing export options. These methods simplify working with tenant export functionality by offering validation, formatting, and configuration utilities.
+
+Example usage:
+
+```csharp
+var exportRequest = new ExportRequest
+{
+    ResourceType = "Organization",
+    TenantId = Guid.Parse("550e8400-e29b-41d4-a716-446655440000"),
+    Format = ExportFormat.Json,
+    Filters = new List<string> { "Status=Active", "Type=Premium" },
+    IncludeFields = new List<string> { "Id", "Name", "Email" }
+};
+
+// Validate the export request
+if (!exportRequest.IsValid())
+{
+    throw new ArgumentException("Export request is invalid");
+}
+
+// Get filename with timestamp and format
+var fileName = exportRequest.GetFileName();
+// Returns: Organization_20260713_143022.json
+
+// Get appropriate content type for the format
+var contentType = exportRequest.GetContentType();
+// Returns: application/json
+
+// Get export options as a dictionary
+var options = exportRequest.GetExportOptions();
+// Returns: Dictionary with ResourceType, Format, TenantId, and Filters
+
+// Check if a specific field should be included
+var shouldIncludeName = exportRequest.ShouldIncludeField("Name");
+// Returns: true
+var shouldIncludeSecret = exportRequest.ShouldIncludeField("SecretKey");
+// Returns: false
+```
+
 ### ConfigurationServiceExtensions
 
 Extension methods for `ConfigurationService` that provide type-safe configuration access patterns, automatic type conversion, and convenient helper methods for common configuration scenarios. These extensions simplify working with tenant-specific settings by offering strongly-typed getters, automatic value type detection, and exception handling for missing configurations.
