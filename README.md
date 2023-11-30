@@ -285,6 +285,31 @@ You can find complete, runnable examples in the `examples/` directory:
 
 ## API Reference
 
+### TenantIsolationExceptionExtensions
+
+Extension methods for enhancing and inspecting `TenantIsolationException` instances. These methods allow you to add error details, modify error codes, append context to error messages, and extract tenant-specific information from exception instances.
+
+Example usage:
+
+```csharp
+try
+{
+    await tenantService.ActivateTenantAsync(tenantId);
+}
+catch (TenantIsolationException ex) when (ex.TryGetTenantId(out var tenantId))
+{
+    // Add detailed error information
+    var enhancedException = ex
+        .WithDetail("TenantId", tenantId)
+        .WithDetail("AttemptedAction", "ActivateTenant")
+        .WithErrorCode("TENANT_ACTIVATION_FAILED")
+        .WithContext("(Tenant: " + tenantId + ")");
+
+    logger.LogError(enhancedException, "Failed to activate tenant");
+    throw enhancedException;
+}
+```
+
 ### TenantService
 
 **CreateTenantAsync(string name, string slug, string adminEmail)**
