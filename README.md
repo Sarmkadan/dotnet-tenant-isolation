@@ -33,4 +33,21 @@ if (disabled)
 }
 ```
 
+## TenantApiControllerExtensions
+The `TenantApiControllerExtensions` class provides extension methods for managing tenants in a tenant-isolated environment. It enables retrieving tenants by IDs or status, bulk activating or suspending tenants, and getting dashboard statistics. 
+Here is an example of how to use it:
+```csharp
+// Get tenants by IDs
+var result = await TenantApiControllerExtensions.GetTenantsByIds(new List<Guid> { Guid.NewGuid(), Guid.NewGuid() });
+
+// Get tenants by status
+var tenantsByStatus = await TenantApiControllerExtensions.GetTenantsByStatus("active");
+
+// Bulk activate tenants
+var activationResult = await TenantApiControllerExtensions.BulkActivateTenants(new List<Guid> { Guid.NewGuid(), Guid.NewGuid() }, "reason for activation");
+
+// Get dashboard statistics
+var statistics = await TenantApiControllerExtensions.GetDashboardStatistics();
+```
+
 // existing content ...
