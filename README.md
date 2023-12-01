@@ -1,53 +1,50 @@
 // existing content ...
 
-## FeaturesControllerExtensions
+## CacheBenchmarks
 
-The `FeaturesControllerExtensions` class provides extension methods for managing feature flags and configurations in a tenant-isolated environment. It enables checking feature status, retrieving configuration details, and controlling feature rollout via percentage-based activation or usage-based disabling.
+The `CacheBenchmarks` class provides a set of benchmarks for evaluating the performance of the cache implementation. It includes tests for cache hits, misses, upserts, and removals, as well as tests for cache key builders with different parameters.
 
 ### Example Usage
 
 ```csharp
-// Check if a feature is enabled for the current tenant
-bool isEnabled = await FeaturesControllerExtensions.IsFeatureEnabledAsync("feature-flag-name");
+// Create a new instance of CacheBenchmarks
+var cacheBenchmarks = new CacheBenchmarks();
 
-// Get detailed configuration for a feature
-var config = await FeaturesControllerExtensions.GetFeatureConfigurationAsync("feature-flag-name");
-if (config?.IsEnabled)
-{
-    Console.WriteLine($"Feature is active with {config.RolloutPercentage}% rollout");
-    Console.WriteLine($"Used {config.UsageCount}/{config.UsageLimit} times");
-}
+// Setup the cache benchmarks
+cacheBenchmarks.Setup();
 
-// Enable feature with 50% rollout
-bool success = await FeaturesControllerExtensions.EnableFeatureWithPercentageAsync("feature-flag-name", 50);
-if (success)
-{
-    Console.WriteLine($"Feature enabled with {config.RolloutPercentage}% rollout");
-}
+// Run the cache hit benchmark
+var result = await cacheBenchmarks.GetAsync_CacheHit();
 
-// Disable feature after usage threshold
-bool disabled = await FeaturesControllerExtensions.DisableFeatureWithUsageAsync("feature-flag-name", 1000);
-if (disabled) 
-{
-    Console.WriteLine($"Feature disabled due to reaching usage limits");
-}
-```
+// Run the cache miss benchmark
+var resultMiss = await cacheBenchmarks.GetAsync_CacheMiss();
 
-## TenantApiControllerExtensions
-The `TenantApiControllerExtensions` class provides extension methods for managing tenants in a tenant-isolated environment. It enables retrieving tenants by IDs or status, bulk activating or suspending tenants, and getting dashboard statistics. 
-Here is an example of how to use it:
-```csharp
-// Get tenants by IDs
-var result = await TenantApiControllerExtensions.GetTenantsByIds(new List<Guid> { Guid.NewGuid(), Guid.NewGuid() });
+// Run the upsert benchmark
+await cacheBenchmarks.SetAsync_Upsert();
 
-// Get tenants by status
-var tenantsByStatus = await TenantApiControllerExtensions.GetTenantsByStatus("active");
+// Get the cache key builder with simple parameters
+var cacheKeyBuilderSimple = cacheBenchmarks.CacheKeyBuilder_Simple;
 
-// Bulk activate tenants
-var activationResult = await TenantApiControllerExtensions.BulkActivateTenants(new List<Guid> { Guid.NewGuid(), Guid.NewGuid() }, "reason for activation");
+// Get the cache key builder with tenant parameters
+var cacheKeyBuilderTenant = cacheBenchmarks.CacheKeyBuilder_WithTenant;
 
-// Get dashboard statistics
-var statistics = await TenantApiControllerExtensions.GetDashboardStatistics();
+// Get the cache key builder with tenant user and hash parameters
+var cacheKeyBuilderTenantUserAndHash = cacheBenchmarks.CacheKeyBuilder_WithTenantUserAndHash;
+
+// Check if the cache exists with a cache hit
+var existsCacheHit = await cacheBenchmarks.ExistsAsync_CacheHit();
+
+// Check if the cache exists with a cache miss
+var existsCacheMiss = await cacheBenchmarks.ExistsAsync_CacheMiss();
+
+// Remove the cache
+await cacheBenchmarks.RemoveAsync();
+
+// Cleanup the cache benchmarks
+cacheBenchmarks.Cleanup();
+
+// Dispose of the cache benchmarks
+cacheBenchmarks.Dispose();
 ```
 
 // existing content ...
