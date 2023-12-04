@@ -1,50 +1,41 @@
 // existing content ...
 
-## CacheBenchmarks
+## TenantResolutionBenchmarks
 
-The `CacheBenchmarks` class provides a set of benchmarks for evaluating the performance of the cache implementation. It includes tests for cache hits, misses, upserts, and removals, as well as tests for cache key builders with different parameters.
+The `TenantResolutionBenchmarks` class provides a set of benchmarks for evaluating the performance of the tenant resolution process. It includes tests for resolving tenants from headers, routes, claims, and subdomains, as well as tests for getting the current tenant and checking if a tenant exists.
 
 ### Example Usage
 
 ```csharp
-// Create a new instance of CacheBenchmarks
-var cacheBenchmarks = new CacheBenchmarks();
+// Create a new instance of TenantResolutionBenchmarks
+var tenantResolutionBenchmarks = new TenantResolutionBenchmarks();
 
-// Setup the cache benchmarks
-cacheBenchmarks.Setup();
+// Setup the tenant resolution benchmarks
+tenantResolutionBenchmarks.Setup();
 
-// Run the cache hit benchmark
-var result = await cacheBenchmarks.GetAsync_CacheHit();
+// Resolve a tenant from the header
+var tenantFromHeader = await tenantResolutionBenchmarks.ResolveTenant_FromHeader();
 
-// Run the cache miss benchmark
-var resultMiss = await cacheBenchmarks.GetAsync_CacheMiss();
+// Resolve a tenant from the route
+var tenantFromRoute = await tenantResolutionBenchmarks.ResolveTenant_FromRoute();
 
-// Run the upsert benchmark
-await cacheBenchmarks.SetAsync_Upsert();
+// Resolve a tenant from claims
+var tenantFromClaims = await tenantResolutionBenchmarks.ResolveTenant_FromClaims();
 
-// Get the cache key builder with simple parameters
-var cacheKeyBuilderSimple = cacheBenchmarks.CacheKeyBuilder_Simple;
+// Resolve a tenant from the subdomain
+var tenantFromSubdomain = await tenantResolutionBenchmarks.ResolveTenant_FromSubdomain();
 
-// Get the cache key builder with tenant parameters
-var cacheKeyBuilderTenant = cacheBenchmarks.CacheKeyBuilder_WithTenant;
+// Get the current tenant
+var currentTenant = tenantResolutionBenchmarks.GetCurrentTenant();
 
-// Get the cache key builder with tenant user and hash parameters
-var cacheKeyBuilderTenantUserAndHash = cacheBenchmarks.CacheKeyBuilder_WithTenantUserAndHash;
+// Check if a tenant exists
+var hasTenant = tenantResolutionBenchmarks.HasTenant;
 
-// Check if the cache exists with a cache hit
-var existsCacheHit = await cacheBenchmarks.ExistsAsync_CacheHit();
+// Cleanup the tenant resolution benchmarks
+tenantResolutionBenchmarks.Cleanup();
 
-// Check if the cache exists with a cache miss
-var existsCacheMiss = await cacheBenchmarks.ExistsAsync_CacheMiss();
-
-// Remove the cache
-await cacheBenchmarks.RemoveAsync();
-
-// Cleanup the cache benchmarks
-cacheBenchmarks.Cleanup();
-
-// Dispose of the cache benchmarks
-cacheBenchmarks.Dispose();
+// Dispose of the tenant resolution benchmarks
+tenantResolutionBenchmarks.Dispose();
 ```
 
 // existing content ...
