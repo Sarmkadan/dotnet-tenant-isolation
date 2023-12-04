@@ -1,41 +1,42 @@
 // existing content ...
 
-## TenantResolutionBenchmarks
+## TenantKeyBenchmarks
 
-The `TenantResolutionBenchmarks` class provides a set of benchmarks for evaluating the performance of the tenant resolution process. It includes tests for resolving tenants from headers, routes, claims, and subdomains, as well as tests for getting the current tenant and checking if a tenant exists.
+The `TenantKeyBenchmarks` class provides a set of benchmarks for evaluating the performance of tenant-aware key generation and cache key building. It includes tests for string concatenation, string interpolation, cache key building, and subdomain extraction.
 
 ### Example Usage
 
 ```csharp
-// Create a new instance of TenantResolutionBenchmarks
-var tenantResolutionBenchmarks = new TenantResolutionBenchmarks();
+// Create a new instance of TenantKeyBenchmarks
+var tenantKeyBenchmarks = new TenantKeyBenchmarks();
 
-// Setup the tenant resolution benchmarks
-tenantResolutionBenchmarks.Setup();
+// Test string concatenation
+var tenantAwareKeyStringConcat = tenantKeyBenchmarks.TenantAwareKey_StringConcat;
 
-// Resolve a tenant from the header
-var tenantFromHeader = await tenantResolutionBenchmarks.ResolveTenant_FromHeader();
+// Test string interpolation
+var tenantAwareKeyInterpolation = tenantKeyBenchmarks.TenantAwareKey_Interpolation;
 
-// Resolve a tenant from the route
-var tenantFromRoute = await tenantResolutionBenchmarks.ResolveTenant_FromRoute();
+// Test cache key building
+var cacheKeyBuilderTenantAndResource = tenantKeyBenchmarks.CacheKeyBuilder_TenantAndResource;
 
-// Resolve a tenant from claims
-var tenantFromClaims = await tenantResolutionBenchmarks.ResolveTenant_FromClaims();
+// Test frozen set contains reserved hit
+var frozenSetContainsReservedHit = tenantKeyBenchmarks.FrozenSet_Contains_ReservedHit;
 
-// Resolve a tenant from the subdomain
-var tenantFromSubdomain = await tenantResolutionBenchmarks.ResolveTenant_FromSubdomain();
+// Test frozen set contains reserved miss
+var frozenSetContainsReservedMiss = tenantKeyBenchmarks.FrozenSet_Contains_ReservedMiss;
 
-// Get the current tenant
-var currentTenant = tenantResolutionBenchmarks.GetCurrentTenant();
+// Test subdomain extraction by index
+var subdomainExtractIndexOf = tenantKeyBenchmarks.SubdomainExtract_IndexOf;
 
-// Check if a tenant exists
-var hasTenant = tenantResolutionBenchmarks.HasTenant;
+// Test subdomain extraction by split
+var subdomainExtractSplit = tenantKeyBenchmarks.SubdomainExtract_Split;
 
-// Cleanup the tenant resolution benchmarks
-tenantResolutionBenchmarks.Cleanup();
+// Test generating a tenant-scoped key
+var generateTenantScopedKey = tenantKeyBenchmarks.GenerateTenantScopedKey;
 
-// Dispose of the tenant resolution benchmarks
-tenantResolutionBenchmarks.Dispose();
+// Test generating a tenant-scoped key with hash
+var generateTenantScopedKeyWithHash = tenantKeyBenchmarks.GenerateTenantScopedKey_WithHash;
 ```
 
 // existing content ...
+```
