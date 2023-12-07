@@ -1,44 +1,22 @@
 // existing content ...
 
-## FeatureToggleBenchmarks
+## TenantIsolationException
 
-The `FeatureToggleBenchmarks` class provides a set of benchmarks for evaluating the performance of feature toggle operations. It includes tests for feature enablement, rollout percentage, and statistics collection.
+The `TenantIsolationException` class represents a custom exception that can be thrown when a tenant isolation-related error occurs. It provides additional information about the error, including an error code and error details.
 
 ### Example Usage
 
 ```csharp
-// Create a new instance of FeatureToggleBenchmarks
-var featureToggleBenchmarks = new FeatureToggleBenchmarks();
-
-// Set up the feature toggle
-await featureToggleBenchmarks.Setup();
-
-// Check if a feature is enabled with 100% rollout
-var isFeatureEnabled = await featureToggleBenchmarks.IsFeatureEnabled_100Percent();
-
-// Check if a feature is enabled with 50% rollout
-var isFeatureEnabled50 = await featureToggleBenchmarks.IsFeatureEnabled_50Percent();
-
-// Check if a feature is enabled with 25% rollout
-var isFeatureEnabled25 = await featureToggleBenchmarks.IsFeatureEnabled_25Percent();
-
-// Enable a feature
-await featureToggleBenchmarks.EnableFeature();
-
-// Set the rollout percentage
-await featureToggleBenchmarks.SetRolloutPercentage(75);
-
-// Record feature usage
-await featureToggleBenchmarks.RecordFeatureUsage();
-
-// Get statistics
-var statistics = await featureToggleBenchmarks.GetStatistics();
-
-// Clean up
-featureToggleBenchmarks.Cleanup();
-
-// Dispose of resources
-featureToggleBenchmarks.Dispose();
+try
+{
+    // Code that may throw a TenantIsolationException
+}
+catch (TenantIsolationException ex)
+{
+    Console.WriteLine($"Error Code: {ex.ErrorCode}");
+    Console.WriteLine($"Error Details: {JsonUtility.Serialize(ex.ErrorDetails)}");
+    Console.WriteLine(ex.ToString());
+}
 ```
 
 // existing content ...
