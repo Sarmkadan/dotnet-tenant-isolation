@@ -142,7 +142,8 @@ public class ConfigurationServiceTests : IAsyncLifetime
     {
         // Arrange
         const string key = "password";
-        const string value = "secret";
+        // Encrypted values must be at least 16 characters (see TenantConfiguration.IsValid).
+        const string value = "super-secret-password";
 
         // Act
         var result = await _sut.SetConfigurationAsync(_tenantId, key, value, "string", true);
@@ -657,8 +658,9 @@ public class ConfigurationServiceTests : IAsyncLifetime
     {
         // Arrange
         await _sut.SetConfigurationAsync(_tenantId, "key1", "value1", "string", false);
-        await _sut.SetConfigurationAsync(_tenantId, "key2", "value2", "string", true);
-        await _sut.SetConfigurationAsync(_tenantId, "key3", "value3", "int", true);
+        // Encrypted values must be at least 16 characters (see TenantConfiguration.IsValid).
+        await _sut.SetConfigurationAsync(_tenantId, "key2", "value2-long-enough", "string", true);
+        await _sut.SetConfigurationAsync(_tenantId, "key3", "value3-long-enough", "int", true);
 
         // Act
         var result = await _sut.GetStatisticsAsync(_tenantId);

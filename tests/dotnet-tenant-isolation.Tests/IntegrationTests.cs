@@ -19,6 +19,7 @@ namespace TenantIsolation.Tests;
 /// </summary>
 public class IntegrationTests : IAsyncLifetime
 {
+    private readonly string _databaseName = $"IntegrationTests_{Guid.NewGuid()}";
     private readonly TenantDbContext _dbContext;
     private readonly IMemoryCache _cache;
     private readonly TenantRepository _tenantRepository;
@@ -28,10 +29,23 @@ public class IntegrationTests : IAsyncLifetime
     private readonly Mock<ILogger<TenantService>> _mockTenantServiceLogger;
     private readonly Mock<ILogger<ConfigurationService>> _mockConfigServiceLogger;
 
+    /// <summary>
+    /// Creates a fresh <see cref="TenantDbContext"/> pointed at this test's shared in-memory
+    /// database. EF Core's DbContext is not thread-safe, so concurrency tests must give each
+    /// logical operation its own context instance rather than sharing <see cref="_dbContext"/>.
+    /// </summary>
+    private TenantDbContext CreateDbContext()
+    {
+        var options = new DbContextOptionsBuilder<TenantDbContext>()
+            .UseInMemoryDatabase(_databaseName)
+            .Options;
+        return new TenantDbContext(options);
+    }
+
     public IntegrationTests()
     {
         var options = new DbContextOptionsBuilder<TenantDbContext>()
-            .UseInMemoryDatabase($"IntegrationTests_{Guid.NewGuid()}")
+            .UseInMemoryDatabase(_databaseName)
             .Options;
 
         _dbContext = new TenantDbContext(options);
@@ -74,16 +88,14 @@ public class IntegrationTests : IAsyncLifetime
         createdTenant.Status.Should().Be(TenantStatus.Provisioning);
 
         // Act - Activate tenant
-        var activeTenant = new Tenant
-        {
-            Id = createdTenant.Id,
-            Name = createdTenant.Name,
-            Slug = createdTenant.Slug,
-            AdminEmail = createdTenant.AdminEmail,
-            Status = TenantStatus.Active,
-            IsDeleted = false,
-            SubscriptionExpiresAt = DateTime.UtcNow.AddDays(365)
-        };
+        // The dynamic tenant store fronts the same underlying data as the repository, so the
+        // mock must hand back the very entity instance already tracked by the DbContext rather
+        // than a freshly constructed one with the same Id - otherwise EF sees two different
+        // instances with the same key and throws when the repository later attaches/updates it.
+        var activeTenant = (await _tenantRepository.GetByIdAsync(createdTenant.Id))!;
+        activeTenant.Status = TenantStatus.Active;
+        activeTenant.IsDeleted = false;
+        activeTenant.SubscriptionExpiresAt = DateTime.UtcNow.AddDays(365);
 
         _mockTenantStore.Setup(s => s.GetTenantByIdAsync(createdTenant.Id))
             .ReturnsAsync(activeTenant);
@@ -189,6 +201,11 @@ public class IntegrationTests : IAsyncLifetime
         _dbContext.Tenants.AddRange(expiringTenant, validTenant, expiredTenant);
         await _dbContext.SaveChangesAsync();
 
+        // IsSubscriptionValidAsync resolves the tenant through the dynamic tenant store, not the
+        // repository directly, so the store mock needs to know about these seeded tenants too.
+        _mockTenantStore.Setup(s => s.GetTenantByIdAsync(validTenant.Id)).ReturnsAsync(validTenant);
+        _mockTenantStore.Setup(s => s.GetTenantByIdAsync(expiredTenant.Id)).ReturnsAsync(expiredTenant);
+
         // Act
         var expiringInThirtyDays = await _tenantService.GetExpiringSubscriptionsAsync(30);
         var subscriptionValid = await _tenantService.IsSubscriptionValidAsync(validTenant.Id);
@@ -224,6 +241,10 @@ public class IntegrationTests : IAsyncLifetime
 
         _dbContext.Tenants.Add(trialTenant);
         await _dbContext.SaveChangesAsync();
+
+        // UpdateTenantAsync resolves the tenant through the dynamic tenant store, not the
+        // repository directly, so the store mock needs to return the same tracked instance.
+        _mockTenantStore.Setup(s => s.GetTenantByIdAsync(trialTenant.Id)).ReturnsAsync(trialTenant);
 
         // Act - Simulate trial conversion to paid
         var updated = await _tenantService.UpdateTenantAsync(trialTenant.Id, t =>
@@ -277,11 +298,18 @@ public class IntegrationTests : IAsyncLifetime
         _mockTenantStore.Setup(s => s.GetAllActiveTenantsAsync())
             .ReturnsAsync(new List<Tenant>());
 
-        // Act - Create tenants concurrently
+        // Act - Create tenants concurrently.
+        // Each task gets its own DbContext/repository/service instance (all pointed at the
+        // same in-memory database) because EF Core's DbContext is not safe for concurrent use
+        // from multiple threads - sharing one instance here would throw spuriously.
         var tasks = Enumerable.Range(0, 10)
             .Select(i => Task.Run(async () =>
             {
-                var tenant = await _tenantService.CreateTenantAsync(
+                using var dbContext = CreateDbContext();
+                var repository = new TenantRepository(new InMemoryTenantDbContextFactory(dbContext));
+                var service = new TenantService(repository, _mockTenantStore.Object, _mockTenantServiceLogger.Object);
+
+                var tenant = await service.CreateTenantAsync(
                     $"Concurrent Tenant {i}",
                     $"concurrent-tenant-{i}",
                     $"admin{i}@concurrent.com");
