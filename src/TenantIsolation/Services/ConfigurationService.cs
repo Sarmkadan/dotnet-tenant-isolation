@@ -75,8 +75,9 @@ public class ConfigurationService
 
         await _context.SaveChangesAsync();
 
-        // Invalidate cache
-        InvalidateCache(tenantId);
+        // Invalidate cache - must include the key so the per-configuration cache entry
+        // (e.g. "config_{tenantId}_{key}") is cleared, not just the "all configurations" entry.
+        InvalidateCache(tenantId, key);
 
         _logger.LogInformation("Configuration set for tenant {TenantId}: {Key}", tenantId, key);
 
