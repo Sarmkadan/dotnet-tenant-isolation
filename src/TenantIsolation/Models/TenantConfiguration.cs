@@ -88,13 +88,13 @@ public class TenantConfiguration
     /// </summary>
     public T? GetValueAs<T>()
     {
-        return ValueType.ToLower() switch
+        return ValueType.ToLowerInvariant() switch
         {
             "bool" => (T)(object)bool.Parse(Value),
-            "int" => (T)(object)int.Parse(Value),
-            "long" => (T)(object)long.Parse(Value),
-            "decimal" => (T)(object)decimal.Parse(Value),
-            "double" => (T)(object)double.Parse(Value),
+            "int" => (T)(object)int.Parse(Value, System.Globalization.CultureInfo.InvariantCulture),
+            "long" => (T)(object)long.Parse(Value, System.Globalization.CultureInfo.InvariantCulture),
+            "decimal" => (T)(object)decimal.Parse(Value, System.Globalization.CultureInfo.InvariantCulture),
+            "double" => (T)(object)double.Parse(Value, System.Globalization.CultureInfo.InvariantCulture),
             "json" => System.Text.Json.JsonSerializer.Deserialize<T>(Value),
             _ => (T)(object)Value
         };
@@ -114,10 +114,10 @@ public class TenantConfiguration
         Value = value switch
         {
             bool b => b.ToString(),
-            int i => i.ToString(),
-            long l => l.ToString(),
-            decimal d => d.ToString(),
-            double d => d.ToString(),
+            int i => i.ToString(System.Globalization.CultureInfo.InvariantCulture),
+            long l => l.ToString(System.Globalization.CultureInfo.InvariantCulture),
+            decimal d => d.ToString(System.Globalization.CultureInfo.InvariantCulture),
+            double d => d.ToString(System.Globalization.CultureInfo.InvariantCulture),
             string s => s,
             _ => System.Text.Json.JsonSerializer.Serialize(value)
         };

@@ -81,6 +81,11 @@ public interface IWebhookHandler
     Task<IEnumerable<WebhookSubscription>> GetWebhooksAsync(Guid tenantId, string? eventType = null);
 
     /// <summary>
+    /// Get a single webhook subscription by its id, regardless of tenant
+    /// </summary>
+    Task<WebhookSubscription?> GetWebhookByIdAsync(Guid webhookId);
+
+    /// <summary>
     /// Get webhook delivery history
     /// </summary>
     Task<IEnumerable<WebhookDelivery>> GetDeliveryHistoryAsync(Guid webhookId, int limit = 10);
@@ -184,6 +189,12 @@ public class WebhookHandler : IWebhookHandler
             .ToList();
 
         return await Task.FromResult(webhooks);
+    }
+
+    public async Task<WebhookSubscription?> GetWebhookByIdAsync(Guid webhookId)
+    {
+        _subscriptions.TryGetValue(webhookId, out var webhook);
+        return await Task.FromResult(webhook);
     }
 
     public async Task<IEnumerable<WebhookDelivery>> GetDeliveryHistoryAsync(Guid webhookId, int limit = 10)

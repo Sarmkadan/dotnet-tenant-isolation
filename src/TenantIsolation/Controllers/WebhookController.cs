@@ -93,9 +93,7 @@ public class WebhookController : ControllerBase
     {
         try
         {
-            // In a real implementation, this would query a database
-            var webhooks = await _webhookHandler.GetWebhooksAsync(Guid.Empty);
-            var webhook = webhooks.FirstOrDefault(w => w.Id == id);
+            var webhook = await _webhookHandler.GetWebhookByIdAsync(id);
 
             if (webhook == null)
                 return NotFound(_formatter.Error("Webhook not found"));

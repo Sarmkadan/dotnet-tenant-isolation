@@ -133,15 +133,12 @@ public class TenantAwareDistributedCacheProvider : ITenantAwareDistributedCacheP
         }
     }
 
-    public ValueTask<bool> ExistsAsync(string key)
+    public async ValueTask<bool> ExistsAsync(string key)
     {
         // IDistributedCache doesn't have an Exists method. A 'Get' followed by a null check is the common approach.
         // This might retrieve the entire value, which could be inefficient for large objects.
-        // For simplicity, we'll use GetAsync for now.
         _logger.LogWarning("ExistsAsync for distributed cache will perform a Get operation, which might be inefficient for large objects.");
-        return (GetAsync<object>(key).AsTask().Result != null)
-            ? ValueTask.FromResult(true)
-            : ValueTask.FromResult(false);
+        return await GetAsync<object>(key) != null;
     }
 
     public async ValueTask ClearAsync()

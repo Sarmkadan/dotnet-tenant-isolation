@@ -152,10 +152,9 @@ public class TenantCleanupWorker : BackgroundService
     {
         _logger.LogDebug("Rebuilding database statistics");
 
-        // This is a simplified example; in production you might want to call SQL DBCC DBREINDEX
         try
         {
-            var command = dbContext.Database.GetDbConnection().CreateCommand();
+            using var command = dbContext.Database.GetDbConnection().CreateCommand();
             command.CommandText = "sp_updatestats";
             command.CommandType = System.Data.CommandType.StoredProcedure;
 
