@@ -1,35 +1,50 @@
 // existing content ...
 
-## TenantEvent
+## IEventBus
 
-The `TenantEvent` class represents a base class for tenant-related events. It provides a standardized way to store event metadata, such as the event ID, occurred at date, tenant ID, and user ID.
+The `IEventBus` interface represents an event bus that enables publish-subscribe communication between components. It allows subscribers to register for specific event types and publishers to send events to all registered subscribers.
 
 ### Example Usage
 
 ```csharp
-public class TenantCreatedEvent : TenantEvent
-{
-    public TenantCreatedEvent(string tenantName, string tenantSlug, string adminEmail, string isolationStrategy)
-    {
-        TenantName = tenantName;
-        TenantSlug = tenantSlug;
-        AdminEmail = adminEmail;
-        IsolationStrategy = isolationStrategy;
-    }
-}
-
 public class Program
 {
     public static void Main(string[] args)
     {
+        // Create an instance of IEventBus
+        var eventBus = new EventBus(new NullLogger<EventBus>());
+
+        // Subscribe to TenantCreatedEvent
+        eventBus.Subscribe<TenantCreatedEvent>(async (@event) =>
+        {
+            Console.WriteLine($"Received TenantCreatedEvent: {@event.TenantName}");
+        });
+
+        // Publish TenantCreatedEvent
         var tenantCreatedEvent = new TenantCreatedEvent("My Tenant", "my-tenant", "admin@example.com", "IsolationStrategy1");
-        Console.WriteLine($"Event ID: {tenantCreatedEvent.EventId}");
-        Console.WriteLine($"Occurred At: {tenantCreatedEvent.OccurredAt}");
-        Console.WriteLine($"Tenant ID: {tenantCreatedEvent.TenantId}");
-        Console.WriteLine($"Tenant Name: {tenantCreatedEvent.TenantName}");
-        Console.WriteLine($"Tenant Slug: {tenantCreatedEvent.TenantSlug}");
-        Console.WriteLine($"Admin Email: {tenantCreatedEvent.AdminEmail}");
-        Console.WriteLine($"Isolation Strategy: {tenantCreatedEvent.IsolationStrategy}");
+        eventBus.PublishAsync(tenantCreatedEvent).Wait();
+
+        // Get subscriber count
+        var subscriberCount = eventBus.GetSubscriberCount<TenantCreatedEvent>();
+        Console.WriteLine($"Subscriber count: {subscriberCount}");
+
+        // Unsubscribe
+        eventBus.Unsubscribe<TenantCreatedEvent>(async (@event) =>
+        {
+            Console.WriteLine($"Received TenantCreatedEvent: {@event.TenantName}");
+        });
+
+        // Clear all subscriptions
+        eventBus.ClearSubscriptions();
+    }
+}
+
+// Register IEventBus in DI container
+public static class Startup
+{
+    public static void ConfigureServices(IServiceCollection services)
+    {
+        services.AddEventBus();
     }
 }
 ```
