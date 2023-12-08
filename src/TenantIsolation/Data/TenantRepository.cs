@@ -21,7 +21,7 @@ public class TenantRepository : Repository<Tenant>
     /// <summary>
     /// Get tenant by slug
     /// </summary>
-    public async Task<Tenant?> GetBySlugAsync(string slug)
+    public virtual async Task<Tenant?> GetBySlugAsync(string slug)
     {
         // Fix: Validate slug parameter to prevent null or whitespace issues in queries.
         if (string.IsNullOrWhiteSpace(slug))
@@ -33,7 +33,7 @@ public class TenantRepository : Repository<Tenant>
     /// <summary>
     /// Get all active tenants
     /// </summary>
-    public async Task<List<Tenant>> GetActiveTenantAsync()
+    public virtual async Task<List<Tenant>> GetActiveTenantAsync()
     {
         return await DbSet
             .Where(t => t.Status == TenantStatus.Active && !t.IsDeleted)
@@ -44,7 +44,7 @@ public class TenantRepository : Repository<Tenant>
     /// <summary>
     /// Get tenants by status
     /// </summary>
-    public async Task<List<Tenant>> GetByStatusAsync(TenantStatus status)
+    public virtual async Task<List<Tenant>> GetByStatusAsync(TenantStatus status)
     {
         return await DbSet
             .Where(t => t.Status == status && !t.IsDeleted)
@@ -55,7 +55,7 @@ public class TenantRepository : Repository<Tenant>
     /// <summary>
     /// Get tenants in trial period
     /// </summary>
-    public async Task<List<Tenant>> GetTrialTenantsAsync()
+    public virtual async Task<List<Tenant>> GetTrialTenantsAsync()
     {
         return await DbSet
             .Where(t => t.Status == TenantStatus.Trial && !t.IsDeleted)
@@ -65,7 +65,7 @@ public class TenantRepository : Repository<Tenant>
     /// <summary>
     /// Get tenants with expiring subscriptions
     /// </summary>
-    public async Task<List<Tenant>> GetExpiringSubscriptionsAsync(int daysUntilExpiry = 30)
+    public virtual async Task<List<Tenant>> GetExpiringSubscriptionsAsync(int daysUntilExpiry = 30)
     {
         // Fix: Validate daysUntilExpiry to ensure it's not negative.
         if (daysUntilExpiry < 0)
@@ -84,7 +84,7 @@ public class TenantRepository : Repository<Tenant>
     /// <summary>
     /// Get recently created tenants
     /// </summary>
-    public async Task<List<Tenant>> GetRecentlyCreatedAsync(int days = 7)
+    public virtual async Task<List<Tenant>> GetRecentlyCreatedAsync(int days = 7)
     {
         var sinceDate = DateTime.UtcNow.AddDays(-days);
         return await DbSet
@@ -96,7 +96,7 @@ public class TenantRepository : Repository<Tenant>
     /// <summary>
     /// Search tenants by name or slug
     /// </summary>
-    public async Task<List<Tenant>> SearchAsync(string query)
+    public virtual async Task<List<Tenant>> SearchAsync(string query)
     {
         // Fix: Add null checks for tenant properties before performing string operations to prevent NullReferenceExceptions.
         // Also, guard against null/whitespace query at the repository level for robustness.
@@ -115,7 +115,7 @@ public class TenantRepository : Repository<Tenant>
     /// <summary>
     /// Get tenant with all related data
     /// </summary>
-    public async Task<Tenant?> GetWithDetailsAsync(Guid id)
+    public virtual async Task<Tenant?> GetWithDetailsAsync(Guid id)
     {
         return await DbSet
             .AsNoTracking()
@@ -125,7 +125,7 @@ public class TenantRepository : Repository<Tenant>
     /// <summary>
     /// Get count of tenants by status
     /// </summary>
-    public async Task<Dictionary<TenantStatus, int>> GetStatusCountsAsync()
+    public virtual async Task<Dictionary<TenantStatus, int>> GetStatusCountsAsync()
     {
         return await DbSet
             .Where(t => !t.IsDeleted)
@@ -137,7 +137,7 @@ public class TenantRepository : Repository<Tenant>
     /// <summary>
     /// Check if slug is unique
     /// </summary>
-    public async Task<bool> IsSlugUniqueAsync(string slug, Guid? excludeId = null)
+    public virtual async Task<bool> IsSlugUniqueAsync(string slug, Guid? excludeId = null)
     {
         // Fix: Validate slug parameter to prevent null or whitespace issues in queries.
         if (string.IsNullOrWhiteSpace(slug))
@@ -153,7 +153,7 @@ public class TenantRepository : Repository<Tenant>
     /// <summary>
     /// Get inactive tenants (no login for X days)
     /// </summary>
-    public async Task<List<Tenant>> GetInactiveTenantsAsync(int inactiveDays = 90)
+    public virtual async Task<List<Tenant>> GetInactiveTenantsAsync(int inactiveDays = 90)
     {
         var threshold = DateTime.UtcNow.AddDays(-inactiveDays);
         return await DbSet
@@ -165,7 +165,7 @@ public class TenantRepository : Repository<Tenant>
     /// <summary>
     /// Activate tenant
     /// </summary>
-    public async Task<bool> ActivateTenantAsync(Guid tenantId)
+    public virtual async Task<bool> ActivateTenantAsync(Guid tenantId)
     {
         var tenant = await GetByIdAsync(tenantId);
         if (tenant == null || !tenant.CanActivate())
@@ -180,7 +180,7 @@ public class TenantRepository : Repository<Tenant>
     /// <summary>
     /// Suspend tenant
     /// </summary>
-    public async Task<bool> SuspendTenantAsync(Guid tenantId, string? reason = null)
+    public virtual async Task<bool> SuspendTenantAsync(Guid tenantId, string? reason = null)
     {
         var tenant = await GetByIdAsync(tenantId);
         if (tenant == null)
@@ -194,7 +194,7 @@ public class TenantRepository : Repository<Tenant>
     /// <summary>
     /// Get billing summary
     /// </summary>
-    public async Task<object> GetBillingSummaryAsync()
+    public virtual async Task<object> GetBillingSummaryAsync()
     {
         return await DbSet
             .Where(t => !t.IsDeleted)
