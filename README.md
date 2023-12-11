@@ -9,43 +9,128 @@ The `IEventBus` interface represents an event bus that enables publish-subscribe
 ```csharp
 public class Program
 {
-    public static void Main(string[] args)
-    {
-        // Create an instance of IEventBus
-        var eventBus = new EventBus(new NullLogger<EventBus>());
+ public static void Main(string[] args)
+ {
+ // Create an instance of IEventBus
+ var eventBus = new EventBus(new NullLogger<EventBus>());
 
-        // Subscribe to TenantCreatedEvent
-        eventBus.Subscribe<TenantCreatedEvent>(async (@event) =>
-        {
-            Console.WriteLine($"Received TenantCreatedEvent: {@event.TenantName}");
-        });
+ // Subscribe to TenantCreatedEvent
+ eventBus.Subscribe<TenantCreatedEvent>(async (@event) => 
+ {
+ Console.WriteLine($"Received TenantCreatedEvent: {@event.TenantName}");
+ });
 
-        // Publish TenantCreatedEvent
-        var tenantCreatedEvent = new TenantCreatedEvent("My Tenant", "my-tenant", "admin@example.com", "IsolationStrategy1");
-        eventBus.PublishAsync(tenantCreatedEvent).Wait();
+ // Publish TenantCreatedEvent
+ var tenantCreatedEvent = new TenantCreatedEvent("My Tenant", "my-tenant", "admin@example.com", "IsolationStrategy1");
+eventBus.PublishAsync(tenantCreatedEvent).Wait();
 
-        // Get subscriber count
-        var subscriberCount = eventBus.GetSubscriberCount<TenantCreatedEvent>();
-        Console.WriteLine($"Subscriber count: {subscriberCount}");
+ // Get subscriber count
+ var subscriberCount = eventBus.GetSubscriberCount<TenantCreatedEvent>();
+ Console.WriteLine($"Subscriber count: {subscriberCount}");
 
-        // Unsubscribe
-        eventBus.Unsubscribe<TenantCreatedEvent>(async (@event) =>
-        {
-            Console.WriteLine($"Received TenantCreatedEvent: {@event.TenantName}");
-        });
+ // Unsubscribe
+ eventBus.Unsubscribe<TenantCreatedEvent>(async (@event) => 
+ {
+ Console.WriteLine($"Received TenantCreatedEvent: {@event.TenantName}");
+ });
 
-        // Clear all subscriptions
-        eventBus.ClearSubscriptions();
-    }
+ // Clear all subscriptions
+ eventBus.ClearSubscriptions();
+ }
 }
 
 // Register IEventBus in DI container
 public static class Startup
 {
-    public static void ConfigureServices(IServiceCollection services)
-    {
-        services.AddEventBus();
-    }
+ public static void ConfigureServices(IServiceCollection services)
+ {
+ services.AddEventBus();
+ }
+}
+```
+
+## IEventPublisher
+
+The `IEventPublisher` interface provides a mechanism for publishing domain events with automatic request context injection. It extends the basic event publishing capabilities by automatically injecting correlation IDs, tenant IDs, and user IDs from the current HTTP request context into published events.
+
+### Members
+
+- `PublishAsync<TEvent>(TEvent @event)` - Publish a single event with automatic context injection
+- `PublishBatchAsync<TEvent>(IEnumerable<TEvent> events)` - Publish multiple events atomically
+
+### Example Usage
+
+```csharp
+public class Program
+{
+ public static async Task Main(string[] args)
+ {
+ // Setup DI container
+ var services = new ServiceCollection();
+ services.AddLogging();
+ services.AddHttpContextAccessor();
+ services.AddEventBus();
+ services.AddSingleton<IEventPublisher, EventPublisher>();
+ var serviceProvider = services.BuildServiceProvider();
+
+ // Resolve dependencies
+ var eventPublisher = serviceProvider.GetRequiredService<IEventPublisher>();
+ var httpContextAccessor = serviceProvider.GetRequiredService<IHttpContextAccessor>();
+
+ // Create a tenant event
+ var tenantEvent = new TenantCreatedEvent(
+ "My Tenant", 
+ "my-tenant", 
+ "admin@example.com", 
+ "IsolationStrategy1");
+
+ // Publish single event (automatically injects context from HttpContext)
+ await eventPublisher.PublishAsync(tenantEvent);
+
+ // Publish multiple events in batch
+ var events = new List<TenantEvent>
+ {
+ new TenantCreatedEvent("Tenant 1", "tenant-1", "user1@example.com", "StrategyA"),
+ new TenantCreatedEvent("Tenant 2", "tenant-2", "user2@example.com", "StrategyB"),
+ new TenantDeletedEvent("tenant-3")
+ };
+ await eventPublisher.PublishBatchAsync(events);
+ }
+}
+```
+
+## Event Subscription Registry
+
+The event subscription registry provides discovery and management of event handlers. It allows registering handlers for specific event types and querying registered handlers.
+
+### Members
+
+- `RegisterHandler<TEvent>(Func<TEvent, Task> handler, string? handlerName = null)` - Register an event handler
+- `GetHandlers<TEvent>()` - Get all registered handlers for a specific event type
+- `GetAllHandlers()` - Get all registered handlers across all event types
+
+### Example Usage
+
+```csharp
+// Register a handler
+var registry = new EventSubscriptionRegistry();
+registry.RegisterHandler<TenantCreatedEvent>(async (@event) => 
+{
+ Console.WriteLine($"Handler received: {@event.TenantName}");
+}, "TenantCreatedLogger");
+
+// Get handlers for specific event type
+var tenantHandlers = registry.GetHandlers<TenantCreatedEvent>();
+foreach (var handler in tenantHandlers)
+{
+ Console.WriteLine($"Handler: {handler.HandlerName}, Registered: {handler.RegisteredAt}");
+}
+
+// Get all registered handlers
+var allHandlers = registry.GetAllHandlers();
+foreach (var handler in allHandlers)
+{
+ Console.WriteLine($"{handler.EventType}: {handler.HandlerName}");
 }
 ```
 
