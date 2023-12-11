@@ -1,5 +1,55 @@
 // existing content ...
 
+## WebhookPayload
+
+The `WebhookPayload` class represents the payload structure sent to registered webhook endpoints when events occur within a tenant. It contains all necessary information for external services to process tenant-specific events including the event identifier, type, tenant context, timestamp, and the actual event data. The payload also includes a signature for security verification.
+
+### Members
+
+- `EventId` - Unique identifier for the event
+- `EventType` - Type of the event being delivered
+- `TenantId` - Identifier of the tenant this event belongs to
+- `Timestamp` - When the event occurred (UTC)
+- `Data` - The actual event data being delivered
+- `Signature` - HMAC-SHA256 signature for payload verification
+
+### Example Usage
+
+```csharp
+public class Program
+{
+    public static async Task Main(string[] args)
+    {
+        // Create a sample tenant event
+        var tenantEvent = new TenantCreatedEvent(
+            tenantName: "Acme Corporation",
+            tenantSlug: "acme-corp",
+            adminEmail: "admin@acme.com",
+            isolationStrategy: "IsolationStrategy1"
+        );
+        
+        // Create webhook payload
+        var payload = new WebhookPayload
+        {
+            EventId = tenantEvent.EventId,
+            EventType = nameof(TenantCreatedEvent),
+            TenantId = tenantEvent.TenantId,
+            Timestamp = tenantEvent.OccurredAt,
+            Data = tenantEvent,
+            Signature = string.Empty // Will be populated by WebhookHandler
+        };
+        
+        // Serialize payload for transmission
+        var json = System.Text.Json.JsonSerializer.Serialize(payload);
+        Console.WriteLine($"Webhook payload for {payload.EventType}: {json}");
+        
+        // External service would verify signature using shared secret
+        // string receivedSignature = request.Headers["X-Webhook-Signature"];
+        // bool isValid = CryptographyUtility.VerifyHmacSha256(json, receivedSignature, webhook.Secret);
+    }
+}
+```
+
 ## BackgroundTask
 
 The `BackgroundTask` class represents a background task that can be queued for execution by the `BackgroundTaskQueue`. It tracks task execution metrics including pending, running, completed, and failed task counts, along with average execution time. Tasks can be prioritized and configured with retry policies.
