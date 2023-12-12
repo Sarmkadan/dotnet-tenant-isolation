@@ -255,4 +255,61 @@ foreach (var handler in allHandlers)
 }
 ```
 
-// existing content ...
+## ApiCallResult
+
+`ApiCallResult<T>` encapsulates the outcome of an HTTP request made through `ExternalApiClient`. It indicates whether the call succeeded, provides the deserialized response payload, any error message, the HTTP status code, and the duration of the request.
+
+**Example usage**
+
+```csharp
+using System;
+using System.Collections.Generic;
+using System.Threading.Tasks;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
+using TenantIsolation.Integration;
+
+public class Program
+{
+    public static async Task Main(string[] args)
+    {
+        // Register the external API client in DI
+        var services = new ServiceCollection();
+        services.AddLogging(builder => builder.AddConsole());
+        services.AddExternalApiClient();
+
+        var provider = services.BuildServiceProvider();
+
+        var apiClient = provider.GetRequiredService<IExternalApiClient>();
+
+        // Perform a GET request
+        var getResult = await apiClient.GetAsync<MyResponse>("https://api.example.com/resource");
+
+        if (getResult.IsSuccess && getResult.Data != null)
+        {
+            Console.WriteLine($"GET succeeded in {getResult.Duration.TotalMilliseconds} ms. Data: {getResult.Data}");
+        }
+        else
+        {
+            Console.WriteLine($"GET failed (HTTP {(getResult.HttpStatusCode ?? 0)}): {getResult.ErrorMessage}");
+        }
+
+        // Perform a POST request
+        var payload = new { Name = "Sample", Value = 42 };
+        var postResult = await apiClient.PostAsync<MyResponse>("https://api.example.com/resource", payload);
+
+        Console.WriteLine($"POST success: {postResult.IsSuccess}, status: {postResult.HttpStatusCode}");
+    }
+
+    // Sample DTO for deserialization
+    public class MyResponse
+    {
+        public string? Id { get; set; }
+        public string? Status { get; set; }
+
+        public override string ToString() => $"Id={Id}, Status={Status}";
+    }
+}
+```
+
+// existing content ...````
