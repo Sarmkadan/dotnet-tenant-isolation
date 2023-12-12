@@ -1,46 +1,41 @@
 // existing content ...
 
-## IHttpClientFactory
+## DataIsolationPolicy
 
-The `IHttpClientFactory` provides a centralized way to create and manage HTTP clients with consistent configuration, including timeouts, headers, and authentication. It supports creating authenticated clients, reusing named clients, and configuring advanced options like connection pooling and retries.
+The `DataIsolationPolicy` class represents a data isolation policy for a tenant, defining rules for accessing specific data entities. It allows for fine-grained control over data access, including filtering, field-level access control, and cross-tenant access.
 
-### Example Usage
+Here's an example usage:
 
 ```csharp
-using Microsoft.Extensions.DependencyInjection;
-using TenantIsolation.Integration;
+using TenantIsolation.Models;
 
 public class Program
 {
-    public static async Task Main(string[] args)
+    public static void Main(string[] args)
     {
-        // Setup DI container
-        var services = new ServiceCollection();
-        services.AddTenantIsolationHttpClientFactory();
-        services.AddLogging();
-        services.AddHttpContextAccessor();
-        var serviceProvider = services.BuildServiceProvider();
+        var policy = new DataIsolationPolicy
+        {
+            Id = Guid.NewGuid(),
+            TenantId = Guid.NewGuid(),
+            PolicyType = DataIsolationPolicyType.Relaxed,
+            EntityType = "Order",
+            Description = "Example policy for orders",
+            FilterRule = "CustomerId == 123",
+            AllowedFields = "Id, CustomerId, OrderDate",
+            DeniedFields = "TotalAmount",
+            AllowedCrossTenantAccess = "tenant-id-1, tenant-id-2",
+            IsActive = true,
+            Priority = 50
+        };
 
-        // Resolve HTTP client factory
-        var httpClientFactory = serviceProvider.GetRequiredService<IHttpClientFactory>();
-
-        // Create a standard client with base URL
-        var client = httpClientFactory.CreateClient("api-client", "https://api.example.com")
-            .WithTimeout(TimeSpan.FromSeconds(10))
-            .WithHeader("X-Api-Version", "2.0");
-
-        // Create an authenticated client
-        var authClient = httpClientFactory.CreateAuthenticatedClient("auth-client", "https://auth.example.com", "my-token")
-            .WithAccept("application/vnd.example.v1+json");
-
-        // Get a named client (reused across calls)
-        var namedClient = httpClientFactory.GetNamedClient("shared-client");
+        var allowedFields = policy.GetAllowedFields(); // ["Id", "CustomerId", "OrderDate"]
+        var deniedFields = policy.GetDeniedFields(); // ["TotalAmount"]
+        var isFieldAllowed = policy.IsFieldAccessAllowed("Id"); // True
+        var isCrossTenantAccessAllowed = policy.IsCrossTenantAccessAllowed(Guid.Parse("tenant-id-1")); // True
+        var isValid = policy.IsValidPolicy(out string? errorMessage); // True
     }
 }
 ```
 
-This example demonstrates:
-1. Registering the HTTP client factory with DI
-2. Creating standard and authenticated clients
-3. Using extension methods to configure timeouts, headers, and content negotiation
-4. Reusing named clients for shared configurations
+This example demonstrates creating a `DataIsolationPolicy` instance and using its public members to manage data access rules.
+// ... rest of existing content ...
