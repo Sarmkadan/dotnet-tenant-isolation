@@ -1,8 +1,8 @@
 // existing content ...
 
-## DataIsolationPolicy
+## TenantConfiguration
 
-The `DataIsolationPolicy` class represents a data isolation policy for a tenant, defining rules for accessing specific data entities. It allows for fine-grained control over data access, including filtering, field-level access control, and cross-tenant access.
+The `TenantConfiguration` class represents a tenant-specific configuration setting, storing key-value pairs with additional metadata such as encryption status, required flag, and creation/modification timestamps.
 
 Here's an example usage:
 
@@ -13,29 +13,24 @@ public class Program
 {
     public static void Main(string[] args)
     {
-        var policy = new DataIsolationPolicy
+        var config = new TenantConfiguration
         {
-            Id = Guid.NewGuid(),
             TenantId = Guid.NewGuid(),
-            PolicyType = DataIsolationPolicyType.Relaxed,
-            EntityType = "Order",
-            Description = "Example policy for orders",
-            FilterRule = "CustomerId == 123",
-            AllowedFields = "Id, CustomerId, OrderDate",
-            DeniedFields = "TotalAmount",
-            AllowedCrossTenantAccess = "tenant-id-1, tenant-id-2",
-            IsActive = true,
-            Priority = 50
+            Key = "features:api:enabled",
+            Value = "true",
+            IsEncrypted = false,
+            IsRequired = true,
+            IsOverridable = true,
+            CreatedAt = DateTime.UtcNow,
+            ModifiedAt = DateTime.UtcNow
         };
 
-        var allowedFields = policy.GetAllowedFields(); // ["Id", "CustomerId", "OrderDate"]
-        var deniedFields = policy.GetDeniedFields(); // ["TotalAmount"]
-        var isFieldAllowed = policy.IsFieldAccessAllowed("Id"); // True
-        var isCrossTenantAccessAllowed = policy.IsCrossTenantAccessAllowed(Guid.Parse("tenant-id-1")); // True
-        var isValid = policy.IsValidPolicy(out string? errorMessage); // True
+        var value = config.GetValueAs<bool>(); // true
+        config.SetValue<bool>(false);
+        var isValid = config.IsValid(out string? errorMessage); // True
     }
 }
 ```
 
-This example demonstrates creating a `DataIsolationPolicy` instance and using its public members to manage data access rules.
+This example demonstrates creating a `TenantConfiguration` instance and using its public members to manage configuration settings.
 // ... rest of existing content ...
