@@ -97,6 +97,66 @@ public class TenantManagement
 This example demonstrates creating a `Tenant` instance, checking its status and limits, and managing its lifecycle through the public members and methods.
 
 
+
+### TenantConnectionString
+
+
+The `TenantConnectionString` class manages database connection strings for each tenant in a multi-tenant application. It stores connection details including database type, server information, timeouts, and connection pooling settings, with support for connection testing and validation.
+
+Here's an example usage:
+
+```csharp
+using TenantIsolation.Models;
+
+public class DatabaseSetup
+{
+  public static void Main(string[] args)
+  {
+    // Create a new tenant connection string
+    var connectionString = new TenantConnectionString
+    {
+      Id = Guid.NewGuid(),
+      TenantId = Guid.Parse("3fa85f64-5717-4562-b3fc-2c963f66afa6"),
+      DatabaseType = "SqlServer",
+      ConnectionString = "Server=sql-server-01;Database=tenant_db_01;User Id=tenant_user;Password=SecurePass123!;Connection Timeout=30;Max Pool Size=100",
+      Name = "Primary Database",
+      SchemaName = "tenant_01_schema",
+      DatabaseName = "tenant_db_01",
+      ServerHost = "sql-server-01.database.windows.net",
+      ServerPort = 1433,
+      ConnectionTimeout = 30,
+      CommandTimeout = 300,
+      MaxPoolSize = 100,
+      UseConnectionPooling = true,
+      IsPrimary = true,
+      IsActive = true
+    };
+
+    // Validate connection string
+    bool isValid = connectionString.IsValidConnectionString(out string? errorMessage);
+    
+    // Get test connection string (with shorter timeout)
+    string testConnection = connectionString.GetTestConnectionString();
+    
+    // Extract hostname
+    string hostname = connectionString.ExtractHostname();
+    
+    // Record successful connection test
+    connectionString.RecordSuccessfulTest();
+    
+    // Check tenant navigation
+    if (connectionString.Tenant != null)
+    {
+      Console.WriteLine($"Connected to tenant: {connectionString.Tenant.Name}");
+    }
+  }
+}
+```
+
+This example demonstrates creating a `TenantConnectionString` instance with all required properties, validating the connection string, and using helper methods to manage database connections for multi-tenant applications.
+
+
+
 ## Services
 
 ### TenantResolutionService
