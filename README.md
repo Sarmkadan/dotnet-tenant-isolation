@@ -44,6 +44,58 @@ The `Organization` class represents an organization entity within a multi-tenant
 
 For detailed API documentation and usage examples, see the [Organization documentation](docs/Organization.md).
 
+## Tenant
+
+The `Tenant` class represents a tenant in a multi-tenancy system, storing configuration, status, and isolation settings. It supports soft deletion, subscription management, and provides methods to check tenant validity and limits.
+
+Here's an example usage:
+
+```csharp
+using TenantIsolation.Models;
+using TenantIsolation.Constants;
+
+public class TenantManagement
+{
+    public static void Main(string[] args)
+    {
+        // Create a new tenant
+        var tenant = new Tenant
+        {
+            Id = Guid.NewGuid(),
+            Slug = "acme-corp",
+            Name = "ACME Corporation",
+            Description = "Enterprise manufacturing solutions provider",
+            AdminEmail = "admin@acme-corp.com",
+            PhoneNumber = "+1-555-0123",
+            Status = TenantStatus.Active,
+            IsolationStrategy = TenantIsolationStrategy.DatabasePerTenant,
+            PlanId = "enterprise-pro",
+            MaxUsers = 500,
+            MaxStorageGb = 1024.50m,
+            SubscriptionExpiresAt = DateTime.UtcNow.AddYears(1),
+            Metadata = "{\"industry\": \"manufacturing\", \"country\": \"US\"}"
+        };
+
+        // Check tenant validity
+        bool canActivate = tenant.CanActivate();
+        bool isValid = tenant.IsSubscriptionValid();
+        bool isLimitExceeded = tenant.IsUserLimitExceeded(150);
+
+        // Update tenant
+        tenant.UpdatedAt = DateTime.UtcNow;
+        tenant.Status = TenantStatus.Active;
+
+        // Soft delete tenant
+        tenant.Delete();
+        
+        // Restore tenant
+        tenant.Restore();
+    }
+}
+```
+
+This example demonstrates creating a `Tenant` instance, checking its status and limits, and managing its lifecycle through the public members and methods.
+
 
 ## Services
 
