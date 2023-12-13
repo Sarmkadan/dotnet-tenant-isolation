@@ -1,6 +1,10 @@
-// existing content ...
+# Tenant Isolation Library
 
-## TenantConfiguration
+A .NET library for implementing multi-tenant data isolation patterns in ASP.NET Core applications.
+
+## Models
+
+### TenantConfiguration
 
 The `TenantConfiguration` class represents a tenant-specific configuration setting, storing key-value pairs with additional metadata such as encryption status, required flag, and creation/modification timestamps.
 
@@ -33,4 +37,42 @@ public class Program
 ```
 
 This example demonstrates creating a `TenantConfiguration` instance and using its public members to manage configuration settings.
-// ... rest of existing content ...
+
+### Organization
+
+The `Organization` class represents an organization entity within a multi-tenant system, storing core business information such as name, contact details, and operational metadata. It supports soft deletion, activation/deactivation, and provides navigation properties for related entities.
+
+For detailed API documentation and usage examples, see the [Organization documentation](docs/Organization.md).
+
+
+## Services
+
+### TenantResolutionService
+Provides tenant resolution strategies for multi-tenant applications.
+
+### TenantService
+Manages tenant lifecycle and configuration.
+
+### ConfigurationService
+Handles tenant-specific configuration settings with encryption and validation.
+
+## Controllers
+
+### TenantApiController
+REST API endpoints for tenant management.
+
+### FeaturesController
+Feature flag management for tenant-specific features.
+
+## Getting Started
+
+See the [Getting Started Guide](docs/getting-started.md) for installation and basic setup instructions.
+
+## Data Isolation Guide
+
+Learn about data isolation patterns in [Data Isolation Guide](docs/data-isolation-guide.md).
+
+
+## API Reference
+
+See the full [API Reference](docs/api-reference.md) for detailed documentation.
