@@ -3,172 +3,129 @@
 // CTO & Software Architect
 // =============================================================================
 
+using System.Buffers;
 using System.Collections.Concurrent;
-using System.Text;
 using TenantIsolation.Utilities;
 
 namespace TenantIsolation.Caching;
 
 /// <summary>
-/// In-memory cache provider with TTL support
-/// Implements sliding expiration and automatic cleanup
-/// Used as fallback when distributed cache is unavailable
+/// In-memory cache provider with TTL support.
+/// Implements sliding expiration and automatic cleanup.
+/// Used as fallback when distributed cache is unavailable.
 /// </summary>
 public interface ICacheProvider
 {
-    Task<T?> GetAsync<T>(string key);
-    Task SetAsync<T>(string key, T value, TimeSpan? expiration = null);
-    Task RemoveAsync(string key);
-    Task<bool> ExistsAsync(string key);
-    Task ClearAsync();
-    Task<IEnumerable<string>> GetAllKeysAsync();
+    ValueTask<T?> GetAsync<T>(string key);
+    ValueTask SetAsync<T>(string key, T value, TimeSpan? expiration = null);
+    ValueTask RemoveAsync(string key);
+    ValueTask<bool> ExistsAsync(string key);
+    ValueTask ClearAsync();
+    ValueTask<IEnumerable<string>> GetAllKeysAsync();
 }
 
 /// <summary>
-/// In-memory implementation of cache provider
-/// Thread-safe using ConcurrentDictionary
+/// In-memory implementation of cache provider.
+/// Thread-safe using ConcurrentDictionary; all operations complete synchronously
+/// so every public method returns a pre-completed ValueTask with zero allocations.
 /// </summary>
 public class MemoryCacheProvider : ICacheProvider, IDisposable
 {
     private readonly ConcurrentDictionary<string, CacheEntry> _cache;
     private readonly Timer _cleanupTimer;
-    private readonly object _lockObject = new();
 
     public MemoryCacheProvider()
     {
         _cache = new ConcurrentDictionary<string, CacheEntry>();
-        // Run cleanup every 5 minutes to remove expired entries
         _cleanupTimer = new Timer(_ => CleanupExpiredEntries(), null, TimeSpan.FromMinutes(5), TimeSpan.FromMinutes(5));
     }
 
-    /// <summary>
-    /// Get value from cache by key
-    /// </summary>
-    public async Task<T?> GetAsync<T>(string key)
+    public ValueTask<T?> GetAsync<T>(string key)
     {
         if (string.IsNullOrWhiteSpace(key))
-            return default;
+            return ValueTask.FromResult<T?>(default);
 
-        return await Task.Run(() =>
-        {
-            if (!_cache.TryGetValue(key, out var entry))
-                return default;
+        if (!_cache.TryGetValue(key, out var entry))
+            return ValueTask.FromResult<T?>(default);
 
-            // Check if expired
-            if (entry.IsExpired)
-            {
-                _cache.TryRemove(key, out _);
-                return default;
-            }
-
-            // Update last access time for sliding expiration
-            entry.LastAccessTime = DateTime.UtcNow;
-
-            return (T?)entry.Value;
-        });
-    }
-
-    /// <summary>
-    /// Set value in cache with optional expiration
-    /// </summary>
-    public async Task SetAsync<T>(string key, T value, TimeSpan? expiration = null)
-    {
-        if (string.IsNullOrWhiteSpace(key))
-            return;
-
-        return await Task.Run(() =>
-        {
-            var entry = new CacheEntry
-            {
-                Key = key,
-                Value = value,
-                CreatedTime = DateTime.UtcNow,
-                LastAccessTime = DateTime.UtcNow,
-                ExpirationTime = expiration.HasValue ? DateTime.UtcNow.Add(expiration.Value) : null
-            };
-
-            _cache.AddOrUpdate(key, entry, (_, _) => entry);
-        });
-    }
-
-    /// <summary>
-    /// Remove entry from cache
-    /// </summary>
-    public async Task RemoveAsync(string key)
-    {
-        if (string.IsNullOrWhiteSpace(key))
-            return;
-
-        return await Task.Run(() =>
+        if (entry.IsExpired)
         {
             _cache.TryRemove(key, out _);
-        });
+            return ValueTask.FromResult<T?>(default);
+        }
+
+        entry.LastAccessTime = DateTime.UtcNow;
+        return ValueTask.FromResult((T?)entry.Value);
     }
 
-    /// <summary>
-    /// Check if key exists in cache
-    /// </summary>
-    public async Task<bool> ExistsAsync(string key)
+    public ValueTask SetAsync<T>(string key, T value, TimeSpan? expiration = null)
     {
         if (string.IsNullOrWhiteSpace(key))
-            return false;
+            return ValueTask.CompletedTask;
 
-        return await Task.Run(() =>
+        // Single syscall instead of three separate DateTime.UtcNow reads.
+        var now = DateTime.UtcNow;
+        var entry = new CacheEntry
         {
-            if (!_cache.TryGetValue(key, out var entry))
-                return false;
+            Key = key,
+            Value = value,
+            CreatedTime = now,
+            LastAccessTime = now,
+            ExpirationTime = expiration.HasValue ? now.Add(expiration.Value) : null
+        };
 
-            if (entry.IsExpired)
-            {
-                _cache.TryRemove(key, out _);
-                return false;
-            }
-
-            return true;
-        });
+        _cache.AddOrUpdate(key, entry, (_, _) => entry);
+        return ValueTask.CompletedTask;
     }
 
-    /// <summary>
-    /// Clear all entries from cache
-    /// </summary>
-    public async Task ClearAsync()
+    public ValueTask RemoveAsync(string key)
     {
-        return await Task.Run(_cache.Clear);
+        if (!string.IsNullOrWhiteSpace(key))
+            _cache.TryRemove(key, out _);
+
+        return ValueTask.CompletedTask;
     }
 
-    /// <summary>
-    /// Get all keys in cache (excluding expired)
-    /// </summary>
-    public async Task<IEnumerable<string>> GetAllKeysAsync()
+    public ValueTask<bool> ExistsAsync(string key)
     {
-        return await Task.Run(() =>
+        if (string.IsNullOrWhiteSpace(key))
+            return ValueTask.FromResult(false);
+
+        if (!_cache.TryGetValue(key, out var entry))
+            return ValueTask.FromResult(false);
+
+        if (entry.IsExpired)
         {
-            var keys = _cache
-                .Where(kvp => !kvp.Value.IsExpired)
-                .Select(kvp => kvp.Key)
-                .ToList();
+            _cache.TryRemove(key, out _);
+            return ValueTask.FromResult(false);
+        }
 
-            return (IEnumerable<string>)keys;
-        });
+        return ValueTask.FromResult(true);
     }
 
-    /// <summary>
-    /// Clean up expired entries from cache
-    /// Called periodically to prevent memory leaks
-    /// </summary>
+    public ValueTask ClearAsync()
+    {
+        _cache.Clear();
+        return ValueTask.CompletedTask;
+    }
+
+    public ValueTask<IEnumerable<string>> GetAllKeysAsync()
+    {
+        var keys = _cache
+            .Where(kvp => !kvp.Value.IsExpired)
+            .Select(kvp => kvp.Key)
+            .ToList();
+
+        return ValueTask.FromResult<IEnumerable<string>>(keys);
+    }
+
     private void CleanupExpiredEntries()
     {
-        lock (_lockObject)
+        // ConcurrentDictionary is thread-safe; no lock needed for the scan.
+        foreach (var kvp in _cache)
         {
-            var expiredKeys = _cache
-                .Where(kvp => kvp.Value.IsExpired)
-                .Select(kvp => kvp.Key)
-                .ToList();
-
-            foreach (var key in expiredKeys)
-            {
-                _cache.TryRemove(key, out _);
-            }
+            if (kvp.Value.IsExpired)
+                _cache.TryRemove(kvp.Key, out _);
         }
     }
 
@@ -177,9 +134,6 @@ public class MemoryCacheProvider : ICacheProvider, IDisposable
         _cleanupTimer?.Dispose();
     }
 
-    /// <summary>
-    /// Internal cache entry structure
-    /// </summary>
     private class CacheEntry
     {
         public required string Key { get; set; }
@@ -188,16 +142,13 @@ public class MemoryCacheProvider : ICacheProvider, IDisposable
         public DateTime LastAccessTime { get; set; }
         public DateTime? ExpirationTime { get; set; }
 
-        /// <summary>
-        /// Check if entry has expired
-        /// </summary>
         public bool IsExpired => ExpirationTime.HasValue && DateTime.UtcNow > ExpirationTime.Value;
     }
 }
 
 /// <summary>
-/// Cache key builder for consistent key generation
-/// Prevents key collisions and ensures proper tenant isolation
+/// Cache key builder for consistent key generation.
+/// Prevents key collisions and ensures proper tenant isolation.
 /// </summary>
 public class CacheKeyBuilder
 {
@@ -210,9 +161,6 @@ public class CacheKeyBuilder
         _segments = new List<string>();
     }
 
-    /// <summary>
-    /// Add segment to cache key
-    /// </summary>
     public CacheKeyBuilder Add(string? segment)
     {
         if (!string.IsNullOrWhiteSpace(segment))
@@ -221,8 +169,7 @@ public class CacheKeyBuilder
     }
 
     /// <summary>
-    /// Add tenant context to key
-    /// Ensures tenant isolation in cache
+    /// Add tenant context to key; ensures tenant isolation in cache.
     /// </summary>
     public CacheKeyBuilder WithTenant(string? tenantId)
     {
@@ -231,9 +178,6 @@ public class CacheKeyBuilder
         return this;
     }
 
-    /// <summary>
-    /// Add user context to key
-    /// </summary>
     public CacheKeyBuilder WithUser(string? userId)
     {
         if (!string.IsNullOrWhiteSpace(userId))
@@ -242,8 +186,8 @@ public class CacheKeyBuilder
     }
 
     /// <summary>
-    /// Add hash of complex object to key
-    /// Useful for caching with parameter-dependent keys
+    /// Add hash of complex object to key.
+    /// Useful for caching with parameter-dependent keys.
     /// </summary>
     public CacheKeyBuilder WithHash(object? parameter)
     {
@@ -257,12 +201,25 @@ public class CacheKeyBuilder
     }
 
     /// <summary>
-    /// Build final cache key
+    /// Build final cache key. Uses ArrayPool to avoid a temporary List allocation
+    /// when concatenating prefix and segments.
     /// </summary>
     public string Build()
     {
-        var parts = new List<string> { _prefix };
-        parts.AddRange(_segments);
-        return string.Join(":", parts).ToLowerInvariant();
+        if (_segments.Count == 0)
+            return _prefix.ToLowerInvariant();
+
+        var count = _segments.Count + 1;
+        var pooled = ArrayPool<string>.Shared.Rent(count);
+        try
+        {
+            pooled[0] = _prefix;
+            _segments.CopyTo(pooled, 1);
+            return string.Join(":", pooled, 0, count).ToLowerInvariant();
+        }
+        finally
+        {
+            ArrayPool<string>.Shared.Return(pooled, clearArray: false);
+        }
     }
 }
