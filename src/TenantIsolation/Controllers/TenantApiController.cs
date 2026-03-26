@@ -37,6 +37,22 @@ public class TenantApiController : ControllerBase
     [HttpPost("create")]
     public async Task<IActionResult> CreateTenant([FromBody] CreateTenantRequest request)
     {
+        // Add input validation for request fields
+        if (request == null || string.IsNullOrWhiteSpace(request.Name) || request.Name.Length > 200)
+        {
+            return BadRequest(new { error = "Invalid tenant name" });
+        }
+
+        if (string.IsNullOrWhiteSpace(request.Slug) || request.Slug.Length > 100)
+        {
+            return BadRequest(new { error = "Invalid tenant slug" });
+        }
+
+        if (string.IsNullOrWhiteSpace(request.AdminEmail) || request.AdminEmail.Length > 254)
+        {
+            return BadRequest(new { error = "Invalid admin email" });
+        }
+
         try
         {
             var tenant = await _tenantService.CreateTenantAsync(
@@ -79,6 +95,12 @@ public class TenantApiController : ControllerBase
     [HttpGet("slug/{slug}")]
     public async Task<IActionResult> GetTenantBySlug(string slug)
     {
+        // Add input validation for slug length
+        if (string.IsNullOrWhiteSpace(slug) || slug.Length > 100)
+        {
+            return BadRequest(new { error = "Invalid slug parameter" });
+        }
+
         try
         {
             var tenant = await _tenantService.GetTenantBySlugAsync(slug);
