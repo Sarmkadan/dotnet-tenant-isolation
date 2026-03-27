@@ -27,7 +27,7 @@ public class TenantRepository : Repository<Tenant>
         if (string.IsNullOrWhiteSpace(slug))
             throw new ArgumentException("Slug cannot be null or whitespace.", nameof(slug));
 
-        return await DbSet.FirstOrDefaultAsync(t => t.Slug == slug && !t.IsDeleted);
+        return await DbSet.FirstOrDefaultAsync(t => t.Slug == slug && !t.IsDeleted && t.IsActive);
     }
 
     /// <summary>
