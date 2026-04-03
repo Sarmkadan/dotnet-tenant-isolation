@@ -214,7 +214,7 @@ public static class CachingServiceExtensions
 
     public static IServiceCollection AddTenantAwareCachingService(this IServiceCollection services)
     {
-        services.AddSingleton<ICacheProvider, MemoryCacheProvider>();
+        services.AddTenantAwareCacheProvider(); // Use the new method to conditionally register ICacheProvider
         services.AddScoped<ICachingService, TenantAwareCachingService>();
         return services;
     }
