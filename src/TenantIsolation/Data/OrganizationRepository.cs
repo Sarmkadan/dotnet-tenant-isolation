@@ -15,8 +15,8 @@ namespace TenantIsolation.Data;
 /// </summary>
 public class OrganizationRepository : Repository<Organization>
 {
-    public OrganizationRepository(TenantDbContext context, Guid? tenantId = null)
-        : base(context, tenantId) { }
+    public OrganizationRepository(ITenantDbContextFactory<TenantDbContext> contextFactory)
+        : base(contextFactory) { }
 
     /// <summary>
     /// Get organization by slug within tenant

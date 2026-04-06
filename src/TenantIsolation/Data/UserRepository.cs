@@ -15,8 +15,8 @@ namespace TenantIsolation.Data;
 /// </summary>
 public class UserRepository : Repository<User>
 {
-    public UserRepository(TenantDbContext context, Guid? tenantId = null)
-        : base(context, tenantId) { }
+    public UserRepository(ITenantDbContextFactory<TenantDbContext> contextFactory)
+        : base(contextFactory) { }
 
     /// <summary>
     /// Get user by email within tenant
