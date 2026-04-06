@@ -15,39 +15,7 @@ namespace TenantIsolation.Data;
 /// </summary>
 public class TenantDbContext : DbContext
 {
-    /// <summary>
-    /// Current tenant identifier filter
-    /// </summary>
-    private Guid? _currentTenantId;
 
-    public TenantDbContext(DbContextOptions<TenantDbContext> options)
-        : base(options)
-    {
-    }
-
-    /// <summary>
-    /// Set current tenant for query filtering
-    /// </summary>
-    public void SetCurrentTenant(Guid tenantId)
-    {
-        _currentTenantId = tenantId;
-    }
-
-    /// <summary>
-    /// Clear current tenant filter
-    /// </summary>
-    public void ClearCurrentTenant()
-    {
-        _currentTenantId = null;
-    }
-
-    /// <summary>
-    /// Get current tenant identifier
-    /// </summary>
-    public Guid? GetCurrentTenant()
-    {
-        return _currentTenantId;
-    }
 
     // DbSets for domain models
     public DbSet<Tenant> Tenants { get; set; }
@@ -182,17 +150,7 @@ public class TenantDbContext : DbContext
         modelBuilder.Entity<Organization>().HasQueryFilter(e => !e.IsDeleted);
         modelBuilder.Entity<User>().HasQueryFilter(e => !e.IsDeleted);
 
-        // Configure query filter for tenant isolation
-        if (_currentTenantId.HasValue)
-        {
-            var tenantId = _currentTenantId.Value;
-            modelBuilder.Entity<TenantConfiguration>().HasQueryFilter(e => e.TenantId == tenantId);
-            modelBuilder.Entity<TenantConnectionString>().HasQueryFilter(e => e.TenantId == tenantId);
-            modelBuilder.Entity<Organization>().HasQueryFilter(e => e.TenantId == tenantId);
-            modelBuilder.Entity<User>().HasQueryFilter(e => e.TenantId == tenantId);
-            modelBuilder.Entity<DataIsolationPolicy>().HasQueryFilter(e => e.TenantId == tenantId);
-            modelBuilder.Entity<TenantFeature>().HasQueryFilter(e => e.TenantId == tenantId);
-        }
+
     }
 
     /// <summary>
