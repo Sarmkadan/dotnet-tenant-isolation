@@ -7,6 +7,8 @@
 
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options; // Add this for IOptions
+using TenantIsolation.Configuration; // Add this for TenantIsolationOptions
 using TenantIsolation.Exceptions;
 using TenantIsolation.Services;
 
@@ -19,11 +21,16 @@ public class TenantResolutionMiddleware
 {
     private readonly RequestDelegate _next;
     private readonly ILogger<TenantResolutionMiddleware> _logger;
+    private readonly TenantIsolationOptions _tenantIsolationOptions;
 
-    public TenantResolutionMiddleware(RequestDelegate next, ILogger<TenantResolutionMiddleware> logger)
+    public TenantResolutionMiddleware(
+        RequestDelegate next,
+        ILogger<TenantResolutionMiddleware> logger,
+        IOptions<TenantIsolationOptions> tenantIsolationOptions) // Inject IOptions
     {
         _next = next;
         _logger = logger;
+        _tenantIsolationOptions = tenantIsolationOptions.Value; // Access the options
     }
 
     public async Task InvokeAsync(
@@ -31,18 +38,30 @@ public class TenantResolutionMiddleware
         TenantResolutionService tenantResolutionService,
         TenantService tenantService)
     {
+        // Check if the current request path is in the excluded paths
+        if (_tenantIsolationOptions.ExcludedPaths != null &&
+            _tenantIsolationOptions.ExcludedPaths.Any(path => context.Request.Path.StartsWithSegments(path, StringComparison.OrdinalIgnoreCase)))
+        {
+            _logger.LogDebug("Bypassing tenant resolution for excluded path: {RequestPath}", context.Request.Path);
+            await _next(context);
+            return;
+        }
+
         try
         {
-            // Skip tenant resolution for health check endpoints
-            if (context.Request.Path.StartsWithSegments("/health") ||
-                context.Request.Path.StartsWithSegments("/.well-known"))
+            // Attempt to resolve tenant
+            var tenant = await tenantResolutionService.ResolveTenantAsync();
+
+            // Null check for tenant before accessing its properties
+            if (tenant == null)
             {
+                _logger.LogWarning("Tenant not resolved for request {RequestPath} and path is not excluded. Proceeding without tenant context.",
+                    context.Request.Path);
+                // Optionally throw an exception if a tenant is mandatory for all non-excluded paths
+                // throw new TenantNotResolvedException("Tenant could not be resolved for this request.");
                 await _next(context);
                 return;
             }
-
-            // Attempt to resolve tenant
-            var tenant = await tenantResolutionService.ResolveTenantAsync();
 
             // Set current tenant in services
             tenantService.SetCurrentTenant(tenant.Id);
@@ -113,3 +132,4 @@ public class TenantResolutionMiddleware
         }
     }
 }
+
