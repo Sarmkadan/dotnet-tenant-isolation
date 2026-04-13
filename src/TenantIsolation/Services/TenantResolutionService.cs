@@ -12,6 +12,7 @@ using Microsoft.Extensions.Logging;
 using TenantIsolation.Constants;
 using TenantIsolation.Exceptions;
 using TenantIsolation.Models;
+using System.Linq;
 
 namespace TenantIsolation.Services;
 
@@ -28,16 +29,16 @@ public class TenantResolutionService
             "static", "cdn", "assets", "dev", "staging", "prod", "auth", "login");
 
     private readonly IHttpContextAccessor _httpContextAccessor;
-    private readonly TenantService _tenantService;
+    private readonly IDynamicTenantStore _dynamicTenantStore; // Use IDynamicTenantStore for tenant lookup
     private readonly ILogger<TenantResolutionService> _logger;
 
     public TenantResolutionService(
         IHttpContextAccessor httpContextAccessor,
-        TenantService tenantService,
+        IDynamicTenantStore dynamicTenantStore,
         ILogger<TenantResolutionService> logger)
     {
         _httpContextAccessor = httpContextAccessor;
-        _tenantService = tenantService;
+        _dynamicTenantStore = dynamicTenantStore;
         _logger = logger;
     }
 
@@ -52,7 +53,10 @@ public class TenantResolutionService
 
         // Try to get from HTTP context items (cached)
         if (httpContext.Items.TryGetValue(TenantConstants.CurrentTenantContextKey, out var cachedTenant))
+        {
+            _logger.LogDebug("Tenant {TenantId} resolved from HttpContext cache.", ((Tenant)cachedTenant).Id);
             return (Tenant)cachedTenant;
+        }
 
         // Try multiple resolution strategies in priority order
         var tenant = await ResolveTenantFromHeaderAsync(httpContext);
@@ -85,7 +89,7 @@ public class TenantResolutionService
         if (tenant.Status != TenantStatus.Active)
             throw new TenantNotActiveException(tenant.Id, $"Tenant is {tenant.Status}");
 
-        // Cache in context
+        // Cache in context for subsequent access within the same request
         httpContext.Items[TenantConstants.CurrentTenantContextKey] = tenant;
 
         _logger.LogInformation("Resolved tenant {TenantId} from request", tenant.Id);
@@ -101,27 +105,18 @@ public class TenantResolutionService
         {
             if (Guid.TryParse(tenantIdValue.ToString(), out var tenantId))
             {
-                try
-                {
-                    return await _tenantService.GetTenantAsync(tenantId);
-                }
-                catch (TenantNotResolvedException)
-                {
-                    _logger.LogWarning("Tenant not found from header: {TenantId}", tenantId);
-                }
+                var tenant = await _dynamicTenantStore.GetTenantByIdAsync(tenantId);
+                if (tenant != null) return tenant;
+                _logger.LogWarning("Tenant not found from header ID: {TenantId}", tenantId);
             }
         }
 
         if (httpContext.Request.Headers.TryGetValue(TenantConstants.TenantSlugHeader, out var slugValue))
         {
-            try
-            {
-                return await _tenantService.GetTenantBySlugAsync(slugValue.ToString());
-            }
-            catch (TenantNotResolvedException)
-            {
-                _logger.LogWarning("Tenant not found from slug header: {Slug}", slugValue.ToString());
-            }
+            var tenants = await _dynamicTenantStore.GetAllActiveTenantsAsync();
+            var tenant = tenants.FirstOrDefault(t => t.Slug.Equals(slugValue.ToString(), StringComparison.OrdinalIgnoreCase));
+            if (tenant != null) return tenant;
+            _logger.LogWarning("Tenant not found from header slug: {Slug}", slugValue.ToString());
         }
 
         return null;
@@ -139,27 +134,18 @@ public class TenantResolutionService
         var tenantIdClaim = user.FindFirst(TenantConstants.TenantIdClaimType);
         if (tenantIdClaim != null && Guid.TryParse(tenantIdClaim.Value, out var tenantId))
         {
-            try
-            {
-                return await _tenantService.GetTenantAsync(tenantId);
-            }
-            catch (TenantNotResolvedException)
-            {
-                _logger.LogWarning("Tenant not found from claim: {TenantId}", tenantId);
-            }
+            var tenant = await _dynamicTenantStore.GetTenantByIdAsync(tenantId);
+            if (tenant != null) return tenant;
+            _logger.LogWarning("Tenant not found from claim ID: {TenantId}", tenantId);
         }
 
         var slugClaim = user.FindFirst(TenantConstants.TenantSlugClaimType);
         if (slugClaim != null)
         {
-            try
-            {
-                return await _tenantService.GetTenantBySlugAsync(slugClaim.Value);
-            }
-            catch (TenantNotResolvedException)
-            {
-                _logger.LogWarning("Tenant not found from slug claim: {Slug}", slugClaim.Value);
-            }
+            var tenants = await _dynamicTenantStore.GetAllActiveTenantsAsync();
+            var tenant = tenants.FirstOrDefault(t => t.Slug.Equals(slugClaim.Value, StringComparison.OrdinalIgnoreCase));
+            if (tenant != null) return tenant;
+            _logger.LogWarning("Tenant not found from claim slug: {Slug}", slugClaim.Value);
         }
 
         return null;
@@ -178,27 +164,18 @@ public class TenantResolutionService
         {
             if (Guid.TryParse(tenantIdValue?.ToString(), out var tenantId))
             {
-                try
-                {
-                    return await _tenantService.GetTenantAsync(tenantId);
-                }
-                catch (TenantNotResolvedException)
-                {
-                    _logger.LogWarning("Tenant not found from route: {TenantId}", tenantId);
-                }
+                var tenant = await _dynamicTenantStore.GetTenantByIdAsync(tenantId);
+                if (tenant != null) return tenant;
+                _logger.LogWarning("Tenant not found from route ID: {TenantId}", tenantId);
             }
         }
 
         if (routeData.Values.TryGetValue(TenantConstants.TenantSlugRouteParameter, out var slugValue))
         {
-            try
-            {
-                return await _tenantService.GetTenantBySlugAsync(slugValue?.ToString() ?? "");
-            }
-            catch (TenantNotResolvedException)
-            {
-                _logger.LogWarning("Tenant not found from route slug: {Slug}", slugValue);
-            }
+            var tenants = await _dynamicTenantStore.GetAllActiveTenantsAsync();
+            var tenant = tenants.FirstOrDefault(t => t.Slug.Equals(slugValue?.ToString() ?? "", StringComparison.OrdinalIgnoreCase));
+            if (tenant != null) return tenant;
+            _logger.LogWarning("Tenant not found from route slug: {Slug}", slugValue);
         }
 
         return null;
@@ -223,20 +200,16 @@ public class TenantResolutionService
         if (ReservedSubdomains.Contains(subdomain))
             return null;
 
-        try
-        {
-            return await _tenantService.GetTenantBySlugAsync(subdomain);
-        }
-        catch (TenantNotResolvedException)
-        {
-            _logger.LogDebug("Tenant not found from subdomain: {Subdomain}", subdomain);
-        }
+        var tenants = await _dynamicTenantStore.GetAllActiveTenantsAsync();
+        var tenant = tenants.FirstOrDefault(t => t.Slug.Equals(subdomain, StringComparison.OrdinalIgnoreCase));
+        if (tenant != null) return tenant;
+        _logger.LogWarning("Tenant not found from subdomain: {Subdomain}", subdomain);
 
         return null;
     }
 
     /// <summary>
-    /// Get current tenant from context.
+    /// Get current tenant from context. This method reads from HttpContext.Items directly.
     /// </summary>
     public Tenant? GetCurrentTenant()
     {
@@ -253,11 +226,4 @@ public class TenantResolutionService
     public Guid? GetCurrentTenantId() => GetCurrentTenant()?.Id;
 
     public bool HasTenant() => GetCurrentTenant() != null;
-
-    public void SetTenant(Tenant tenant)
-    {
-        var httpContext = _httpContextAccessor.HttpContext;
-        if (httpContext != null)
-            httpContext.Items[TenantConstants.CurrentTenantContextKey] = tenant;
-    }
 }
