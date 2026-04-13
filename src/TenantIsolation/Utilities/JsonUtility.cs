@@ -225,7 +225,7 @@ public static class JsonUtility
             return null;
 
         var element = JsonSerializer.Deserialize<JsonElement>(json);
-        if (element?.ValueKind != JsonValueKind.Object)
+        if (element.ValueKind != JsonValueKind.Object)
             return null;
 
         var parts = propertyPath.Split('.');
@@ -233,16 +233,16 @@ public static class JsonUtility
 
         foreach (var part in parts)
         {
-            if (current?.ValueKind != JsonValueKind.Object)
+            if (current.ValueKind != JsonValueKind.Object)
                 return null;
 
-            if (!current.Value.TryGetProperty(part, out var next))
+            if (!current.TryGetProperty(part, out var next))
                 return null;
 
             current = next;
         }
 
-        return ExtractValue(current.Value);
+        return ExtractValue(current);
     }
 
     /// <summary>

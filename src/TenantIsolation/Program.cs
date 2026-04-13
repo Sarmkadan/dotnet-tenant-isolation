@@ -14,7 +14,6 @@ var builder = WebApplication.CreateBuilder(args);
 // Add services
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
 
 // Get configuration
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection")
@@ -47,8 +46,6 @@ var app = builder.Build();
 // Configure middleware
 if (app.Environment.IsDevelopment())
 {
-    app.UseSwagger();
-    app.UseSwaggerUI();
 }
 
 app.UseHttpsRedirection();
@@ -69,7 +66,7 @@ using (var scope = app.Services.CreateScope())
     {
         if (dbContext.Database.IsSqlServer())
             await dbContext.Database.MigrateAsync();
-        else if (dbContext.Database.IsInMemory())
+        else if (string.Equals(dbContext.Database.ProviderName, "Microsoft.EntityFrameworkCore.InMemory", StringComparison.Ordinal))
             await dbContext.Database.EnsureCreatedAsync();
 
         Console.WriteLine("Database migration completed successfully");

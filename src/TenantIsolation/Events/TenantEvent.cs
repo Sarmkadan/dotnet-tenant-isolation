@@ -31,12 +31,17 @@ public abstract class TenantEvent
     /// <summary>
     /// User who triggered event (optional)
     /// </summary>
-    public string? UserId { get; protected set; }
+    public string? UserId { get; private set; }
 
     /// <summary>
     /// Correlation ID for distributed tracing
     /// </summary>
     public string? CorrelationId { get; set; }
+
+    public void SetUserId(string? userId)
+    {
+        UserId = userId;
+    }
 
     /// <summary>
     /// Event source (which service/module triggered it)

@@ -9,6 +9,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options; // Add this for IOptions
 using TenantIsolation.Configuration; // Add this for TenantIsolationOptions
+using TenantIsolation.Constants;
 using TenantIsolation.Exceptions;
 using TenantIsolation.Services;
 
@@ -35,8 +36,7 @@ public class TenantResolutionMiddleware
 
     public async Task InvokeAsync(
         HttpContext context,
-        TenantResolutionService tenantResolutionService,
-        TenantService tenantService)
+        TenantResolutionService tenantResolutionService)
     {
         // Check if the current request path is in the excluded paths
         if (_tenantIsolationOptions.ExcludedPaths != null &&
@@ -63,15 +63,15 @@ public class TenantResolutionMiddleware
                 return;
             }
 
-            // Set current tenant in services
-            tenantService.SetCurrentTenant(tenant.Id);
+            context.Items[TenantConstants.CurrentTenantContextKey] = tenant;
+            context.Items["TenantId"] = tenant.Id;
 
             _logger.LogInformation("Tenant {TenantId} resolved for request {RequestPath}",
                 tenant.Id, context.Request.Path);
 
             // Add tenant info to response headers
-            context.Response.Headers.Add("X-Tenant-Id", tenant.Id.ToString());
-            context.Response.Headers.Add("X-Tenant-Slug", tenant.Slug);
+            context.Response.Headers["X-Tenant-Id"] = tenant.Id.ToString();
+            context.Response.Headers["X-Tenant-Slug"] = tenant.Slug;
 
             await _next(context);
         }
