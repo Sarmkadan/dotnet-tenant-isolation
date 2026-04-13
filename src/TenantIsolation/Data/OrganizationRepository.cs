@@ -122,16 +122,18 @@ public class OrganizationRepository : Repository<Organization>
     /// </summary>
     public async Task<List<dynamic>> GetOrganizationsWithUserCountAsync(Guid tenantId)
     {
-        return await DbSet
+        var organizations = await DbSet
             .Where(o => o.TenantId == tenantId && !o.IsDeleted)
             .Select(o => new
             {
                 Organization = o,
                 UserCount = o.Users.Count(u => !u.IsDeleted)
             })
-            .AsEnumerable()
-            .Select(x => (dynamic)new { x.Organization, x.UserCount })
             .ToListAsync();
+
+        return organizations
+            .Select(x => (dynamic)new { x.Organization, x.UserCount })
+            .ToList();
     }
 
     /// <summary>

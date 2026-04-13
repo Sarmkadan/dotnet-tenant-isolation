@@ -7,6 +7,7 @@
 
 using System.Net;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using Microsoft.Extensions.Logging;
 using TenantIsolation.Exceptions;
 
@@ -56,6 +57,17 @@ public class ErrorHandlingMiddleware
 
         switch (exception)
         {
+            case TenantNotActiveException activeEx:
+                context.Response.StatusCode = (int)HttpStatusCode.Forbidden;
+                response = new ErrorResponse
+                {
+                    Code = "TENANT_NOT_ACTIVE",
+                    Message = activeEx.Message,
+                    StatusCode = 403,
+                    TraceId = context.TraceIdentifier
+                };
+                break;
+
             case TenantNotResolvedException tenantEx:
                 context.Response.StatusCode = (int)HttpStatusCode.BadRequest;
                 response = new ErrorResponse
@@ -74,17 +86,6 @@ public class ErrorHandlingMiddleware
                     Code = "TENANT_ISOLATION_ERROR",
                     Message = isolationEx.Message,
                     StatusCode = 400,
-                    TraceId = context.TraceIdentifier
-                };
-                break;
-
-            case TenantNotActiveException activeEx:
-                context.Response.StatusCode = (int)HttpStatusCode.Forbidden;
-                response = new ErrorResponse
-                {
-                    Code = "TENANT_NOT_ACTIVE",
-                    Message = activeEx.Message,
-                    StatusCode = 403,
                     TraceId = context.TraceIdentifier
                 };
                 break;

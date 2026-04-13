@@ -15,77 +15,11 @@ using TenantIsolation.Configuration;
 using TenantIsolation.Events;
 using TenantIsolation.Formatters;
 using TenantIsolation.Integration;
+using TenantIsolation.Middleware;
 using TenantIsolation.Services;
 using TenantIsolation.Utilities;
 
 namespace TenantIsolation.Configuration;
-
-/// <summary>
-/// Configuration options for tenant isolation services
-/// </summary>
-public class TenantIsolationOptions
-{
-    /// <summary>
-    /// Enable webhook support
-    /// </summary>
-    public bool EnableWebhooks { get; set; } = true;
-
-    /// <summary>
-    /// Enable caching layer
-    /// </summary>
-    public bool EnableCaching { get; set; } = true;
-
-    /// <summary>
-    /// Enable event bus
-    /// </summary>
-    public bool EnableEventBus { get; set; } = true;
-
-    /// <summary>
-    /// Enable audit logging
-    /// </summary>
-    public bool EnableAuditLogging { get; set; } = true;
-
-    /// <summary>
-    /// Enable background task processing
-    /// </summary>
-    public bool EnableBackgroundTasks { get; set; } = true;
-
-    /// <summary>
-    /// Enable notification service
-    /// </summary>
-    public bool EnableNotifications { get; set; } = true;
-
-    /// <summary>
-    /// Enable distributed tracing
-    /// </summary>
-    public bool EnableDistributedTracing { get; set; } = true;
-
-    /// <summary>
-    /// Enable health checks
-    /// </summary>
-    public bool EnableHealthChecks { get; set; } = true;
-
-    /// <summary>
-    /// Enable external API client
-    /// </summary>
-    public bool EnableExternalApiClient { get; set; } = true;
-
-    /// <summary>
-    /// Cache expiration time in minutes
-    /// </summary>
-    public int CacheExpirationMinutes { get; set; } = 60;
-
-    /// <summary>
-    /// Maximum background task queue size
-    /// </summary>
-    public int MaxBackgroundTaskQueueSize { get; set; } = 1000;
-
-    /// <summary>
-    /// Interval in minutes for the dynamic tenant store to reload tenant data.
-    /// Set to 0 or less to disable dynamic reloading.
-    /// </summary>
-    public int DynamicTenantStoreReloadIntervalMinutes { get; set; } = 5;
-}
 
 /// <summary>
 /// Comprehensive service registration extension for Phase 2 features
