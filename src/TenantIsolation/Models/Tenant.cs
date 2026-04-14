@@ -6,6 +6,7 @@
 // =============================================================================
 
 using System.ComponentModel.DataAnnotations;
+using TenantIsolation.Constants;
 
 namespace TenantIsolation.Models;
 
