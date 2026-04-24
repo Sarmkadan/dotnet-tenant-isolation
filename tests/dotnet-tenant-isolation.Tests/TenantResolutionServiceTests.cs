@@ -176,9 +176,7 @@ public class TenantResolutionServiceTests
         httpContext.User = principal;
 
         // Set up route resolution
-        var routeData = new RouteData();
-        routeData.Values[TenantConstants.TenantRouteParameter] = tenantId.ToString();
-        httpContext.SetRouteData(routeData);
+        httpContext.Items["TenantId"] = tenantId;
 
         _mockTenantStore.Setup(s => s.GetTenantByIdAsync(tenantId))
             .ReturnsAsync(tenant);
@@ -202,9 +200,8 @@ public class TenantResolutionServiceTests
         var tenant = new Tenant { Id = tenantId, Status = TenantStatus.Active };
         var httpContext = CreateHttpContext();
 
-        var routeData = new RouteData();
-        routeData.Values[TenantConstants.TenantRouteParameter] = tenantId.ToString();
-        httpContext.SetRouteData(routeData);
+        // Set tenant in context items for route resolution
+        httpContext.Items[TenantConstants.TenantRouteParameter] = tenantId.ToString();
 
         _mockTenantStore.Setup(s => s.GetTenantByIdAsync(tenantId))
             .ReturnsAsync(tenant);
@@ -224,9 +221,8 @@ public class TenantResolutionServiceTests
         var tenant = new Tenant { Id = Guid.NewGuid(), Slug = slug, Status = TenantStatus.Active };
         var httpContext = CreateHttpContext();
 
-        var routeData = new RouteData();
-        routeData.Values[TenantConstants.TenantSlugRouteParameter] = slug;
-        httpContext.SetRouteData(routeData);
+        // Set tenant slug in context items for route resolution
+        httpContext.Items[TenantConstants.TenantSlugRouteParameter] = slug;
 
         var tenants = new List<Tenant> { tenant };
         _mockTenantStore.Setup(s => s.GetAllActiveTenantsAsync())
