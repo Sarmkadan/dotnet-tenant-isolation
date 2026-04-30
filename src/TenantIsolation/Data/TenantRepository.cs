@@ -21,6 +21,10 @@ public class TenantRepository : Repository<Tenant>
     /// </summary>
     public async Task<Tenant?> GetBySlugAsync(string slug)
     {
+        // Fix: Validate slug parameter to prevent null or whitespace issues in queries.
+        if (string.IsNullOrWhiteSpace(slug))
+            throw new ArgumentException("Slug cannot be null or whitespace.", nameof(slug));
+
         return await DbSet.FirstOrDefaultAsync(t => t.Slug == slug && !t.IsDeleted);
     }
 
@@ -61,6 +65,10 @@ public class TenantRepository : Repository<Tenant>
     /// </summary>
     public async Task<List<Tenant>> GetExpiringSubscriptionsAsync(int daysUntilExpiry = 30)
     {
+        // Fix: Validate daysUntilExpiry to ensure it's not negative.
+        if (daysUntilExpiry < 0)
+            throw new ArgumentOutOfRangeException(nameof(daysUntilExpiry), "Days until expiry cannot be negative.");
+
         var expiryDate = DateTime.UtcNow.AddDays(daysUntilExpiry);
         return await DbSet
             .Where(t => t.SubscriptionExpiresAt.HasValue &&
@@ -88,11 +96,16 @@ public class TenantRepository : Repository<Tenant>
     /// </summary>
     public async Task<List<Tenant>> SearchAsync(string query)
     {
+        // Fix: Add null checks for tenant properties before performing string operations to prevent NullReferenceExceptions.
+        // Also, guard against null/whitespace query at the repository level for robustness.
+        if (string.IsNullOrWhiteSpace(query))
+            return new List<Tenant>();
+
         var searchTerm = query.ToLower();
         return await DbSet
-            .Where(t => t.Name.ToLower().Contains(searchTerm) ||
-                       t.Slug.ToLower().Contains(searchTerm) ||
-                       t.AdminEmail.ToLower().Contains(searchTerm))
+            .Where(t => (t.Name != null && t.Name.ToLower().Contains(searchTerm)) ||
+                       (t.Slug != null && t.Slug.ToLower().Contains(searchTerm)) ||
+                       (t.AdminEmail != null && t.AdminEmail.ToLower().Contains(searchTerm)))
             .OrderBy(t => t.Name)
             .ToListAsync();
     }
@@ -124,6 +137,10 @@ public class TenantRepository : Repository<Tenant>
     /// </summary>
     public async Task<bool> IsSlugUniqueAsync(string slug, Guid? excludeId = null)
     {
+        // Fix: Validate slug parameter to prevent null or whitespace issues in queries.
+        if (string.IsNullOrWhiteSpace(slug))
+            throw new ArgumentException("Slug cannot be null or whitespace.", nameof(slug));
+
         var query = DbSet.Where(t => t.Slug == slug && !t.IsDeleted);
         if (excludeId.HasValue)
             query = query.Where(t => t.Id != excludeId.Value);
