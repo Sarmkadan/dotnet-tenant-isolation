@@ -157,6 +157,58 @@ This example demonstrates creating a `TenantConnectionString` instance with all 
 
 
 
+## TenantUsageRecord
+
+
+
+The `TenantUsageRecord` class tracks accumulated usage for a single named metric scoped to one tenant. It maintains counters for billing periods (hourly, daily, monthly, yearly, or lifetime), quota limits, and provides computed properties to determine whether usage has exceeded limits or is approaching thresholds.
+
+
+
+Here's an example usage:
+
+```csharp
+using TenantIsolation.Models;
+
+public class UsageMonitor
+{
+  public static void Main(string[] args)
+  {
+    // Create a usage record for API calls with a monthly quota
+    var apiCallsRecord = new TenantUsageRecord
+    {
+      TenantId = Guid.Parse("3fa85f64-5717-4562-b3fc-2c963f66afa6"),
+      MetricKey = "api_calls",
+      CurrentValue = 1500,
+      QuotaLimit = 5000,
+      Period = UsagePeriod.Monthly,
+      PeriodStart = DateTime.UtcNow.Date,
+      ResetAt = null,
+      CreatedAt = DateTime.UtcNow,
+      UpdatedAt = DateTime.UtcNow
+    };
+
+    // Check quota status
+    bool isExceeded = apiCallsRecord.IsQuotaExceeded; // false
+    bool isApproaching = apiCallsRecord.IsApproachingLimit(80); // true (30%)
+    double usagePercent = apiCallsRecord.UsagePercentage; // 30.0
+
+    // Update usage
+    apiCallsRecord.CurrentValue += 100;
+    apiCallsRecord.UpdatedAt = DateTime.UtcNow;
+
+    // Check quota check result factory methods
+    var checkResult = TenantUsageRecord.QuotaCheckResult.Allow("api_calls", apiCallsRecord.CurrentValue, apiCallsRecord.QuotaLimit);
+    
+    Console.WriteLine($"Allowed: {checkResult.IsAllowed}, Usage: {checkResult.CurrentUsage}, Limit: {checkResult.QuotaLimit}");
+  }
+}
+```
+
+This example demonstrates creating a `TenantUsageRecord` instance, checking quota status, updating usage, and using the `QuotaCheckResult` factory methods to evaluate limits.
+
+
+
 ## Services
 
 ### TenantResolutionService
