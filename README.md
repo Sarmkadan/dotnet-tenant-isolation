@@ -2,7 +2,7 @@
 
 Enterprise-grade multi-tenancy isolation framework for ASP.NET Core 10 with support for multiple data isolation strategies, per-tenant configuration management, comprehensive feature toggle system, and production-ready middleware pipeline.
 
-## 📋 Table of Contents
+## Table of Contents
 
 - [Overview](#overview)
 - [Key Features](#key-features)
@@ -46,14 +46,14 @@ This framework handles all these concerns transparently, letting developers focu
 
 ## Key Features
 
-### 🏢 Core Multi-Tenancy Support
+### Core Multi-Tenancy Support
 
 - **Automatic Tenant Resolution** - Resolves tenants from HTTP headers, route parameters, claims, or subdomains with fallback cascade
 - **Multiple Isolation Strategies** - Choose from Database-per-Tenant, Schema-per-Tenant, Row-Level Security, or Hybrid approaches
 - **Tenant Status Management** - 6 tenant states: Active, Suspended, Trial, Inactive, Archived, Provisioning
 - **Subscription Tracking** - Built-in subscription plan management with expiration tracking and upgrade paths
 
-### 🔐 Data Isolation & Security
+### Data Isolation & Security
 
 - **Configurable Data Isolation Policies** - Define field-level access controls and cross-tenant restrictions
 - **Three Policy Types** - Strict (no cross-tenant access), Relaxed (explicit allow-list), Custom (filter-based)
@@ -61,7 +61,7 @@ This framework handles all these concerns transparently, letting developers focu
 - **Soft Delete Support** - Mark entities as deleted without removing from database
 - **Query Filtering** - Global query filters automatically isolate data by tenant
 
-### ⚙️ Configuration Management
+### Configuration Management
 
 - **Per-Tenant Configuration** - Store and manage tenant-specific settings with type-safe access
 - **Configuration Encryption** - Optional encryption for sensitive configuration values
@@ -69,7 +69,7 @@ This framework handles all these concerns transparently, letting developers focu
 - **Caching Layer** - 1-hour TTL memory cache with automatic invalidation
 - **Type Conversion** - Automatic conversion between strings and strongly-typed values
 
-### 🚀 Feature Toggle System
+### Feature Toggle System
 
 - **Per-Tenant Feature Control** - Enable/disable features per individual tenant
 - **Rollout Percentages** - Gradual feature rollout with probabilistic distribution
@@ -77,7 +77,7 @@ This framework handles all these concerns transparently, letting developers focu
 - **Feature Metrics** - Track feature usage, adoption, and deprecation
 - **Default Features** - Initialize with default feature flags for new tenants
 
-### 🔌 Developer Experience
+### Developer Experience
 
 - **Simple DI Integration** - Register everything with fluent API in `Program.cs`
 - **Middleware-Based Resolution** - Automatic tenant detection on every request
@@ -86,7 +86,7 @@ This framework handles all these concerns transparently, letting developers focu
 - **Exception Hierarchy** - Custom exceptions with specific error codes
 - **Async-First Design** - Full async/await support prevents thread exhaustion
 
-### 🗄️ Database Support
+### Database Support
 
 - **SQL Server** 2019 and later
 - **PostgreSQL** 12 and later
