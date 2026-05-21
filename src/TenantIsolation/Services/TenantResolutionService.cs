@@ -54,14 +54,33 @@ public class TenantResolutionService
         if (httpContext.Items.TryGetValue(TenantConstants.CurrentTenantContextKey, out var cachedTenant))
             return (Tenant)cachedTenant;
 
-        // Try multiple resolution strategies
-        var tenant = await ResolveTenantFromHeaderAsync(httpContext) ??
-                    await ResolveTenantFromClaimsAsync(httpContext) ??
-                    await ResolveTenantFromRouteAsync(httpContext) ??
-                    await ResolveTenantFromSubdomainAsync(httpContext);
+        // Try multiple resolution strategies in priority order
+        var tenant = await ResolveTenantFromHeaderAsync(httpContext);
+        if (tenant is null)
+        {
+            _logger.LogDebug("Tenant not resolved from header, trying claims");
+            tenant = await ResolveTenantFromClaimsAsync(httpContext);
+        }
+        if (tenant is null)
+        {
+            _logger.LogDebug("Tenant not resolved from claims, trying route");
+            tenant = await ResolveTenantFromRouteAsync(httpContext);
+        }
+        if (tenant is null)
+        {
+            _logger.LogDebug("Tenant not resolved from route, trying subdomain");
+            tenant = await ResolveTenantFromSubdomainAsync(httpContext);
+        }
 
         if (tenant == null)
+        {
+            _logger.LogWarning(
+                "All tenant resolution strategies exhausted for {Method} {Path} from {RemoteIp}",
+                httpContext.Request.Method,
+                httpContext.Request.Path,
+                httpContext.Connection.RemoteIpAddress);
             throw new TenantNotResolvedException("Unable to resolve tenant from request");
+        }
 
         if (tenant.Status != TenantStatus.Active)
             throw new TenantNotActiveException(tenant.Id, $"Tenant is {tenant.Status}");
