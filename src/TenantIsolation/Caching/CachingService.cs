@@ -6,6 +6,7 @@
 // =============================================================================
 
 using Microsoft.Extensions.Logging;
+using TenantIsolation.Configuration;
 
 namespace TenantIsolation.Caching;
 

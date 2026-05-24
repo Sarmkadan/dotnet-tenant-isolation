@@ -61,7 +61,7 @@ public class EventPublisher : IEventPublisher
                     @event.CorrelationId = correlationId?.ToString();
 
                 if (httpContext.Items.TryGetValue("UserId", out var userId))
-                    @event.UserId = userId?.ToString();
+                    @event.SetUserId(userId?.ToString());
             }
 
             _logger.LogInformation("Publishing event {EventType} (ID: {EventId}) for tenant {TenantId}",

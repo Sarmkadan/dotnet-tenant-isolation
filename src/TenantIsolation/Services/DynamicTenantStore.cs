@@ -165,7 +165,6 @@ public class DynamicTenantStore : IDynamicTenantStore, IDisposable
                t1.Name == t2.Name &&
                t1.Slug == t2.Slug &&
                t1.Status == t2.Status &&
-               t1.IsActive == t2.IsActive &&
                t1.UpdatedAt == t2.UpdatedAt; // Check UpdateAt to detect changes
     }
 
