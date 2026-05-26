@@ -235,7 +235,7 @@ public class TenantRepositoryTests : IAsyncLifetime
 
         // Assert
         result.Should().HaveCount(2);
-        result[0].CreatedAt.Should().BeGreaterThan(result[1].CreatedAt);
+        result[0].CreatedAt.Should().BeAfter(result[1].CreatedAt);
     }
 
     #endregion
@@ -375,7 +375,9 @@ public class TenantRepositoryTests : IAsyncLifetime
 
         // Assert
         result.Should().HaveCount(2);
-        result[0].SubscriptionExpiresAt.Should().BeLessThan(result[1].SubscriptionExpiresAt);
+        result[0].SubscriptionExpiresAt.Should().HaveValue();
+        result[1].SubscriptionExpiresAt.Should().HaveValue();
+        result[0].SubscriptionExpiresAt!.Value.Should().BeBefore(result[1].SubscriptionExpiresAt!.Value);
     }
 
     #endregion
@@ -802,7 +804,12 @@ public class InMemoryTenantDbContextFactory : ITenantDbContextFactory<TenantDbCo
         _context = context;
     }
 
-    public TenantDbContext CreateDbContext()
+    public TenantDbContext Create(Guid tenantId)
+    {
+        return _context;
+    }
+
+    public TenantDbContext Create()
     {
         return _context;
     }
