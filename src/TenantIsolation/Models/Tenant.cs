@@ -11,32 +11,32 @@ using TenantIsolation.Constants;
 namespace TenantIsolation.Models;
 
 /// <summary>
-/// Represents a tenant in the multi-tenancy system
+/// Represents a tenant in the multi-tenancy system, containing configuration, status, and isolation settings.
 /// </summary>
 public class Tenant
 {
     /// <summary>
-    /// Unique identifier for the tenant
+    /// Gets or sets the unique identifier for the tenant.
     /// </summary>
     [Key]
     public Guid Id { get; set; }
 
     /// <summary>
-    /// Unique slug/subdomain for the tenant
+    /// Gets or sets the unique slug (subdomain or URL identifier) for the tenant.
     /// </summary>
     [Required]
     [StringLength(100)]
     public string Slug { get; set; } = null!;
 
     /// <summary>
-    /// Display name of the tenant
+    /// Gets or sets the display name of the tenant.
     /// </summary>
     [Required]
     [StringLength(255)]
     public string Name { get; set; } = null!;
 
     /// <summary>
-    /// Description of the tenant
+    /// Gets or sets an optional description of the tenant.
     /// </summary>
     [StringLength(1000)]
     public string? Description { get; set; }
