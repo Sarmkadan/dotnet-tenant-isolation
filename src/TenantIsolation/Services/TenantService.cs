@@ -15,7 +15,7 @@ using System.Linq;
 namespace TenantIsolation.Services;
 
 /// <summary>
-/// Core service for tenant management operations
+/// Provides services for managing tenant lifecycles, including creation, activation, suspension, and deletion.
 /// </summary>
 public class TenantService
 {
@@ -34,10 +34,18 @@ public class TenantService
     }
 
     /// <summary>
-    /// Create new tenant with initialization
+    /// Creates a new tenant and initializes it in the system.
     /// </summary>
+    /// <param name="name">The display name of the tenant.</param>
+    /// <param name="slug">The unique URL-friendly slug for the tenant.</param>
+    /// <param name="adminEmail">The primary email address for the tenant administrator.</param>
+    /// <param name="strategy">The data isolation strategy to use for this tenant (defaults to <see cref="TenantIsolationStrategy.DatabasePerTenant"/>).</param>
+    /// <returns>A <see cref="Task{Tenant}"/> representing the asynchronous operation, containing the created <see cref="Tenant"/>.</returns>
+    /// <exception cref="ArgumentException">Thrown when name, slug, or adminEmail is invalid.</exception>
+    /// <exception cref="TenantIsolationException">Thrown when the slug is already in use or database operations fail.</exception>
     public async Task<Tenant> CreateTenantAsync(string name, string slug, string adminEmail,
         TenantIsolationStrategy strategy = TenantIsolationStrategy.DatabasePerTenant)
+
     {
         // Fix: Changed ArgumentNullException to ArgumentException for string validation.
         if (string.IsNullOrWhiteSpace(name))

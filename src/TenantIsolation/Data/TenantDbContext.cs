@@ -11,14 +11,22 @@ using TenantIsolation.Models;
 namespace TenantIsolation.Data;
 
 /// <summary>
-/// Entity Framework Core DbContext for tenant isolation system
+/// Provides the Entity Framework Core database context for the tenant isolation framework.
+/// Manages entity configurations, relationships, and soft-delete filters for all tenant-related models.
 /// </summary>
 public class TenantDbContext : DbContext
 {
+    /// <summary>
+    /// Initializes a new instance of the <see cref="TenantDbContext"/> class.
+    /// </summary>
     public TenantDbContext()
     {
     }
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="TenantDbContext"/> class with specified options.
+    /// </summary>
+    /// <param name="options">The options to be used by the <see cref="DbContext"/>.</param>
     public TenantDbContext(DbContextOptions<TenantDbContext> options)
         : base(options)
     {

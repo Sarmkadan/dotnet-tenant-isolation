@@ -1,11 +1,23 @@
 # dotnet-tenant-isolation
 
-![CI](https://github.com/sarmkadan/dotnet-tenant-isolation/actions/workflows/ci.yml/badge.svg)
-![License](https://img.shields.io/github/license/sarmkadan/dotnet-tenant-isolation)
-![.NET](https://img.shields.io/badge/.NET-10.0-512BD4)
-[![Build](https://github.com/sarmkadan/dotnet-tenant-isolation/actions/workflows/build.yml/badge.svg)](https://github.com/sarmkadan/dotnet-tenant-isolation/actions/workflows/build.yml)
+Enterprise-grade multi-tenancy isolation framework for ASP.NET Core.
 
-Enterprise-grade multi-tenancy isolation framework for ASP.NET Core 10 with support for multiple data isolation strategies, per-tenant configuration management, comprehensive feature toggle system, and production-ready middleware pipeline.
+[![Build](https://github.com/sarmkadan/dotnet-tenant-isolation/actions/workflows/build.yml/badge.svg)](https://github.com/sarmkadan/dotnet-tenant-isolation/actions/workflows/build.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
+## Installation
+
+Add the NuGet package to your ASP.NET Core project:
+
+```bash
+dotnet add package dotnet-tenant-isolation
+```
+
+Or clone the repository:
+
+```bash
+git clone https://github.com/sarmkadan/dotnet-tenant-isolation.git
+```
 
 ## Table of Contents
 
