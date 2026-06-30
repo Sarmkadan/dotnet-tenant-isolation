@@ -769,6 +769,31 @@ await using var tenantLock = await lockFactory.AcquireAsync(
 var tenant = await tenantService.CreateTenantAsync(name, slug, adminEmail);
 ```
 
+## Docker Usage
+
+This project includes support for running via Docker.
+
+### Prerequisites
+
+- Docker Desktop or Docker Engine
+- Docker Compose
+
+### Running with Docker Compose
+
+To start the application and the required SQL Server database:
+
+```bash
+docker-compose up -d
+```
+
+This will build the Docker images and start the containers. The API will be available at `http://localhost:8080`.
+
+### Stopping the Containers
+
+```bash
+docker-compose down
+```
+
 ## Contributing
 
 We welcome contributions from the community! Here's how to get involved:
