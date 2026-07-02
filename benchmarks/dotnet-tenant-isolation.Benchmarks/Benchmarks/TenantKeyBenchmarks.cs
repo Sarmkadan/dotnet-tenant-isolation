@@ -3,92 +3,129 @@
 // =============================================================================
 // Author: Vladyslav Zaiets | https://sarmkadan.com
 // CTO & Software Architect
-// =============================================================================
+// =====================================================================
 
-using System.Collections.Frozen;
 using BenchmarkDotNet.Attributes;
-using TenantIsolation.Caching;
+using TenantIsolation.Utilities;
 
 namespace TenantIsolation.Benchmarks;
 
 /// <summary>
-/// Benchmarks for tenant-scoped key building and subdomain resolution checks.
-/// Measures string.Concat vs interpolation for key prefix assembly, and
-/// FrozenSet&lt;string&gt; lookup latency for the reserved-subdomain guard.
+/// Benchmarks for tenant key generation and subdomain resolution.
+/// Measures the performance of tenant-scoped operations and key building.
 /// </summary>
 [MemoryDiagnoser]
 [HideColumns("Error", "StdDev", "Median", "RatioSD")]
 public class TenantKeyBenchmarks
 {
-    private const string TenantIdStr  = "f47ac10b-58cc-4372-a567-0e02b2c3d479";
-    private const string ResourceKey  = "configuration:defaults";
-    private const string KnownSubdomain    = "acme";
-    private const string ReservedSubdomain = "api";
-
-    // FrozenSet used by TenantResolutionService – reproduced here for isolated measurement.
-    private static readonly FrozenSet<string> ReservedSubdomains =
-        FrozenSet.Create(StringComparer.OrdinalIgnoreCase,
-            "www", "api", "mail", "smtp", "ftp", "admin", "app",
-            "static", "cdn", "assets", "dev", "staging", "prod", "auth", "login");
+    private const string TestTenantId = "f47ac10b-58cc-4372-a567-0e02b2c3d479";
+    private const string TestResource = "user-preferences";
+    private const string TestSubdomain = "acme-corp.example.com";
+    private const string TestTenantSlug = "acme-corp";
+    private readonly string[] _reservedTenants = ["admin", "system", "root", "default", "public"];
 
     /// <summary>
-    /// Baseline: string.Concat to build a tenant-scoped key (used inside
-    /// TenantAwareCachingService.GetTenantAwareKey).
+    /// Baseline: Build tenant-aware key using string.Concat.
+    /// This is the traditional approach.
     /// </summary>
     [Benchmark(Baseline = true)]
-    public string TenantAwareKey_Concat()
-        => string.Concat(TenantIdStr, ":", ResourceKey);
+    public string TenantAwareKey_StringConcat()
+    {
+        return string.Concat("tenant:", TestTenantId, ":", TestResource);
+    }
 
     /// <summary>
-    /// Interpolation equivalent — shows the allocation difference
-    /// vs string.Concat for the same two-part join.
+    /// Build tenant-aware key using string interpolation.
+    /// Modern C# approach.
     /// </summary>
     [Benchmark]
     public string TenantAwareKey_Interpolation()
-        => $"{TenantIdStr}:{ResourceKey}";
+    {
+        return $"tenant:{TestTenantId}:{TestResource}";
+    }
 
     /// <summary>
-    /// Full CacheKeyBuilder pipeline: prefix + WithTenant + Add.
-    /// Covers the ArrayPool path in Build().
+    /// Build cache key with tenant and resource using CacheKeyBuilder.
+    /// Recommended approach for tenant isolation.
     /// </summary>
     [Benchmark]
-    public string CacheKeyBuilder_TenantResource()
-        => new CacheKeyBuilder("app")
-            .WithTenant(TenantIdStr)
-            .Add(ResourceKey)
-            .Build();
+    public string CacheKeyBuilder_TenantAndResource()
+    {
+        var builder = new CacheKeyBuilder("tenant-cache")
+            .WithTenant(TestTenantId)
+            .Add(TestResource);
+        return builder.Build();
+    }
 
     /// <summary>
-    /// FrozenSet.Contains for a reserved subdomain — expected sub-10 ns.
+    /// Check if tenant ID exists in reserved set using FrozenSet (tenant hit).
+    /// FrozenSet provides O(1) lookup with minimal overhead.
     /// </summary>
     [Benchmark]
-    public bool FrozenSet_ReservedHit()
-        => ReservedSubdomains.Contains(ReservedSubdomain);
+    public bool FrozenSet_Contains_ReservedHit()
+    {
+        var set = System.Collections.Frozen.FrozenSet.ToFrozenSet(_reservedTenants);
+        return set.Contains(TestTenantSlug);
+    }
 
     /// <summary>
-    /// FrozenSet.Contains for a normal tenant subdomain — miss path.
+    /// Check if tenant ID exists in reserved set using FrozenSet (tenant miss).
+    /// Tests the negative path.
     /// </summary>
     [Benchmark]
-    public bool FrozenSet_ReservedMiss()
-        => ReservedSubdomains.Contains(KnownSubdomain);
+    public bool FrozenSet_Contains_ReservedMiss()
+    {
+        var set = System.Collections.Frozen.FrozenSet.ToFrozenSet(_reservedTenants);
+        return set.Contains("nonexistent-tenant");
+    }
 
     /// <summary>
-    /// IndexOf-based subdomain extraction (used in ResolveTenantFromSubdomainAsync)
-    /// vs the previous Split-based approach. Avoids string[] allocation entirely.
+    /// Extract tenant subdomain using IndexOf (fastest approach).
+    /// Used in subdomain-based tenant resolution.
     /// </summary>
     [Benchmark]
     public string SubdomainExtract_IndexOf()
     {
-        const string host = "acme.example.com";
-        var dot = host.IndexOf('.');
-        return dot > 0 ? host[..dot] : host;
+        var index = TestSubdomain.IndexOf('.');
+        return index > 0 ? TestSubdomain[..index] : TestSubdomain;
     }
 
+    /// <summary>
+    /// Extract tenant subdomain using Split (more allocations).
+    /// Alternative approach for comparison.
+    /// </summary>
     [Benchmark]
     public string SubdomainExtract_Split()
     {
-        const string host = "acme.example.com";
-        var parts = host.Split('.');
-        return parts.Length >= 2 ? parts[0] : host;
+        return TestSubdomain.Split('.')[0];
+    }
+
+    /// <summary>
+    /// Generate tenant-scoped key for configuration cache.
+    /// Common pattern in multi-tenant applications.
+    /// </summary>
+    [Benchmark]
+    public string GenerateTenantScopedKey()
+    {
+        return new CacheKeyBuilder("config")
+            .WithTenant(TestTenantId)
+            .Add("feature-flags")
+            .Add("v2")
+            .Build();
+    }
+
+    /// <summary>
+    /// Generate tenant-scoped cache key with hash for parameterized queries.
+    /// Used for caching queries with different parameters.
+    /// </summary>
+    [Benchmark]
+    public string GenerateTenantScopedKey_WithHash()
+    {
+        var parameters = new { Page = 1, Size = 20, Sort = "name:asc" };
+        return new CacheKeyBuilder("query-cache")
+            .WithTenant(TestTenantId)
+            .Add("products")
+            .WithHash(parameters)
+            .Build();
     }
 }

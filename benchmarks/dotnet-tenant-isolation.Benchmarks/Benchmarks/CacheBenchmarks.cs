@@ -3,97 +3,158 @@
 // =============================================================================
 // Author: Vladyslav Zaiets | https://sarmkadan.com
 // CTO & Software Architect
-// =============================================================================
+// =====================================================================
 
 using BenchmarkDotNet.Attributes;
 using TenantIsolation.Caching;
+using TenantIsolation.Constants;
 
 namespace TenantIsolation.Benchmarks;
 
 /// <summary>
-/// Benchmarks for the in-memory cache layer.
-/// Measures the impact of removing Task.Run() wrappers and returning
-/// pre-completed ValueTasks directly from ConcurrentDictionary operations.
+/// Benchmarks for cache layer operations.
+/// Measures the performance of in-memory cache with different scenarios.
 /// </summary>
 [MemoryDiagnoser]
 [HideColumns("Error", "StdDev", "Median", "RatioSD")]
-public class CacheBenchmarks
+public class CacheBenchmarks : IDisposable
 {
-    private MemoryCacheProvider _provider = null!;
-
-    private const string HitKey   = "tenant:f47ac10b:config:defaults";
-    private const string MissKey  = "tenant:f47ac10b:config:missing";
-    private const string UpsertKey = "tenant:f47ac10b:config:upsert";
+    private MemoryCacheProvider? _cache;
+    private string? _cacheKey;
+    private string? _tenantId;
+    private string? _userId;
 
     [GlobalSetup]
-    public async Task Setup()
+    public void Setup()
     {
-        _provider = new MemoryCacheProvider();
-        await _provider.SetAsync(HitKey, new CachedTenant
-        {
-            Id = Guid.Parse("f47ac10b-58cc-4372-a567-0e02b2c3d479"),
-            Name = "Acme Corp",
-            Slug = "acme-corp"
-        });
+        _cache = new MemoryCacheProvider();
+        _cacheKey = "test:key:12345";
+        _tenantId = Guid.NewGuid().ToString();
+        _userId = Guid.NewGuid().ToString();
+
+        // Pre-populate cache for "cache hit" scenarios
+        _cache.SetAsync(_cacheKey, "test-value", TimeSpan.FromMinutes(30)).Wait();
+
+        // Pre-populate with tenant context
+        var keyBuilder = new CacheKeyBuilder("tenant-cache")
+            .WithTenant(_tenantId)
+            .Add("user")
+            .Add("preferences");
+        var tenantKey = keyBuilder.Build();
+        _cache.SetAsync(tenantKey, new { Theme = "dark", Locale = "en-US" }, TimeSpan.FromMinutes(30)).Wait();
     }
 
     /// <summary>
-    /// Hot path: reading a value that is present and not expired.
-    /// Expected to be a few dozen nanoseconds – a lock-free ConcurrentDictionary
-    /// lookup returning a pre-completed ValueTask.
+    /// Baseline: Get value from cache when key exists (cache hit).
+    /// This is the most common scenario in production.
     /// </summary>
     [Benchmark(Baseline = true)]
-    public ValueTask<CachedTenant?> GetAsync_Hit()
-        => _provider.GetAsync<CachedTenant>(HitKey);
+    public async ValueTask<object?> GetAsync_CacheHit()
+    {
+        return await _cache!.GetAsync<object>(_cacheKey!);
+    }
 
     /// <summary>
-    /// Miss path: key not present in dictionary.
+    /// Get value from cache when key doesn't exist (cache miss).
+    /// Tests the fallback path.
     /// </summary>
     [Benchmark]
-    public ValueTask<CachedTenant?> GetAsync_Miss()
-        => _provider.GetAsync<CachedTenant>(MissKey);
+    public async ValueTask<object?> GetAsync_CacheMiss()
+    {
+        return await _cache!.GetAsync<object>("nonexistent:key");
+    }
 
     /// <summary>
-    /// Upsert path: AddOrUpdate on an existing key (realistic update scenario).
+    /// Set value in cache (upsert operation).
+    /// Tests write path performance.
     /// </summary>
     [Benchmark]
-    public ValueTask SetAsync_Upsert()
-        => _provider.SetAsync(UpsertKey, new CachedTenant
-        {
-            Id = Guid.NewGuid(),
-            Name = "Updated Tenant",
-            Slug = "updated-tenant"
-        });
+    public async ValueTask SetAsync_Upsert()
+    {
+        await _cache!.SetAsync(_cacheKey!, "new-value", TimeSpan.FromMinutes(30));
+    }
 
     /// <summary>
-    /// CacheKeyBuilder simple path: prefix + tenant segment + one resource segment.
+    /// Build cache key with simple segments (no tenant context).
+    /// Tests the simplest key building scenario.
     /// </summary>
     [Benchmark]
     public string CacheKeyBuilder_Simple()
-        => new CacheKeyBuilder("tenant")
-            .WithTenant("f47ac10b-58cc-4372-a567-0e02b2c3d479")
-            .Add("configuration:defaults")
-            .Build();
+    {
+        var builder = new CacheKeyBuilder("simple-cache")
+            .Add("user")
+            .Add("preferences")
+            .Add("settings");
+        return builder.Build();
+    }
 
     /// <summary>
-    /// CacheKeyBuilder with hash: includes JSON serialization of a parameter object.
-    /// Shows the relative cost of the hashing step vs. the rest of key building.
+    /// Build cache key with tenant context.
+    /// Tests tenant-isolated key building.
     /// </summary>
     [Benchmark]
-    public string CacheKeyBuilder_WithHash()
-        => new CacheKeyBuilder("tenant")
-            .WithTenant("f47ac10b-58cc-4372-a567-0e02b2c3d479")
-            .Add("search")
-            .WithHash(new { Page = 1, Size = 50, Status = "active" })
-            .Build();
+    public string CacheKeyBuilder_WithTenant()
+    {
+        var builder = new CacheKeyBuilder("tenant-cache")
+            .WithTenant(_tenantId)
+            .Add("user")
+            .Add("preferences");
+        return builder.Build();
+    }
+
+    /// <summary>
+    /// Build cache key with tenant, user, and hash segments.
+    /// Tests complex key building with multiple contexts.
+    /// </summary>
+    [Benchmark]
+    public string CacheKeyBuilder_WithTenantUserAndHash()
+    {
+        var builder = new CacheKeyBuilder("complex-cache")
+            .WithTenant(_tenantId)
+            .WithUser(_userId)
+            .WithHash(new { Page = 1, Size = 10, Sort = "name" })
+            .Add("products");
+        return builder.Build();
+    }
+
+    /// <summary>
+    /// Check if key exists in cache (cache hit).
+    /// Very lightweight operation.
+    /// </summary>
+    [Benchmark]
+    public async ValueTask<bool> ExistsAsync_CacheHit()
+    {
+        return await _cache!.ExistsAsync(_cacheKey!);
+    }
+
+    /// <summary>
+    /// Check if key exists in cache (cache miss).
+    /// Tests the negative path.
+    /// </summary>
+    [Benchmark]
+    public async ValueTask<bool> ExistsAsync_CacheMiss()
+    {
+        return await _cache!.ExistsAsync("nonexistent:key");
+    }
+
+    /// <summary>
+    /// Remove key from cache.
+    /// Tests cleanup operations.
+    /// </summary>
+    [Benchmark]
+    public async ValueTask RemoveAsync()
+    {
+        await _cache!.RemoveAsync(_cacheKey!);
+    }
 
     [GlobalCleanup]
-    public void Cleanup() => _provider.Dispose();
-
-    public sealed record CachedTenant
+    public void Cleanup()
     {
-        public Guid Id { get; init; }
-        public string Name { get; init; } = "";
-        public string Slug { get; init; } = "";
+        _cache?.Dispose();
+    }
+
+    public void Dispose()
+    {
+        Cleanup();
     }
 }
