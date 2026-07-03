@@ -4,11 +4,12 @@
 // Author: Vladyslav Zaiets | https://sarmkadan.com
 // CTO & Software Architect
 // =====================================================================
-
 using BenchmarkDotNet.Attributes;
 using Microsoft.AspNetCore.Http;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using TenantIsolation.Configuration;
 using TenantIsolation.Models;
 using TenantIsolation.Services;
 
@@ -38,9 +39,9 @@ public class TenantResolutionBenchmarks : IDisposable
         // Setup in-memory tenant store with some tenants
         services.AddSingleton<IDynamicTenantStore>(new InMemoryTenantStore(new List<Tenant>
         {
-            new Tenant { Id = Guid.Parse("f47ac10b-58cc-4372-a567-0e02b2c3d479"), Name = "Acme Corp", Slug = "acme-corp", Status = TenantStatus.Active },
-            new Tenant { Id = Guid.Parse("a1b2c3d4-e5f6-7890-g1h2-i3j4k5l6m7n8"), Name = "Globex Corp", Slug = "globex-corp", Status = TenantStatus.Active },
-            new Tenant { Id = Guid.Parse("11111111-2222-3333-4444-555555555555"), Name = "Test Tenant", Slug = "test-tenant", Status = TenantStatus.Active }
+            new Tenant { Id = Guid.Parse("f47ac10b-58cc-4372-a567-0e02b2c3d479"), Name = "Acme Corp", Slug = "acme-corp", Status = global::TenantIsolation.Constants.TenantStatus.Active },
+            new Tenant { Id = Guid.Parse("a1b2c3d4-e5f6-7890-g1h2-i3j4k5l6m7n8"), Name = "Globex Corp", Slug = "globex-corp", Status = global::TenantIsolation.Constants.TenantStatus.Active },
+            new Tenant { Id = Guid.Parse("11111111-2222-3333-4444-555555555555"), Name = "Test Tenant", Slug = "test-tenant", Status = global::TenantIsolation.Constants.TenantStatus.Active }
         }));
 
         services.AddTenantIsolationInMemory("BenchmarkDb", options =>
@@ -125,12 +126,12 @@ public class TenantResolutionBenchmarks : IDisposable
     /// This tests the fast path after tenant has been resolved.
     /// </summary>
     [Benchmark]
-    public Tenant GetCurrentTenant()
+    public Tenant? GetCurrentTenant()
     {
         // Simulate that tenant was already resolved and stored in context
         var context = new DefaultHttpContext();
-        var tenant = new Tenant { Id = Guid.Parse("f47ac10b-58cc-4372-a567-0e02b2c3d479"), Name = "Acme Corp", Slug = "acme-corp", Status = TenantStatus.Active };
-        context.Items[TenantIsolation.Constants.TenantConstants.CurrentTenantContextKey] = tenant;
+        var tenant = new Tenant { Id = Guid.Parse("f47ac10b-58cc-4372-a567-0e02b2c3d479"), Name = "Acme Corp", Slug = "acme-corp", Status = global::TenantIsolation.Constants.TenantStatus.Active };
+        context.Items[global::TenantIsolation.Constants.TenantConstants.CurrentTenantContextKey] = tenant;
         var accessor = _scope!.ServiceProvider.GetRequiredService<IHttpContextAccessor>();
         accessor.HttpContext = context;
         return _resolutionService!.GetCurrentTenant();
@@ -144,8 +145,8 @@ public class TenantResolutionBenchmarks : IDisposable
     public bool HasTenant()
     {
         var context = new DefaultHttpContext();
-        var tenant = new Tenant { Id = Guid.Parse("f47ac10b-58cc-4372-a567-0e02b2c3d479"), Name = "Acme Corp", Slug = "acme-corp", Status = TenantStatus.Active };
-        context.Items[TenantIsolation.Constants.TenantConstants.CurrentTenantContextKey] = tenant;
+        var tenant = new Tenant { Id = Guid.Parse("f47ac10b-58cc-4372-a567-0e02b2c3d479"), Name = "Acme Corp", Slug = "acme-corp", Status = global::TenantIsolation.Constants.TenantStatus.Active };
+        context.Items[global::TenantIsolation.Constants.TenantConstants.CurrentTenantContextKey] = tenant;
         var accessor = _scope!.ServiceProvider.GetRequiredService<IHttpContextAccessor>();
         accessor.HttpContext = context;
         return _resolutionService!.HasTenant();
@@ -197,7 +198,7 @@ internal sealed class InMemoryTenantStore : IDynamicTenantStore
 
     public Task<IEnumerable<Tenant>> GetAllActiveTenantsAsync()
     {
-        return Task.FromResult<IEnumerable<Tenant>>(_tenants.Where(t => t.Status == TenantStatus.Active));
+        return Task.FromResult<IEnumerable<Tenant>>(_tenants.Where(t => t.Status == global::TenantIsolation.Constants.TenantStatus.Active));
     }
 
     public Task<Tenant?> GetTenantByIdAsync(Guid tenantId)

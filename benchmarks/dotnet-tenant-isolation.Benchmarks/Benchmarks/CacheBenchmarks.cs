@@ -4,7 +4,6 @@
 // Author: Vladyslav Zaiets | https://sarmkadan.com
 // CTO & Software Architect
 // =====================================================================
-
 using BenchmarkDotNet.Attributes;
 using TenantIsolation.Caching;
 using TenantIsolation.Constants;
@@ -33,7 +32,7 @@ public class CacheBenchmarks : IDisposable
         _userId = Guid.NewGuid().ToString();
 
         // Pre-populate cache for "cache hit" scenarios
-        _cache.SetAsync(_cacheKey, "test-value", TimeSpan.FromMinutes(30)).Wait();
+        _cache.SetAsync(_cacheKey, "test-value", TimeSpan.FromMinutes(30)).GetAwaiter().GetResult();
 
         // Pre-populate with tenant context
         var keyBuilder = new CacheKeyBuilder("tenant-cache")
@@ -41,7 +40,7 @@ public class CacheBenchmarks : IDisposable
             .Add("user")
             .Add("preferences");
         var tenantKey = keyBuilder.Build();
-        _cache.SetAsync(tenantKey, new { Theme = "dark", Locale = "en-US" }, TimeSpan.FromMinutes(30)).Wait();
+        _cache.SetAsync(tenantKey, new { Theme = "dark", Locale = "en-US" }, TimeSpan.FromMinutes(30)).GetAwaiter().GetResult();
     }
 
     /// <summary>
