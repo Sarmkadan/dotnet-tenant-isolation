@@ -14,10 +14,10 @@ namespace TenantIsolation.Tests;
 
 public class TenantServiceTests
 {
-    private readonly Mock<TenantRepository> _mockTenantRepository;
-    private readonly Mock<IDynamicTenantStore> _mockDynamicTenantStore;
+    internal readonly Mock<TenantRepository> _mockTenantRepository;
+    internal readonly Mock<IDynamicTenantStore> _mockDynamicTenantStore;
     private readonly Mock<ILogger<TenantService>> _mockLogger;
-    private readonly TenantService _sut;
+    internal readonly TenantService _sut;
 
     public TenantServiceTests()
     {
