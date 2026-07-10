@@ -1,0 +1,91 @@
+using System;
+using System.Collections.Generic;
+using System.Globalization;
+using System.Security.Cryptography;
+using System.Text;
+using System.Text.Json;
+
+/// <summary>
+/// Extension methods for <see cref="WebhookPayload"/> that provide common helper functionality.
+/// </summary>
+namespace TenantIsolation.Integration
+{
+    /// <summary>
+    /// Provides utility extensions for <see cref="WebhookPayload"/>.
+    /// </summary>
+    public static class WebhookPayloadExtensions
+    {
+        /// <summary>
+        /// Validates the payload's <c>Signature</c> using the supplied secret.
+        /// The signature is expected to be a hex‑encoded HMAC‑SHA256 of the concatenated
+        /// <c>EventId</c>, <c>EventType</c>, <c>TenantId</c> and <c>Timestamp</c> values.
+        /// </summary>
+        /// <param name="payload">The webhook payload to validate.</param>
+        /// <param name="secret">The secret key used to compute the HMAC.</param>
+        /// <returns><c>true</c> if the computed signature matches the payload's <c>Signature</c>; otherwise <c>false</c>.</returns>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="payload"/> or <paramref name="secret"/> is <c>null</c>.</exception>
+        /// <exception cref="ArgumentException">Thrown when <paramref name="secret"/> is an empty string.</exception>
+        public static bool ValidateSignature(this WebhookPayload payload, string secret)
+        {
+            ArgumentNullException.ThrowIfNull(payload);
+            ArgumentException.ThrowIfNullOrEmpty(secret);
+
+            // Build the message to sign.
+            var message = string.Concat(
+                payload.EventId,
+                payload.EventType,
+                payload.TenantId.ToString("D", CultureInfo.InvariantCulture),
+                payload.Timestamp.ToString("O", CultureInfo.InvariantCulture));
+
+            // Compute HMAC‑SHA256.
+            using var hmac = new HMACSHA256(Encoding.UTF8.GetBytes(secret));
+            var hashBytes = hmac.ComputeHash(Encoding.UTF8.GetBytes(message));
+            var computedSignature = BitConverter.ToString(hashBytes).Replace("-", string.Empty, StringComparison.OrdinalIgnoreCase);
+
+            return string.Equals(computedSignature, payload.Signature, StringComparison.OrdinalIgnoreCase);
+        }
+
+        /// <summary>
+        /// Serialises the <c>Data</c> property of the payload to a JSON string.
+        /// </summary>
+        /// <param name="payload">The webhook payload whose data should be serialised.</param>
+        /// <returns>A JSON representation of <c>Data</c>, or the JSON literal <c>null</c> if <c>Data</c> is <c>null</c>.</returns>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="payload"/> is <c>null</c>.</exception>
+        public static string ToJson(this WebhookPayload payload)
+        {
+            ArgumentNullException.ThrowIfNull(payload);
+
+            return payload.Data is null
+                ? "null"
+                : JsonSerializer.Serialize(payload.Data, new JsonSerializerOptions { WriteIndented = false });
+        }
+
+        /// <summary>
+        /// Determines whether the payload's <c>Timestamp</c> is within the specified maximum age relative to the current UTC time.
+        /// </summary>
+        /// <param name="payload">The webhook payload to evaluate.</param>
+        /// <param name="maxAge">The maximum allowed age.</param>
+        /// <returns><c>true</c> if the payload is newer than <paramref name="maxAge"/>; otherwise <c>false</c>.</returns>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="payload"/> is <c>null</c>.</exception>
+        public static bool IsRecent(this WebhookPayload payload, TimeSpan maxAge)
+        {
+            ArgumentNullException.ThrowIfNull(payload);
+
+            var age = DateTime.UtcNow - payload.Timestamp;
+            return age <= maxAge;
+        }
+
+        /// <summary>
+        /// Generates a concise, human‑readable summary of the webhook event.
+        /// </summary>
+        /// <param name="payload">The webhook payload to summarise.</param>
+        /// <returns>A string containing the event type, identifier and timestamp formatted with invariant culture.</returns>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="payload"/> is <c>null</c>.</exception>
+        public static string GetEventSummary(this WebhookPayload payload)
+        {
+            ArgumentNullException.ThrowIfNull(payload);
+
+            return string.Create(CultureInfo.InvariantCulture, $"{payload.EventType} (ID: {payload.EventId}) @ {payload.Timestamp:O}");
+        }
+    }
+}
