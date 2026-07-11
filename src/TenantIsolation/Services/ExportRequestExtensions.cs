@@ -3,46 +3,40 @@
 // =============================================================================
 // Author: Vladyslav Zaiets | https://sarmkadan.com
 // CTO & Software Architect
-// =============================================================================
+// =====================================================================
 
 using System.Text;
 
 namespace TenantIsolation.Services;
 
 /// <summary>
-/// Extension methods for ExportRequest to provide common operations and validations
+/// Extension methods for <see cref="ExportRequest"/> to provide common operations and validations.
 /// </summary>
 public static class ExportRequestExtensions
 {
     /// <summary>
-    /// Validates that the ExportRequest has required properties set
+    /// Validates that the <see cref="ExportRequest"/> has required properties set.
     /// </summary>
-    /// <param name="request">The export request to validate</param>
-    /// <returns>True if valid, false otherwise</returns>
-    /// <exception cref="ArgumentNullException">Thrown if request is null</exception>
+    /// <param name="request">The export request to validate.</param>
+    /// <returns>True if the request is valid; otherwise, false.</returns>
+    /// <exception cref="ArgumentNullException">Thrown if <paramref name="request"/> is null.</exception>
     public static bool IsValid(this ExportRequest request)
     {
-        if (request == null)
-        {
-            throw new ArgumentNullException(nameof(request));
-        }
+        ArgumentNullException.ThrowIfNull(request);
 
         return !string.IsNullOrWhiteSpace(request.ResourceType) &&
                request.TenantId != Guid.Empty;
     }
 
     /// <summary>
-    /// Gets the default filename for this export request
+    /// Gets the default filename for this export request.
     /// </summary>
-    /// <param name="request">The export request</param>
-    /// <returns>Generated filename with format: {ResourceType}_{Format}_{Timestamp}.{extension}</returns>
-    /// <exception cref="ArgumentNullException">Thrown if request is null</exception>
+    /// <param name="request">The export request.</param>
+    /// <returns>Generated filename with format: {ResourceType}_{Timestamp}.{extension}.</returns>
+    /// <exception cref="ArgumentNullException">Thrown if <paramref name="request"/> is null.</exception>
     public static string GetFileName(this ExportRequest request)
     {
-        if (request == null)
-        {
-            throw new ArgumentNullException(nameof(request));
-        }
+        ArgumentNullException.ThrowIfNull(request);
 
         var timestamp = DateTime.UtcNow.ToString("yyyyMMdd_HHmmss");
         var extension = request.Format switch
@@ -53,21 +47,18 @@ public static class ExportRequestExtensions
             _ => "txt"
         };
 
-        return $"{request.ResourceType}_{request.Format}_{timestamp}.{extension}";
+        return $"{request.ResourceType}_{timestamp}.{extension}";
     }
 
     /// <summary>
-    /// Gets the content type for the export format
+    /// Gets the content type for the export format.
     /// </summary>
-    /// <param name="request">The export request</param>
-    /// <returns>Content type string based on format</returns>
-    /// <exception cref="ArgumentNullException">Thrown if request is null</exception>
+    /// <param name="request">The export request.</param>
+    /// <returns>Content type string based on format.</returns>
+    /// <exception cref="ArgumentNullException">Thrown if <paramref name="request"/> is null.</exception>
     public static string GetContentType(this ExportRequest request)
     {
-        if (request == null)
-        {
-            throw new ArgumentNullException(nameof(request));
-        }
+        ArgumentNullException.ThrowIfNull(request);
 
         return request.Format switch
         {
@@ -79,17 +70,14 @@ public static class ExportRequestExtensions
     }
 
     /// <summary>
-    /// Creates a dictionary of export options from the request
+    /// Creates a dictionary of export options from the request.
     /// </summary>
-    /// <param name="request">The export request</param>
-    /// <returns>Dictionary containing export configuration options</returns>
-    /// <exception cref="ArgumentNullException">Thrown if request is null</exception>
+    /// <param name="request">The export request.</param>
+    /// <returns>Dictionary containing export configuration options.</returns>
+    /// <exception cref="ArgumentNullException">Thrown if <paramref name="request"/> is null.</exception>
     public static Dictionary<string, object> GetExportOptions(this ExportRequest request)
     {
-        if (request == null)
-        {
-            throw new ArgumentNullException(nameof(request));
-        }
+        ArgumentNullException.ThrowIfNull(request);
 
         var options = new Dictionary<string, object>
         {
@@ -98,12 +86,12 @@ public static class ExportRequestExtensions
             ["TenantId"] = request.TenantId
         };
 
-        if (request.Filters != null && request.Filters.Count > 0)
+        if (request.Filters?.Count > 0)
         {
             options["Filters"] = request.Filters;
         }
 
-        if (request.IncludeFields != null && request.IncludeFields.Count > 0)
+        if (request.IncludeFields?.Count > 0)
         {
             options["IncludeFields"] = request.IncludeFields;
         }
@@ -112,26 +100,19 @@ public static class ExportRequestExtensions
     }
 
     /// <summary>
-    /// Checks if the specified field should be included in the export
+    /// Checks if the specified field should be included in the export.
     /// </summary>
-    /// <param name="request">The export request</param>
-    /// <param name="fieldName">Name of the field to check</param>
-    /// <returns>True if field should be included or if IncludeFields is null/empty</returns>
-    /// <exception cref="ArgumentNullException">Thrown if request is null or fieldName is null</exception>
+    /// <param name="request">The export request.</param>
+    /// <param name="fieldName">Name of the field to check.</param>
+    /// <returns>True if field should be included or if IncludeFields is null/empty.</returns>
+    /// <exception cref="ArgumentNullException">Thrown if <paramref name="request"/> or <paramref name="fieldName"/> is null.</exception>
+    /// <exception cref="ArgumentException">Thrown if <paramref name="fieldName"/> is whitespace.</exception>
     public static bool ShouldIncludeField(this ExportRequest request, string fieldName)
     {
-        if (request == null)
-        {
-            throw new ArgumentNullException(nameof(request));
-        }
+        ArgumentNullException.ThrowIfNull(request);
+        ArgumentException.ThrowIfNullOrWhiteSpace(fieldName);
 
-        if (string.IsNullOrWhiteSpace(fieldName))
-        {
-            throw new ArgumentNullException(nameof(fieldName));
-        }
-
-        return request.IncludeFields == null ||
-               request.IncludeFields.Count == 0 ||
+        return request.IncludeFields is null or { Count: 0 } ||
                request.IncludeFields.Contains(fieldName);
     }
 }
