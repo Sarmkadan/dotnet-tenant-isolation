@@ -25,10 +25,20 @@ public class TenantCleanupWorker : BackgroundService
     private readonly PeriodicTimer _timer;
 
     // Run cleanup weekly
-    private static readonly TimeSpan CheckInterval = TimeSpan.FromDays(1);
+    private static readonly TimeSpan DefaultCheckInterval = TimeSpan.FromDays(1);
 
     // Retention period for soft-deleted records (30 days)
-    private static readonly TimeSpan RetentionPeriod = TimeSpan.FromDays(30);
+    private static readonly TimeSpan DefaultRetentionPeriod = TimeSpan.FromDays(30);
+
+    /// <summary>
+    /// Gets or sets the interval at which cleanup checks are performed
+    /// </summary>
+    public TimeSpan CheckInterval { get; set; } = DefaultCheckInterval;
+
+    /// <summary>
+    /// Gets or sets the retention period for soft-deleted records before permanent deletion
+    /// </summary>
+    public TimeSpan RetentionPeriod { get; set; } = DefaultRetentionPeriod;
 
     public TenantCleanupWorker(
         IServiceProvider serviceProvider,
@@ -177,15 +187,78 @@ public class TenantCleanupWorker : BackgroundService
 }
 
 /// <summary>
-/// Extension method to register cleanup worker
+/// Extension methods for TenantCleanupWorker providing additional configuration and utility methods
 /// </summary>
 public static class TenantCleanupWorkerExtensions
 {
-    public static IHostBuilder AddTenantCleanupWorker(this IHostBuilder builder)
+    /// <summary>
+    /// Configures the tenant cleanup worker with custom interval and retention period
+    /// </summary>
+    /// <param name="builder">The host builder</param>
+    /// <param name="checkInterval">How often to run the cleanup check</param>
+    /// <param name="retentionPeriod">How long to keep soft-deleted records before permanent deletion</param>
+    /// <returns>The host builder for chaining</returns>
+    /// <exception cref="ArgumentNullException">Thrown if builder is null</exception>
+    public static IHostBuilder AddTenantCleanupWorker(
+        this IHostBuilder builder,
+        TimeSpan checkInterval,
+        TimeSpan retentionPeriod)
     {
+        ArgumentNullException.ThrowIfNull(builder);
+
         return builder.ConfigureServices((context, services) =>
         {
-            services.AddHostedService<TenantCleanupWorker>();
+            services.AddHostedService<TenantCleanupWorker>(provider =>
+            {
+                var logger = provider.GetRequiredService<ILogger<TenantCleanupWorker>>();
+                return new TenantCleanupWorker(provider, logger)
+                {
+                    CheckInterval = checkInterval,
+                    RetentionPeriod = retentionPeriod
+                };
+            });
         });
+    }
+
+    /// <summary>
+    /// Configures the tenant cleanup worker with custom retention period but default interval
+    /// </summary>
+    /// <param name="builder">The host builder</param>
+    /// <param name="retentionPeriod">How long to keep soft-deleted records before permanent deletion</param>
+    /// <returns>The host builder for chaining</returns>
+    /// <exception cref="ArgumentNullException">Thrown if builder is null</exception>
+    public static IHostBuilder AddTenantCleanupWorker(
+        this IHostBuilder builder,
+        TimeSpan retentionPeriod)
+    {
+        ArgumentNullException.ThrowIfNull(builder);
+
+        return builder.AddTenantCleanupWorker(TimeSpan.FromDays(1), retentionPeriod);
+    }
+
+    /// <summary>
+    /// Gets the current retention period from the TenantCleanupWorker instance
+    /// </summary>
+    /// <param name="worker">The tenant cleanup worker instance</param>
+    /// <returns>The retention period</returns>
+    /// <exception cref="ArgumentNullException">Thrown if worker is null</exception>
+    public static TimeSpan GetRetentionPeriod(this TenantCleanupWorker worker)
+    {
+        ArgumentNullException.ThrowIfNull(worker);
+
+        return worker.RetentionPeriod;
+    }
+
+    /// <summary>
+    /// Gets the current check interval from the TenantCleanupWorker instance
+    /// </summary>
+    /// <param name="worker">The tenant cleanup worker instance</param>
+    /// <returns>The check interval</returns>
+    /// <exception cref="ArgumentNullException">Thrown if worker is null</exception>
+    public static TimeSpan GetCheckInterval(this TenantCleanupWorker worker)
+    {
+        ArgumentNullException.ThrowIfNull(worker);
+
+        return worker.CheckInterval;
     }
 }
