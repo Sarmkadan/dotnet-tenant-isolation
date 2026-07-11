@@ -35,6 +35,26 @@ public class WebhookController : ControllerBase
     }
 
     /// <summary>
+    /// Tenant identifier
+    /// </summary>
+    public string TenantId { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Event type to subscribe to
+    /// </summary>
+    public string EventType { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Webhook endpoint URL
+    /// </summary>
+    public string Url { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Optional secret for webhook signature verification
+    /// </summary>
+    public string? Secret { get; set; }
+
+    /// <summary>
     /// Register a new webhook endpoint
     /// </summary>
     [HttpPost("register")]
