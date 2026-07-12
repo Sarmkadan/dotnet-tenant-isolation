@@ -4,19 +4,26 @@ using Moq;
 using TenantIsolation.Services;
 using Xunit;
 
-namespace TenantIsolation.Tests;
-
+/// <summary>
+/// Tests for the NotificationService class.
+/// </summary>
 public class NotificationServiceTests
 {
     private readonly Mock<ILogger<NotificationService>> _loggerMock;
     internal readonly NotificationService _notificationService;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="NotificationServiceTests"/> class.
+    /// </summary>
     public NotificationServiceTests()
     {
         _loggerMock = new Mock<ILogger<NotificationService>>();
         _notificationService = new NotificationService(_loggerMock.Object);
     }
 
+    /// <summary>
+    /// Tests that a valid notification is added to the database when SendNotificationAsync is called.
+    /// </summary>
     [Fact]
     public async Task SendNotificationAsync_ValidNotification_AddsNotification()
     {
@@ -32,6 +39,9 @@ public class NotificationServiceTests
         unread.Should().ContainSingle().Which.Id.Should().Be(notification.Id);
     }
 
+    /// <summary>
+    /// Tests that an ArgumentNullException is thrown when SendNotificationAsync is called with a null notification.
+    /// </summary>
     [Fact]
     public async Task SendNotificationAsync_NullNotification_ThrowsArgumentNullException()
     {
@@ -42,6 +52,9 @@ public class NotificationServiceTests
         await act.Should().ThrowAsync<ArgumentNullException>();
     }
 
+    /// <summary>
+    /// Tests that only unread notifications are returned when GetUnreadNotificationsAsync is called.
+    /// </summary>
     [Fact]
     public async Task GetUnreadNotificationsAsync_WithMultipleNotifications_ReturnsOnlyUnread()
     {
@@ -60,6 +73,9 @@ public class NotificationServiceTests
         unread.Should().ContainSingle().Which.Id.Should().Be(n2.Id);
     }
 
+    /// <summary>
+    /// Tests that a notification is marked as read when MarkAsReadAsync is called.
+    /// </summary>
     [Fact]
     public async Task MarkAsReadAsync_ExistingNotification_MarksAsRead()
     {
@@ -76,6 +92,9 @@ public class NotificationServiceTests
         unread.Should().BeEmpty();
     }
 
+    /// <summary>
+    /// Tests that a notification is deleted when DeleteNotificationAsync is called.
+    /// </summary>
     [Fact]
     public async Task DeleteNotificationAsync_ExistingNotification_RemovesIt()
     {
