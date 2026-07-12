@@ -4,7 +4,7 @@ using System.Text.Json;
 namespace TenantIsolation.Models
 {
 	/// <summary>
-	/// Provides JSON serialization and deserialization extensions for <see cref="Organization"/> objects.
+	/// Provides extension methods for JSON serialization and deserialization of <see cref="Organization"/> instances.
 	/// </summary>
 	public static class OrganizationJsonExtensions
 	{
@@ -14,11 +14,11 @@ namespace TenantIsolation.Models
 		};
 
 		/// <summary>
-		/// Serializes an <see cref="Organization"/> instance to a JSON string.
+		/// Serializes the supplied <see cref="Organization"/> instance to a JSON string using camel‑case property naming.
 		/// </summary>
-		/// <param name="value">The organization to serialize.</param>
-		/// <param name="indented">Whether to format the JSON with indentation for readability.</param>
-		/// <returns>A JSON string representation of the organization.</returns>
+		/// <param name="value">The <see cref="Organization"/> instance to serialize. Must not be <see langword="null"/>.</param>
+		/// <param name="indented">When <see langword="true"/>, the output JSON is formatted with indentation for readability; otherwise it is compact.</param>
+		/// <returns>A JSON string representation of the <paramref name="value"/>.</returns>
 		/// <exception cref="ArgumentNullException"><paramref name="value"/> is <see langword="null"/>.</exception>
 		public static string ToJson(this Organization value, bool indented = false)
 		{
@@ -33,10 +33,10 @@ namespace TenantIsolation.Models
 		}
 
 		/// <summary>
-		/// Deserializes an <see cref="Organization"/> instance from a JSON string.
+		/// Deserializes a JSON string into an <see cref="Organization"/> object using the predefined camel‑case serializer options.
 		/// </summary>
-		/// <param name="json">The JSON string to deserialize.</param>
-		/// <returns>The deserialized organization, or <see langword="null"/> if the JSON represents a null value.</returns>
+		/// <param name="json">A JSON string that represents an <see cref="Organization"/>. Must not be <see langword="null"/>.</param>
+		/// <returns>The deserialized <see cref="Organization"/> instance, or <see langword="null"/> if the JSON represents a null value.</returns>
 		/// <exception cref="ArgumentNullException"><paramref name="json"/> is <see langword="null"/>.</exception>
 		/// <exception cref="JsonException">The JSON is invalid or cannot be deserialized to an <see cref="Organization"/>.</exception>
 		public static Organization? FromJson(string json)
@@ -47,11 +47,13 @@ namespace TenantIsolation.Models
 		}
 
 		/// <summary>
-		/// Attempts to deserialize an <see cref="Organization"/> instance from a JSON string.
+		/// Attempts to deserialize a JSON string into an <see cref="Organization"/> instance without propagating exceptions.
 		/// </summary>
-		/// <param name="json">The JSON string to deserialize.</param>
-		/// <param name="value">Receives the deserialized organization if successful; otherwise, <see langword="null"/>.</param>
-		/// <returns><see langword="true"/> if deserialization succeeds; otherwise, <see langword="false"/>.</returns>
+		/// <param name="json">The JSON string to parse. Must not be <see langword="null"/>.</param>
+		/// <param name="value">
+		/// When the method returns <see langword="true"/>, receives the deserialized <see cref="Organization"/>; otherwise <see langword="null"/>.
+		/// </param>
+		/// <returns><see langword="true"/> if deserialization succeeds; otherwise <see langword="false"/>.</returns>
 		/// <exception cref="ArgumentNullException"><paramref name="json"/> is <see langword="null"/>.</exception>
 		public static bool TryFromJson(string json, out Organization? value)
 		{
