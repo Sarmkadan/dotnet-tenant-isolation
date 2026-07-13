@@ -1,41 +1,44 @@
 // existing content ...
 
-## StringBenchmarks
+## FeatureToggleBenchmarks
 
-The `StringBenchmarks` class provides a set of benchmarks for evaluating the performance of string manipulation operations. It includes tests for slug generation, hash calculation, data masking, and string formatting.
+The `FeatureToggleBenchmarks` class provides a set of benchmarks for evaluating the performance of feature toggle operations. It includes tests for feature enablement, rollout percentage, and statistics collection.
 
 ### Example Usage
 
 ```csharp
-// Create a new instance of StringBenchmarks
-var stringBenchmarks = new StringBenchmarks();
+// Create a new instance of FeatureToggleBenchmarks
+var featureToggleBenchmarks = new FeatureToggleBenchmarks();
 
-// Test slug generation with ASCII characters
-var slugAscii = stringBenchmarks.ToSlug_Ascii("Hello World");
+// Set up the feature toggle
+await featureToggleBenchmarks.Setup();
 
-// Test slug generation with Unicode characters
-var slugUnicode = stringBenchmarks.ToSlug_Unicode("Bonjour Monde");
+// Check if a feature is enabled with 100% rollout
+var isFeatureEnabled = await featureToggleBenchmarks.IsFeatureEnabled_100Percent();
 
-// Test hash calculation
-var hash = stringBenchmarks.GetDeterministicHashCode("Hello World");
+// Check if a feature is enabled with 50% rollout
+var isFeatureEnabled50 = await featureToggleBenchmarks.IsFeatureEnabled_50Percent();
 
-// Test data masking
-var maskedData = stringBenchmarks.MaskSensitiveData("Hello World");
+// Check if a feature is enabled with 25% rollout
+var isFeatureEnabled25 = await featureToggleBenchmarks.IsFeatureEnabled_25Percent();
 
-// Test human-readable string formatting
-var humanReadable = stringBenchmarks.ToHumanReadable("Hello World");
+// Enable a feature
+await featureToggleBenchmarks.EnableFeature();
 
-// Test removal of special characters
-var cleanedString = stringBenchmarks.RemoveSpecialCharacters("Hello World!");
+// Set the rollout percentage
+await featureToggleBenchmarks.SetRolloutPercentage(75);
 
-// Test email validation
-var isValidEmail = stringBenchmarks.IsValidEmail("hello@example.com");
+// Record feature usage
+await featureToggleBenchmarks.RecordFeatureUsage();
 
-// Test URL validation
-var isValidUrl = stringBenchmarks.IsValidUrl("https://example.com");
+// Get statistics
+var statistics = await featureToggleBenchmarks.GetStatistics();
 
-// Test Pascal case conversion
-var pascalCase = stringBenchmarks.ToPascalCase("hello world");
+// Clean up
+featureToggleBenchmarks.Cleanup();
+
+// Dispose of resources
+featureToggleBenchmarks.Dispose();
 ```
 
 // existing content ...
