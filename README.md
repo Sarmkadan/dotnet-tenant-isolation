@@ -1,42 +1,41 @@
 // existing content ...
 
-## TenantKeyBenchmarks
+## StringBenchmarks
 
-The `TenantKeyBenchmarks` class provides a set of benchmarks for evaluating the performance of tenant-aware key generation and cache key building. It includes tests for string concatenation, string interpolation, cache key building, and subdomain extraction.
+The `StringBenchmarks` class provides a set of benchmarks for evaluating the performance of string manipulation operations. It includes tests for slug generation, hash calculation, data masking, and string formatting.
 
 ### Example Usage
 
 ```csharp
-// Create a new instance of TenantKeyBenchmarks
-var tenantKeyBenchmarks = new TenantKeyBenchmarks();
+// Create a new instance of StringBenchmarks
+var stringBenchmarks = new StringBenchmarks();
 
-// Test string concatenation
-var tenantAwareKeyStringConcat = tenantKeyBenchmarks.TenantAwareKey_StringConcat;
+// Test slug generation with ASCII characters
+var slugAscii = stringBenchmarks.ToSlug_Ascii("Hello World");
 
-// Test string interpolation
-var tenantAwareKeyInterpolation = tenantKeyBenchmarks.TenantAwareKey_Interpolation;
+// Test slug generation with Unicode characters
+var slugUnicode = stringBenchmarks.ToSlug_Unicode("Bonjour Monde");
 
-// Test cache key building
-var cacheKeyBuilderTenantAndResource = tenantKeyBenchmarks.CacheKeyBuilder_TenantAndResource;
+// Test hash calculation
+var hash = stringBenchmarks.GetDeterministicHashCode("Hello World");
 
-// Test frozen set contains reserved hit
-var frozenSetContainsReservedHit = tenantKeyBenchmarks.FrozenSet_Contains_ReservedHit;
+// Test data masking
+var maskedData = stringBenchmarks.MaskSensitiveData("Hello World");
 
-// Test frozen set contains reserved miss
-var frozenSetContainsReservedMiss = tenantKeyBenchmarks.FrozenSet_Contains_ReservedMiss;
+// Test human-readable string formatting
+var humanReadable = stringBenchmarks.ToHumanReadable("Hello World");
 
-// Test subdomain extraction by index
-var subdomainExtractIndexOf = tenantKeyBenchmarks.SubdomainExtract_IndexOf;
+// Test removal of special characters
+var cleanedString = stringBenchmarks.RemoveSpecialCharacters("Hello World!");
 
-// Test subdomain extraction by split
-var subdomainExtractSplit = tenantKeyBenchmarks.SubdomainExtract_Split;
+// Test email validation
+var isValidEmail = stringBenchmarks.IsValidEmail("hello@example.com");
 
-// Test generating a tenant-scoped key
-var generateTenantScopedKey = tenantKeyBenchmarks.GenerateTenantScopedKey;
+// Test URL validation
+var isValidUrl = stringBenchmarks.IsValidUrl("https://example.com");
 
-// Test generating a tenant-scoped key with hash
-var generateTenantScopedKeyWithHash = tenantKeyBenchmarks.GenerateTenantScopedKey_WithHash;
+// Test Pascal case conversion
+var pascalCase = stringBenchmarks.ToPascalCase("hello world");
 ```
 
 // existing content ...
-```
