@@ -65,6 +65,25 @@ public class TenantResolutionServiceTests
         return httpContext;
     }
 
+    /// <summary>
+    /// Sets a route value on the given <see cref="HttpContext"/> so that
+    /// <c>HttpContext.GetRouteData()</c> (used by the production route resolution
+    /// strategy) can see it. Setting <c>HttpContext.Items</c> directly does not
+    /// populate route data and would make the route resolution strategy a no-op.
+    /// </summary>
+    private static void SetRouteValue(HttpContext httpContext, string key, object value)
+    {
+        var routingFeature = httpContext.Features.Get<Microsoft.AspNetCore.Routing.IRoutingFeature>();
+        if (routingFeature == null)
+        {
+            routingFeature = new Microsoft.AspNetCore.Routing.RoutingFeature();
+            httpContext.Features.Set(routingFeature);
+        }
+
+        routingFeature.RouteData ??= new RouteData();
+        routingFeature.RouteData.Values[key] = value;
+    }
+
     #region ResolveTenantAsync - Header Resolution Tests
 
     /// <summary>
@@ -128,20 +147,14 @@ public class TenantResolutionServiceTests
         var httpContext = CreateHttpContext();
         httpContext.Request.Headers[TenantConstants.TenantIdHeader] = "invalid-guid";
 
-        const string slug = "test-tenant";
-        var tenant = new Tenant { Id = Guid.NewGuid(), Slug = slug, Status = TenantStatus.Active };
-        var tenants = new List<Tenant> { tenant };
-
-        _mockTenantStore.Setup(s => s.GetAllActiveTenantsAsync())
-            .ReturnsAsync(tenants);
+        // No slug header, no claims, no route data, and no subdomain-bearing host is
+        // configured, so every subsequent resolution strategy is exhausted too.
 
         // Act
-        var result = await _sut.ResolveTenantAsync();
+        Func<Task> act = async () => await _sut.ResolveTenantAsync();
 
-        // Assert - Should return empty list because no slug header was set
-        result.Should().Be(tenant); // Will eventually fail when all strategies exhausted
-
-        // This test shows fallback behavior - the service tries claims next
+        // Assert - falls through every strategy and ultimately fails to resolve a tenant.
+        await act.Should().ThrowAsync<TenantNotResolvedException>();
     }
 
     #endregion
@@ -228,7 +241,7 @@ public class TenantResolutionServiceTests
         httpContext.User = principal;
 
         // Set up route resolution
-        httpContext.Items["TenantId"] = tenantId;
+        SetRouteValue(httpContext, TenantConstants.TenantRouteParameter, tenantId.ToString());
 
         _mockTenantStore.Setup(s => s.GetTenantByIdAsync(tenantId))
             .ReturnsAsync(tenant);
@@ -257,7 +270,7 @@ public class TenantResolutionServiceTests
         var httpContext = CreateHttpContext();
 
         // Set tenant in context items for route resolution
-        httpContext.Items[TenantConstants.TenantRouteParameter] = tenantId.ToString();
+        SetRouteValue(httpContext, TenantConstants.TenantRouteParameter, tenantId.ToString());
 
         _mockTenantStore.Setup(s => s.GetTenantByIdAsync(tenantId))
             .ReturnsAsync(tenant);
@@ -282,7 +295,7 @@ public class TenantResolutionServiceTests
         var httpContext = CreateHttpContext();
 
         // Set tenant slug in context items for route resolution
-        httpContext.Items[TenantConstants.TenantSlugRouteParameter] = slug;
+        SetRouteValue(httpContext, TenantConstants.TenantSlugRouteParameter, slug);
 
         var tenants = new List<Tenant> { tenant };
         _mockTenantStore.Setup(s => s.GetAllActiveTenantsAsync())

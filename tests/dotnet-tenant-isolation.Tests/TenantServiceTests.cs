@@ -1,6 +1,7 @@
 #nullable enable
 
 using FluentAssertions;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Moq;
 using TenantIsolation.Constants;
@@ -44,8 +45,14 @@ public class TenantServiceTests
 	/// </summary>
 	public TenantServiceTests()
 	{
-		_mockTenantRepository = new Mock<TenantRepository>(MockBehavior.Strict,
-			new Mock<ITenantDbContextFactory<TenantDbContext>>().Object);
+		// The repository constructor eagerly resolves a DbContext from the factory,
+		// so the factory must return a real (in-memory) context rather than a loose mock's null.
+		var options = new DbContextOptionsBuilder<TenantDbContext>()
+			.UseInMemoryDatabase($"TenantServiceTests_{Guid.NewGuid()}")
+			.Options;
+		var contextFactory = new InMemoryTenantDbContextFactory(new TenantDbContext(options));
+
+		_mockTenantRepository = new Mock<TenantRepository>(MockBehavior.Strict, contextFactory);
 		_mockDynamicTenantStore = new Mock<IDynamicTenantStore>(MockBehavior.Strict);
 		_mockLogger = new Mock<ILogger<TenantService>>();
 
@@ -941,8 +948,10 @@ public class TenantServiceTests
 		Assert.Equal(65, (int)dynamicResult.TotalTenants);
 		Assert.Equal(50, (int)dynamicResult.ActiveTenants);
 
+		// GetTenantStatisticsAsync only aggregates status counts; expiring subscriptions
+		// are surfaced separately via GetExpiringSubscriptionsAsync and are not part of
+		// this statistics call.
 		_mockTenantRepository.Verify(r => r.GetStatusCountsAsync(), Times.Once);
-		_mockTenantRepository.Verify(r => r.GetExpiringSubscriptionsAsync(30), Times.Once);
 	}
 
 	[Fact]
