@@ -1,5 +1,76 @@
 // existing content ...
 
+## BackgroundTask
+
+The `BackgroundTask` class represents a background task that can be queued for execution by the `BackgroundTaskQueue`. It tracks task execution metrics including pending, running, completed, and failed task counts, along with average execution time. Tasks can be prioritized and configured with retry policies.
+
+### Members
+
+- `Id` - Unique identifier for the task
+- `Name` - Human-readable name describing the task
+- `WorkItem` - The asynchronous delegate to execute (`Func<CancellationToken, Task>`)
+- `EnqueuedAt` - When the task was enqueued
+- `Priority` - Task priority level (`BackgroundTaskPriority`)
+- `MaxRetries` - Maximum retry attempts for failed executions
+- `PendingTasks` - Count of pending tasks
+- `CompletedTasks` - Count of completed tasks
+- `FailedTasks` - Count of failed tasks
+- `RunningTasks` - Count of currently running tasks
+- `AverageExecutionTime` - Average execution duration across completed tasks
+
+### Example Usage
+
+```csharp
+public class Program
+{
+    public static async Task Main(string[] args)
+    {
+        // Setup DI container
+        var services = new ServiceCollection();
+        services.AddLogging();
+        services.AddBackgroundTaskQueue();
+        var serviceProvider = services.BuildServiceProvider();
+
+        // Resolve the background task queue
+        var taskQueue = serviceProvider.GetRequiredService<BackgroundTaskQueue>();
+
+        // Create a background task with a work item
+        var task = new BackgroundTask(
+            name: "Database Cleanup",
+            workItem: async (cancellationToken) =>
+            {
+                Console.WriteLine("Starting database cleanup...");
+                await Task.Delay(1000, cancellationToken);
+                Console.WriteLine("Database cleanup completed!");
+            },
+            priority: BackgroundTaskPriority.Normal,
+            maxRetries: 3
+        );
+
+        // Queue the task
+        taskQueue.QueueTask(task);
+
+        // Process tasks in a background service
+        var hostedService = serviceProvider.GetRequiredService<BackgroundTaskHostedService>();
+        await hostedService.StartAsync(CancellationToken.None);
+
+        // Get queue statistics
+        var stats = taskQueue.GetStatistics();
+        Console.WriteLine($"Pending: {stats.PendingTasks}, Running: {stats.RunningTasks}, " +
+                        $"Completed: {stats.CompletedTasks}, Failed: {stats.FailedTasks}");
+    }
+}
+
+// Register BackgroundTaskQueue in DI container
+public static class Startup
+{
+    public static void ConfigureServices(IServiceCollection services)
+    {
+        services.AddBackgroundTaskQueue();
+    }
+}
+```
+
 ## IEventBus
 
 The `IEventBus` interface represents an event bus that enables publish-subscribe communication between components. It allows subscribers to register for specific event types and publishers to send events to all registered subscribers.
