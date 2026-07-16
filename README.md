@@ -1660,6 +1660,78 @@ public class ConfigurationValidationExample
 }
 ```
 
+## ICacheProvider
+
+The `ICacheProvider` interface provides a tenant-aware caching abstraction for multi-tenant applications. It supports both in-memory and distributed caching scenarios with Time-To-Live (TTL) expiration, automatic cleanup, and consistent key generation through the `CacheKeyBuilder`.
+
+**Key capabilities:**
+- Thread-safe asynchronous operations with zero allocations
+- Sliding expiration and automatic cleanup of expired entries
+- Tenant isolation through consistent key generation
+- Support for both in-memory and distributed cache implementations
+- Efficient memory management with automatic cleanup
+
+**Usage example**
+
+```csharp
+using Microsoft.Extensions.DependencyInjection;
+using TenantIsolation.Caching;
+
+public class CacheExample
+{
+    public static async Task Main(string[] args)
+    {
+        // Setup dependency injection
+        var services = new ServiceCollection();
+        
+        // Register cache provider (automatically detects distributed vs in-memory)
+        services.AddTenantAwareCacheProvider();
+        
+        var provider = services.BuildServiceProvider();
+        
+        // Resolve the cache provider
+        var cacheProvider = provider.GetRequiredService<ICacheProvider>();
+        
+        var tenantId = Guid.NewGuid().ToString();
+        var userId = Guid.NewGuid().ToString();
+        
+        // Create a cache key using the builder
+        var cacheKey = new CacheKeyBuilder("user-data")
+            .WithTenant(tenantId)
+            .WithUser(userId)
+            .Add("profile")
+            .Build();
+        
+        // Store data in cache with 5 minute expiration
+        var userProfile = new { 
+            Name = "John Doe", 
+            Email = "john.doe@example.com",
+            Role = "Administrator"
+        };
+        
+        await cacheProvider.SetAsync(cacheKey, userProfile, TimeSpan.FromMinutes(5));
+        
+        // Retrieve data from cache
+        var cachedProfile = await cacheProvider.GetAsync<object>(cacheKey);
+        Console.WriteLine($"Cached profile: {cachedProfile?.GetType().Name}");
+        
+        // Check if key exists
+        var exists = await cacheProvider.ExistsAsync(cacheKey);
+        Console.WriteLine("Key exists: {exists}");
+        
+        // Remove specific key
+        await cacheProvider.RemoveAsync(cacheKey);
+        
+        // Clear all cache entries
+        await cacheProvider.ClearAsync();
+        
+        // Get all cache keys (useful for debugging)
+        var allKeys = await cacheProvider.GetAllKeysAsync();
+        Console.WriteLine($"Total cache keys: {allKeys.Count()}");
+    }
+}
+```
+
 ## UserRepository
 
 The `UserRepository` class provides data access operations for user management within multi-tenant applications. It extends the base `Repository<User>` class and offers specialized methods for querying, filtering, and managing users based on various criteria such as email, role, organization, and authentication status.
