@@ -1589,6 +1589,77 @@ public class UsageMeteringExample
 }
 ```
 
+## ValidationResult
+
+The `ValidationResult` class represents the outcome of configuration validation operations in multi-tenant applications. It tracks validation status, collects error messages, and provides helper methods to add validation feedback. This type is primarily used by the `ConfigurationValidator` to report configuration issues during application startup.
+
+**Key capabilities:**
+- Track overall validation status with `IsValid` property
+- Collect error messages in `Errors` list for invalid configurations
+- Collect warning messages in `Warnings` list for non-critical issues
+- Add errors and warnings dynamically using helper methods
+
+**Usage example**
+
+```csharp
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
+using TenantIsolation.Configuration;
+
+public class ConfigurationValidationExample
+{
+    public static void Main(string[] args)
+    {
+        // Setup dependency injection
+        var services = new ServiceCollection();
+        services.AddLogging(configure => configure.AddConsole());
+        services.AddConfigurationValidator();
+        
+        var provider = services.BuildServiceProvider();
+        
+        // Get the configuration validator
+        var validator = provider.GetRequiredService<IConfigurationValidator>();
+        
+        // Validate configuration
+        var result = validator.Validate();
+        
+        Console.WriteLine($"Configuration valid: {result.IsValid}");
+        Console.WriteLine($"Error count: {result.Errors.Count}");
+        Console.WriteLine($"Warning count: {result.Warnings.Count}");
+        
+        // Add custom validation errors
+        if (!result.IsValid)
+        {
+            foreach (var error in result.Errors)
+            {
+                Console.WriteLine($"Error: {error}");
+            }
+        }
+        
+        // Add custom validation warnings
+        result.AddWarning("Consider enabling audit logging for production environment");
+        result.AddWarning("Review feature flags for optimal performance");
+        
+        Console.WriteLine($"Updated warning count: {result.Warnings.Count}");
+        
+        // Validate specific configuration section
+        var sectionResult = validator.ValidateSection("TenantIsolation");
+        Console.WriteLine($"Section validation valid: {sectionResult.IsValid}");
+        
+        // Throw exception if validation fails
+        try
+        {
+            validator.ValidateAndThrow();
+            Console.WriteLine("Configuration validation passed!");
+        }
+        catch (InvalidOperationException ex)
+        {
+            Console.WriteLine($"Configuration validation failed: {ex.Message}");
+        }
+    }
+}
+```
+
 ## UserRepository
 
 The `UserRepository` class provides data access operations for user management within multi-tenant applications. It extends the base `Repository<User>` class and offers specialized methods for querying, filtering, and managing users based on various criteria such as email, role, organization, and authentication status.
