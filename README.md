@@ -1061,6 +1061,128 @@ public class TimeProviderTestingExample
 }
 ```
 
+## ValidationUtility
+
+The `ValidationUtility` class provides centralized validation methods for common data validation patterns across the tenant isolation framework. It includes validation for email addresses, slugs, GUIDs, URLs, and various string and numeric constraints, with both boolean check methods and exception-throwing validation methods for different use cases.
+
+**Key capabilities:**
+- Validate email format (RFC-compliant regex pattern)
+- Validate tenant slug format (lowercase alphanumeric with hyphens, 3-63 characters)
+- Validate GUID format
+- Validate URL format (HTTP/HTTPS only)
+- Validate string length constraints (min, max, range)
+- Validate numeric ranges and positivity
+- Validate date relationships (future, past, valid ranges)
+- Validate enum values
+- Throw `TenantIsolationException` for invalid values or provide boolean results
+
+**Usage example**
+
+```csharp
+using TenantIsolation.Utilities;
+using TenantIsolation.Exceptions;
+
+public class ValidationExample
+{
+    public static void Main(string[] args)
+    {
+        // Validate email format
+        string email = "user@example.com";
+        bool isEmailValid = ValidationUtility.IsValidEmail(email);
+        Console.WriteLine($"Email '{email}' is valid: {isEmailValid}");
+
+        // Validate tenant slug
+        string slug = "acme-corp";
+        bool isSlugValid = ValidationUtility.IsValidSlug(slug);
+        Console.WriteLine($"Slug '{slug}' is valid: {isSlugValid}");
+
+        // Validate GUID
+        string guid = Guid.NewGuid().ToString();
+        bool isGuidValid = ValidationUtility.IsValidGuid(guid);
+        Console.WriteLine($"GUID '{guid}' is valid: {isGuidValid}");
+
+        // Validate URL
+        string url = "https://example.com/api/users";
+        bool isUrlValid = ValidationUtility.IsValidUrl(url);
+        Console.WriteLine($"URL '{url}' is valid: {isUrlValid}");
+
+        // String length validation
+        string name = "John Doe";
+        ValidationUtility.RequireMinLength(name, 3, nameof(name));
+        ValidationUtility.RequireMaxLength(name, 50, nameof(name));
+        ValidationUtility.RequireLengthBetween(name, 3, 50, nameof(name));
+
+        // Numeric validation
+        int userCount = 42;
+        ValidationUtility.RequirePositive(userCount, nameof(userCount));
+        ValidationUtility.RequireRange(userCount, 1, 1000, nameof(userCount));
+
+        // Date validation
+        DateTime futureDate = DateTime.UtcNow.AddDays(30);
+        ValidationUtility.RequireFutureDate(futureDate, nameof(futureDate));
+
+        DateTime pastDate = DateTime.UtcNow.AddDays(-1);
+        ValidationUtility.RequirePastDate(pastDate, nameof(pastDate));
+
+        // Date range validation
+        DateTime startDate = DateTime.UtcNow;
+        DateTime endDate = DateTime.UtcNow.AddDays(7);
+        ValidationUtility.RequireValidDateRange(startDate, endDate, nameof(startDate), nameof(endDate));
+
+        // Enum validation
+        ValidationUtility.RequireValidEnum(UserRole.Administrator);
+
+        // Exception-throwing validation methods
+        try
+        {
+            ValidationUtility.RequireNotEmpty(null, nameof(email));
+        }
+        catch (TenantIsolationException ex)
+        {
+            Console.WriteLine($"Validation failed: {ex.Message}");
+        }
+
+        try
+        {
+            ValidationUtility.RequireValidEmail("invalid-email");
+        }
+        catch (TenantIsolationException ex)
+        {
+            Console.WriteLine($"Email validation failed: {ex.Message}");
+        }
+
+        try
+        {
+            ValidationUtility.RequireValidSlug("Invalid Slug");
+        }
+        catch (TenantIsolationException ex)
+        {
+            Console.WriteLine($"Slug validation failed: {ex.Message}");
+        }
+
+        try
+        {
+            ValidationUtility.RequireValidGuid("not-a-guid", nameof(guid));
+        }
+        catch (TenantIsolationException ex)
+        {
+            Console.WriteLine($"GUID validation failed: {ex.Message}");
+        }
+
+        try
+        {
+            ValidationUtility.RequireValidUrl("ftp://invalid.com", nameof(url));
+        }
+        catch (TenantIsolationException ex)
+        {
+            Console.WriteLine($"URL validation failed: {ex.Message}");
+        }
+    }
+}
+
+public enum UserRole { Administrator, User, Guest }
+```
+
 ## DynamicTenantStore
     public static async Task Main(string[] args)
     {
@@ -3034,6 +3156,128 @@ public class TimeProviderTestingExample
         Console.WriteLine($"Reset to system time: {mockTimeProvider.UtcNow}");
     }
 }
+```
+
+## ValidationUtility
+
+The `ValidationUtility` class provides centralized validation methods for common data validation patterns across the tenant isolation framework. It includes validation for email addresses, slugs, GUIDs, URLs, and various string and numeric constraints, with both boolean check methods and exception-throwing validation methods for different use cases.
+
+**Key capabilities:**
+- Validate email format (RFC-compliant regex pattern)
+- Validate tenant slug format (lowercase alphanumeric with hyphens, 3-63 characters)
+- Validate GUID format
+- Validate URL format (HTTP/HTTPS only)
+- Validate string length constraints (min, max, range)
+- Validate numeric ranges and positivity
+- Validate date relationships (future, past, valid ranges)
+- Validate enum values
+- Throw `TenantIsolationException` for invalid values or provide boolean results
+
+**Usage example**
+
+```csharp
+using TenantIsolation.Utilities;
+using TenantIsolation.Exceptions;
+
+public class ValidationExample
+{
+    public static void Main(string[] args)
+    {
+        // Validate email format
+        string email = "user@example.com";
+        bool isEmailValid = ValidationUtility.IsValidEmail(email);
+        Console.WriteLine($"Email '{email}' is valid: {isEmailValid}");
+
+        // Validate tenant slug
+        string slug = "acme-corp";
+        bool isSlugValid = ValidationUtility.IsValidSlug(slug);
+        Console.WriteLine($"Slug '{slug}' is valid: {isSlugValid}");
+
+        // Validate GUID
+        string guid = Guid.NewGuid().ToString();
+        bool isGuidValid = ValidationUtility.IsValidGuid(guid);
+        Console.WriteLine($"GUID '{guid}' is valid: {isGuidValid}");
+
+        // Validate URL
+        string url = "https://example.com/api/users";
+        bool isUrlValid = ValidationUtility.IsValidUrl(url);
+        Console.WriteLine($"URL '{url}' is valid: {isUrlValid}");
+
+        // String length validation
+        string name = "John Doe";
+        ValidationUtility.RequireMinLength(name, 3, nameof(name));
+        ValidationUtility.RequireMaxLength(name, 50, nameof(name));
+        ValidationUtility.RequireLengthBetween(name, 3, 50, nameof(name));
+
+        // Numeric validation
+        int userCount = 42;
+        ValidationUtility.RequirePositive(userCount, nameof(userCount));
+        ValidationUtility.RequireRange(userCount, 1, 1000, nameof(userCount));
+
+        // Date validation
+        DateTime futureDate = DateTime.UtcNow.AddDays(30);
+        ValidationUtility.RequireFutureDate(futureDate, nameof(futureDate));
+
+        DateTime pastDate = DateTime.UtcNow.AddDays(-1);
+        ValidationUtility.RequirePastDate(pastDate, nameof(pastDate));
+
+        // Date range validation
+        DateTime startDate = DateTime.UtcNow;
+        DateTime endDate = DateTime.UtcNow.AddDays(7);
+        ValidationUtility.RequireValidDateRange(startDate, endDate, nameof(startDate), nameof(endDate));
+
+        // Enum validation
+        ValidationUtility.RequireValidEnum(UserRole.Administrator);
+
+        // Exception-throwing validation methods
+        try
+        {
+            ValidationUtility.RequireNotEmpty(null, nameof(email));
+        }
+        catch (TenantIsolationException ex)
+        {
+            Console.WriteLine($"Validation failed: {ex.Message}");
+        }
+
+        try
+        {
+            ValidationUtility.RequireValidEmail("invalid-email");
+        }
+        catch (TenantIsolationException ex)
+        {
+            Console.WriteLine($"Email validation failed: {ex.Message}");
+        }
+
+        try
+        {
+            ValidationUtility.RequireValidSlug("Invalid Slug");
+        }
+        catch (TenantIsolationException ex)
+        {
+            Console.WriteLine($"Slug validation failed: {ex.Message}");
+        }
+
+        try
+        {
+            ValidationUtility.RequireValidGuid("not-a-guid", nameof(guid));
+        }
+        catch (TenantIsolationException ex)
+        {
+            Console.WriteLine($"GUID validation failed: {ex.Message}");
+        }
+
+        try
+        {
+            ValidationUtility.RequireValidUrl("ftp://invalid.com", nameof(url));
+        }
+        catch (TenantIsolationException ex)
+        {
+            Console.WriteLine($"URL validation failed: {ex.Message}");
+        }
+    }
+}
+
+public enum UserRole { Administrator, User, Guest }
 ```
 
 ## DynamicTenantStore
