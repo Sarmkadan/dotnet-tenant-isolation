@@ -1089,6 +1089,94 @@ public class Program
 }
 ```
 
+## JsonUtility
+
+The `JsonUtility` class provides consistent JSON serialization and deserialization utilities for the tenant isolation framework. It handles JSON conversion with standardized options including camelCase naming, null value handling, and cycle reference management. The class offers both compact and pretty-print serialization, safe deserialization methods, and utilities for JSON manipulation and validation.
+
+**Key capabilities:**
+- Standardized JSON serialization with camelCase naming policy
+- Pretty-print JSON output for logging and debugging
+- Safe deserialization with error handling
+- JSON validation and formatting utilities
+- Dynamic JSON manipulation and property extraction
+- Object-to-dictionary conversion for parameter passing
+
+**Usage example**
+
+```csharp
+using System;
+using System.Collections.Generic;
+using TenantIsolation.Utilities;
+
+public class JsonUtilityExample
+{
+    public static void Main(string[] args)
+    {
+        // Create a sample object to serialize
+        var user = new
+        {
+            Id = Guid.NewGuid(),
+            FirstName = "John",
+            LastName = "Doe",
+            Email = "john.doe@example.com",
+            IsActive = true,
+            Preferences = new Dictionary<string, object>
+            {
+                { "theme", "dark" },
+                { "language", "en-US" },
+                { "notificationsEnabled", true }
+            },
+            Metadata = new
+            {
+                CreatedAt = DateTime.UtcNow,
+                UpdatedAt = DateTime.UtcNow
+            }
+        };
+
+        // Serialize to compact JSON
+        var compactJson = JsonUtility.Serialize(user);
+        Console.WriteLine("Compact JSON:");
+        Console.WriteLine(compactJson);
+
+        // Serialize to pretty JSON with indentation
+        var prettyJson = JsonUtility.SerializePretty(user);
+        Console.WriteLine("\nPretty JSON:");
+        Console.WriteLine(prettyJson);
+
+        // Deserialize back to object
+        var deserializedUser = JsonUtility.Deserialize<Dictionary<string, object>>(compactJson);
+        Console.WriteLine($"\nDeserialized user email: {deserializedUser?["email"]}");
+
+        // Safe deserialization (returns null on failure)
+        var safeResult = JsonUtility.DeserializeSafe<Dictionary<string, object>>("invalid json");
+        Console.WriteLine($"Safe deserialization result: {safeResult == null}");
+
+        // Validate JSON
+        var isValid = JsonUtility.IsValidJson(compactJson);
+        Console.WriteLine($"\nIs valid JSON: {isValid}");
+
+        // Pretty print existing JSON
+        var minified = JsonUtility.Minify(prettyJson);
+        Console.WriteLine($"\nMinified length: {minified.Length} chars");
+
+        var prettyAgain = JsonUtility.PrettyPrint(minified);
+        Console.WriteLine($"Pretty print length: {prettyAgain.Length} chars");
+
+        // Get property value from JSON string
+        var emailValue = JsonUtility.GetPropertyValue(compactJson, "email");
+        Console.WriteLine($"\nExtracted email: {emailValue}");
+
+        // Convert object to dictionary
+        var userDict = JsonUtility.ConvertToDictionary(user);
+        Console.WriteLine($"\nUser dictionary keys: {string.Join(", ", userDict.Keys)}");
+
+        // Create custom serializer options
+        var customOptions = JsonUtility.CreateCustomOptions(indented: true, ignoreNulls: false);
+        Console.WriteLine($"\nCustom options configured: indented={customOptions.WriteIndented}, ignoreNulls={customOptions.DefaultIgnoreCondition == JsonIgnoreCondition.WhenWritingNull}");
+    }
+}
+```
+
 ## CollectionExtensions
 
 The `CollectionExtensions` class provides a comprehensive set of extension methods for working with collections, lists, dictionaries, and enumerables in .NET applications. These methods offer safe collection manipulation patterns, prevent common exceptions like `IndexOutOfRangeException`, and provide convenient operations for filtering, partitioning, and transforming collections while maintaining thread safety and proper null handling.
