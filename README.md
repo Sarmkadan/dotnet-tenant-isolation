@@ -1838,6 +1838,106 @@ public class ApiResponseExample
 }
 ```
 
+## NotificationServiceTests
+
+The `NotificationServiceTests` class provides comprehensive unit test coverage for the `NotificationService` class, validating all notification functionality including sending notifications to individual users, tenant-wide notifications, read status tracking, expiration handling, and notification lifecycle operations. It tests notification creation, retrieval, marking as read, deletion, and history queries across multiple realistic scenarios.
+
+**Key capabilities:**
+- Test notification sending to individual users with proper metadata and expiration
+- Validate tenant-wide notification broadcasting
+- Verify unread notification filtering and retrieval
+- Test marking notifications as read and tracking read status
+- Validate notification deletion and history queries
+- Test notification expiration and automatic cleanup
+- Verify error scenarios (null notifications, invalid recipients)
+
+**Public members tested:**
+- `SendNotificationAsync_ValidNotification_AddsNotification()` - Tests successful notification sending
+- `SendNotificationAsync_NullNotification_ThrowsArgumentNullException()` - Validates null notification handling
+- `GetUnreadNotificationsAsync_WithMultipleNotifications_ReturnsOnlyUnread()` - Tests unread notification filtering
+- `MarkAsReadAsync_ExistingNotification_MarksAsRead()` - Tests marking notifications as read
+- `DeleteNotificationAsync_ExistingNotification_RemovesIt()` - Tests notification deletion
+
+**Usage example**
+
+```csharp
+using FluentAssertions;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
+using TenantIsolation.Models;
+using TenantIsolation.Services;
+using TenantIsolation.Tests;
+using Xunit;
+
+public class NotificationServiceTestsExample
+{
+    private readonly NotificationServiceTests _notificationServiceTests;
+    private readonly INotificationService _notificationService;
+    private readonly Guid _tenantId = Guid.Parse("3fa85f64-5717-4562-b3fc-2c963f66afa6");
+
+    public NotificationServiceTestsExample()
+    {
+        // Setup dependency injection
+        var services = new ServiceCollection();
+        services.AddLogging(configure => configure.AddConsole());
+        services.AddNotificationService();
+        
+        var provider = services.BuildServiceProvider();
+        _notificationService = provider.GetRequiredService<INotificationService>();
+        
+        _notificationServiceTests = new NotificationServiceTests();
+    }
+
+    public async Task RunNotificationServiceTests()
+    {
+        // Test sending a valid notification
+        var validNotification = new Notification
+        {
+            Title = "Welcome to the platform",
+            Message = "Your account has been successfully created and is ready to use.",
+            Type = NotificationType.Success,
+            RecipientUserId = "user-12345",
+            TenantId = _tenantId,
+            Metadata = new Dictionary<string, string>
+            {
+                { "actionUrl", "/dashboard" },
+                { "priority", "high" }
+            },
+            ExpiresAt = DateTime.UtcNow.AddDays(7),
+            CreatedAt = DateTime.UtcNow
+        };
+
+        // Send notification and verify it was added
+        await _notificationServiceTests.SendNotificationAsync_ValidNotification_AddsNotification();
+        
+        // Test null notification handling
+        await _notificationServiceTests.SendNotificationAsync_NullNotification_ThrowsArgumentNullException();
+        
+        // Test sending tenant-wide notification
+        await _notificationService.SendTenantNotificationAsync(
+            tenantId: _tenantId,
+            title: "System Maintenance",
+            message: "The system will be undergoing maintenance tonight at 2 AM UTC.",
+            type: NotificationType.Warning
+        );
+        
+        // Test getting unread notifications
+        await _notificationServiceTests.GetUnreadNotificationsAsync_WithMultipleNotifications_ReturnsOnlyUnread();
+        
+        // Test marking as read
+        await _notificationServiceTests.MarkAsReadAsync_ExistingNotification_MarksAsRead();
+        
+        // Test deleting notification
+        await _notificationServiceTests.DeleteNotificationAsync_ExistingNotification_RemovesIt();
+        
+        // Test notification history
+        var history = await _notificationService.GetNotificationHistoryAsync("user-12345", limit: 10);
+        history.Should().NotBeNull();
+        history.Count().Should().BeGreaterOrEqualTo(0);
+    }
+}
+```
+
 ## Notification
 
 The `Notification` class represents an in-app notification for multi-tenant applications. It stores notification details including title, message, type, recipient information, timestamps, and metadata. Notifications support tracking read status, expiration dates, and can be associated with either individual users or entire tenants.
