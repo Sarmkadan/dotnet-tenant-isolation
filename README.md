@@ -176,55 +176,55 @@ public class UserManagement
 {
 public static void Main(string[] args)
 {
-// Create a new user for a tenant
-var user = new User
-{
-Id = Guid.NewGuid(),
-TenantId = Guid.Parse("3fa85f64-5717-4562-b3fc-2c963f66afa6"),
-OrganizationId = Guid.Parse("4fa85f64-5717-4562-b3fc-2c963f66afa6"),
-Email = "john.doe@acme-corp.com",
-FirstName = "John",
-LastName = "Doe",
-Role = UserRole.Administrator,
-PasswordHash = BCrypt.Net.BCrypt.HashPassword("SecurePassword123!"),
-IsActive = true,
-IsEmailVerified = true,
-IsTwoFactorEnabled = false,
-LastLoginAt = DateTime.UtcNow.AddDays(-1),
-FailedLoginAttempts = 0,
-LockedUntil = null,
-PhoneNumber = "+1-555-0101",
-AvatarUrl = "https://acme-corp.com/avatars/john-doe.jpg",
-Preferences = "{\"theme\": \"dark\", \"language\": \"en-US\"}",
-LastPasswordChangeAt = DateTime.UtcNow,
-CreatedAt = DateTime.UtcNow,
-UpdatedAt = DateTime.UtcNow
-};
+ // Create a new user for a tenant
+ var user = new User
+ {
+ Id = Guid.NewGuid(),
+ TenantId = Guid.Parse("3fa85f64-5717-4562-b3fc-2c963f66afa6"),
+ OrganizationId = Guid.Parse("4fa85f64-5717-4562-b3fc-2c963f66afa6"),
+ Email = "john.doe@acme-corp.com",
+ FirstName = "John",
+ LastName = "Doe",
+ Role = UserRole.Administrator,
+ PasswordHash = BCrypt.Net.BCrypt.HashPassword("SecurePassword123!"),
+ IsActive = true,
+ IsEmailVerified = true,
+ IsTwoFactorEnabled = false,
+ LastLoginAt = DateTime.UtcNow.AddDays(-1),
+ FailedLoginAttempts = 0,
+ LockedUntil = null,
+ PhoneNumber = "+1-555-0101",
+ AvatarUrl = "https://acme-corp.com/avatars/john-doe.jpg",
+ Preferences = "{\"theme\": \"dark\", \"language\": \"en-US\"}",
+ LastPasswordChangeAt = DateTime.UtcNow,
+ CreatedAt = DateTime.UtcNow,
+ UpdatedAt = DateTime.UtcNow
+ };
 
-// Check user status
-bool canLogin = user.CanLogin(); // true
-bool isLocked = user.IsLocked(); // false
-bool requiresPasswordChange = user.RequiresPasswordChange(); // false
+ // Check user status
+ bool canLogin = user.CanLogin(); // true
+ bool isLocked = user.IsLocked(); // false
+ bool requiresPasswordChange = user.RequiresPasswordChange(); // false
 
-// Update user properties
-user.FirstName = "Jonathan";
-user.LastLoginAt = DateTime.UtcNow;
-user.FailedLoginAttempts = 0;
-user.UpdatedAt = DateTime.UtcNow;
+ // Update user properties
+ user.FirstName = "Jonathan";
+ user.LastLoginAt = DateTime.UtcNow;
+ user.FailedLoginAttempts = 0;
+ user.UpdatedAt = DateTime.UtcNow;
 
-// Reset failed login attempts
-user.ResetFailedLoginAttempts();
+ // Reset failed login attempts
+ user.ResetFailedLoginAttempts();
 
-// Check tenant and organization navigation
-if (user.Tenant != null)
-{
-Console.WriteLine($"User belongs to tenant: {user.Tenant.Name}");
-}
+ // Check tenant and organization navigation
+ if (user.Tenant != null)
+ {
+ Console.WriteLine($"User belongs to tenant: {user.Tenant.Name}");
+ }
 
-if (user.Organization != null)
-{
-Console.WriteLine($"User belongs to organization: {user.Organization.Name}");
-}
+ if (user.Organization != null)
+ {
+ Console.WriteLine($"User belongs to organization: {user.Organization.Name}");
+ }
 }
 }
 ```
@@ -301,6 +301,51 @@ Manages tenant lifecycle and configuration.
 
 ### ConfigurationService
 Handles tenant-specific configuration settings with encryption and validation.
+
+## TenantResolutionService
+
+The `TenantResolutionService` resolves the current tenant for each request using a prioritized set of strategies (header → claims → route → subdomain) and caches the result in `HttpContext.Items`. It exposes helper methods to retrieve the resolved tenant, its identifier, and to check whether a tenant is present.
+
+**Usage example**
+
+```csharp
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
+using TenantIsolation.Services;
+
+public class Example
+{
+    public static async Task Main(string[] args)
+    {
+        var services = new ServiceCollection();
+
+        // Register required services
+        services.AddHttpContextAccessor();
+        services.AddLogging();
+
+        // Register your implementation of IDynamicTenantStore
+        services.AddSingleton<IDynamicTenantStore, InMemoryDynamicTenantStore>(); // replace with real implementation
+
+        // Register the resolution service
+        services.AddTransient<TenantResolutionService>();
+
+        var provider = services.BuildServiceProvider();
+
+        var tenantResolver = provider.GetRequiredService<TenantResolutionService>();
+
+        // Resolve the tenant for the current request
+        var tenant = await tenantResolver.ResolveTenantAsync();
+
+        // Access helper members
+        var tenantId = tenantResolver.GetCurrentTenantId();
+        var hasTenant = tenantResolver.HasTenant();
+
+        Console.WriteLine($"Resolved tenant: {tenant.Name} (Id: {tenantId}), HasTenant: {hasTenant}");
+    }
+}
+```
+
+*Note:* `InMemoryDynamicTenantStore` is a placeholder for your own `IDynamicTenantStore` implementation.
 
 ## ConfigurationService
 The `ConfigurationService` is responsible for managing tenant-specific configuration settings. It provides methods to set, get, and delete configurations, as well as batch operations and caching for improved performance. Here's an example usage:
