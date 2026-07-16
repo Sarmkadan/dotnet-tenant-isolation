@@ -937,6 +937,158 @@ public class AuditLoggingExample
 }
 ```
 
+## DependencyInjectionExtensions
+
+The `DependencyInjectionExtensions` class provides extension methods for registering tenant isolation services in ASP.NET Core applications. It simplifies the setup process by offering methods to configure the core services including the tenant-aware DbContext, repositories, and resolution services.
+
+**Key capabilities:**
+- Register tenant isolation with various database providers (In-Memory, SQL Server, PostgreSQL)
+- Configure tenant resolution middleware for request pipeline
+- Register core services including repositories, configuration, and feature toggles
+- Support for automatic database migration and soft-delete filtering
+- Enable/disable various framework features like audit logging, caching, and health checks
+
+**Usage examples**
+
+### Basic Setup with SQL Server
+
+```csharp
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
+using TenantIsolation.Configuration;
+using TenantIsolation.Data;
+
+public class Program
+{
+    public static void Main(string[] args)
+    {
+        var services = new ServiceCollection();
+
+        // Configure tenant isolation with SQL Server
+        services.AddTenantIsolation(options =>
+            options.UseSqlServer("Server=(localdb)\mssqllocaldb;Database=TenantIsolationDb;Trusted_Connection=True;MultipleActiveResultSets=true"));
+
+        // Build service provider
+        var provider = services.BuildServiceProvider();
+
+        // Resolve services
+        var dbContextFactory = provider.GetRequiredService<ITenantDbContextFactory<TenantDbContext>>();
+        var tenantService = provider.GetRequiredService<TenantService>();
+    }
+}
+```
+
+### Setup with In-Memory Database (for testing)
+
+```csharp
+using Microsoft.Extensions.DependencyInjection;
+using TenantIsolation.Configuration;
+
+public class Program
+{
+    public static void Main(string[] args)
+    {
+        var services = new ServiceCollection();
+
+        // Configure tenant isolation with in-memory database
+        services.AddTenantIsolationInMemory(databaseName: "TestTenantIsolationDb");
+
+        // Build service provider
+        var provider = services.BuildServiceProvider();
+
+        // Resolve services
+        var dbContextFactory = provider.GetRequiredService<ITenantDbContextFactory<TenantDbContext>>();
+    }
+}
+```
+
+### Advanced Setup with Custom Options
+
+```csharp
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
+using TenantIsolation.Configuration;
+
+public class Program
+{
+    public static void Main(string[] args)
+    {
+        var services = new ServiceCollection();
+
+        // Configure tenant isolation with custom options
+        services.AddTenantIsolation(
+            options => options.UseSqlServer("Server=sql-server;Database=TenantIsolationDb;User Id=sa;Password=YourPassword123;"),
+            configureOptions: options =>
+            {
+                options.AutoMigrate = true;
+                options.EnableSoftDeleteFilter = true;
+                options.EnableAuditLogging = true;
+                options.EnableCaching = true;
+                options.EnableHealthChecks = true;
+                options.MaxConcurrentTenants = 500;
+            });
+
+        // Build service provider
+        var provider = services.BuildServiceProvider();
+    }
+}
+```
+
+### Using Tenant Resolution Middleware
+
+```csharp
+using Microsoft.AspNetCore.Builder;
+using Microsoft.Extensions.DependencyInjection;
+using TenantIsolation.Configuration;
+using TenantIsolation.Middleware;
+
+var builder = WebApplication.CreateBuilder(args);
+
+// Register tenant isolation services
+builder.Services.AddTenantIsolation(options =>
+    options.UseSqlServer("Server=(localdb)\mssqllocaldb;Database=TenantIsolationDb;Trusted_Connection=True"));
+
+var app = builder.Build();
+
+// Use tenant resolution middleware in the pipeline
+app.UseTenantResolution();
+
+// Add other middleware
+app.UseMiddleware<TenantResolutionMiddleware>();
+app.UseMiddleware<ErrorHandlingMiddleware>();
+
+app.MapGet("/", () => "Hello World!");
+app.Run();
+```
+
+### Registering Feature Toggle Services
+
+```csharp
+using Microsoft.Extensions.DependencyInjection;
+using TenantIsolation.Configuration;
+using TenantIsolation.Services;
+
+public class Program
+{
+    public static void Main(string[] args)
+    {
+        var services = new ServiceCollection();
+
+        // Register tenant isolation
+        services.AddTenantIsolationInMemory();
+
+        // Register feature toggle service
+        services.AddTenantFeatureToggle();
+
+        // Build service provider
+        var provider = services.BuildServiceProvider();
+
+        // Resolve feature service
+        var featureService = provider.GetRequiredService<TenantFeatureService>();
+    }
+}
+```
+
 ## ServiceRegistrationExtensions
 
 The `ServiceRegistrationExtensions` class provides comprehensive service registration methods for configuring Phase 2 features of the tenant isolation framework. It simplifies setup by offering extension methods to register all framework services in one call, with support for custom configuration through options.
