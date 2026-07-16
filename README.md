@@ -1051,6 +1051,200 @@ public class ProductRepositoryExample
 This example demonstrates creating a generic `Repository<TEntity>` instance through dependency injection and using its public methods for common CRUD operations, bulk operations, and custom queries in a tenant-aware multi-tenant application.
 
 
+## TenantDbContext
+
+The `TenantDbContext` class is the Entity Framework Core database context for the tenant isolation framework. It manages entity configurations, relationships, and soft-delete filters for all tenant-related models including Tenants, Organizations, Users, TenantConfigurations, TenantConnectionStrings, DataIsolationPolicies, and TenantFeatures. The context automatically applies global query filters to exclude soft-deleted entities and provides timestamp management for CreatedAt and UpdatedAt fields.
+
+Here's an example usage:
+
+```csharp
+using Microsoft.EntityFrameworkCore;
+using TenantIsolation.Data;
+using TenantIsolation.Models;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
+
+public class TenantDbContextExample
+{
+    public static async Task Main(string[] args)
+    {
+        // Setup dependency injection
+        var services = new ServiceCollection();
+        services.AddLogging(configure => configure.AddConsole());
+        
+        // Configure DbContext with SQL Server (example configuration)
+        services.AddDbContext<TenantDbContext>(options =>
+            options.UseSqlServer("Server=(localdb)\mssqllocaldb;Database=TenantIsolationDb;Trusted_Connection=True;MultipleActiveResultSets=true"));
+        
+        var provider = services.BuildServiceProvider();
+        
+        // Get the DbContext instance
+        var dbContext = provider.GetRequiredService<TenantDbContext>();
+        
+        // Create and add a new tenant
+        var tenant = new Tenant
+        {
+            Id = Guid.NewGuid(),
+            Slug = "acme-corp",
+            Name = "ACME Corporation",
+            AdminEmail = "admin@acme-corp.com",
+            Status = TenantStatus.Active,
+            IsolationStrategy = TenantIsolationStrategy.DatabasePerTenant,
+            PlanId = "enterprise-pro",
+            MaxUsers = 500,
+            MaxStorageGb = 1024.50m,
+            SubscriptionExpiresAt = DateTime.UtcNow.AddYears(1),
+            CreatedAt = DateTime.UtcNow,
+            UpdatedAt = DateTime.UtcNow
+        };
+        
+        dbContext.Tenants.Add(tenant);
+        
+        // Create and add an organization
+        var organization = new Organization
+        {
+            Id = Guid.NewGuid(),
+            TenantId = tenant.Id,
+            Slug = "acme-corp-main",
+            Name = "ACME Corporation Main Org",
+            Industry = "Manufacturing",
+            CountryCode = "US",
+            RegistrationNumber = "REG-ACME-001",
+            ContactEmail = "contact@acme-corp.com",
+            IsActive = true,
+            CreatedAt = DateTime.UtcNow,
+            UpdatedAt = DateTime.UtcNow
+        };
+        
+        dbContext.Organizations.Add(organization);
+        
+        // Create and add a user
+        var user = new User
+        {
+            Id = Guid.NewGuid(),
+            TenantId = tenant.Id,
+            OrganizationId = organization.Id,
+            Email = "john.doe@acme-corp.com",
+            FirstName = "John",
+            LastName = "Doe",
+            Role = UserRole.Administrator,
+            PasswordHash = BCrypt.Net.BCrypt.HashPassword("SecurePassword123!"),
+            IsActive = true,
+            IsEmailVerified = true,
+            CreatedAt = DateTime.UtcNow,
+            UpdatedAt = DateTime.UtcNow
+        };
+        
+        dbContext.Users.Add(user);
+        
+        // Create and add a tenant configuration
+        var config = new TenantConfiguration
+        {
+            Id = Guid.NewGuid(),
+            TenantId = tenant.Id,
+            Key = "features:api:enabled",
+            Value = "true",
+            IsEncrypted = false,
+            IsRequired = true,
+            IsOverridable = true,
+            CreatedAt = DateTime.UtcNow,
+            ModifiedAt = DateTime.UtcNow
+        };
+        
+        dbContext.TenantConfigurations.Add(config);
+        
+        // Create and add a tenant connection string
+        var connectionString = new TenantConnectionString
+        {
+            Id = Guid.NewGuid(),
+            TenantId = tenant.Id,
+            DatabaseType = "SqlServer",
+            ConnectionString = "Server=sql-server-01;Database=acme_corp_db;User Id=tenant_user;Password=SecurePass123!;Connection Timeout=30;Max Pool Size=100",
+            Name = "Primary Database",
+            SchemaName = "acme_corp_schema",
+            DatabaseName = "acme_corp_db",
+            ServerHost = "sql-server-01.database.windows.net",
+            ServerPort = 1433,
+            ConnectionTimeout = 30,
+            CommandTimeout = 300,
+            MaxPoolSize = 100,
+            UseConnectionPooling = true,
+            IsPrimary = true,
+            IsActive = true
+        };
+        
+        dbContext.TenantConnectionStrings.Add(connectionString);
+        
+        // Create and add a data isolation policy
+        var policy = new DataIsolationPolicy
+        {
+            Id = Guid.NewGuid(),
+            TenantId = tenant.Id,
+            EntityType = "User",
+            PolicyType = "RowLevelSecurity",
+            FilterRule = "TenantId = @tenantId",
+            IsEnabled = true,
+            Priority = 1,
+            CreatedAt = DateTime.UtcNow,
+            UpdatedAt = DateTime.UtcNow
+        };
+        
+        dbContext.DataIsolationPolicies.Add(policy);
+        
+        // Create and add a tenant feature
+        var feature = new TenantFeature
+        {
+            Id = Guid.NewGuid(),
+            TenantId = tenant.Id,
+            FeatureKey = "advanced-reporting",
+            DisplayName = "Advanced Reporting",
+            Description = "Enables detailed analytics reports.",
+            IsEnabled = true,
+            Category = "Analytics",
+            RolloutPercentage = 75,
+            AvailabilityLevel = "Beta",
+            AvailableFrom = DateTime.UtcNow.AddDays(-1),
+            UsageLimit = 10000,
+            CurrentUsage = 0,
+            Metadata = "{\"requiresLicense\":true}",
+            CreatedAt = DateTime.UtcNow,
+            UpdatedAt = DateTime.UtcNow
+        };
+        
+        dbContext.TenantFeatures.Add(feature);
+        
+        // Save all changes to the database
+        var changesSaved = await dbContext.SaveChangesAsync();
+        Console.WriteLine($"Saved {changesSaved} changes to the database");
+        
+        // Query data using the DbContext
+        var activeTenants = await dbContext.Tenants
+            .Where(t => t.Status == TenantStatus.Active)
+            .ToListAsync();
+        
+        var tenantOrgs = await dbContext.Organizations
+            .Where(o => o.TenantId == tenant.Id)
+            .ToListAsync();
+        
+        var tenantUsers = await dbContext.Users
+            .Where(u => u.TenantId == tenant.Id)
+            .ToListAsync();
+        
+        Console.WriteLine($"Tenant has {tenantOrgs.Count} organizations and {tenantUsers.Count} users");
+        
+        // Soft delete an entity (will be filtered out by global query filter)
+        dbContext.Tenants.Remove(tenant);
+        await dbContext.SaveChangesAsync();
+        
+        // Verify soft delete by querying again
+        var activeTenantsAfterDelete = await dbContext.Tenants
+            .Where(t => t.Status == TenantStatus.Active)
+            .ToListAsync();
+        Console.WriteLine($"After soft delete, {activeTenantsAfterDelete.Count} active tenants");
+    }
+}
+```
+
 ## OrganizationRepository
 
 The `OrganizationRepository` class provides data access operations for organization management within multi-tenant applications. It extends the base `Repository<Organization>` class and offers specialized methods for querying, filtering, and managing organizations based on various criteria such as slug, industry, country, and activity status.
