@@ -18,12 +18,12 @@ namespace TenantIsolation.Controllers;
 public class TenantApiController : ControllerBase
 {
     private readonly TenantService _tenantService;
-    private readonly TenantResolutionService _resolutionService;
+    private readonly ITenantResolutionService _resolutionService;
     private readonly ILogger<TenantApiController> _logger;
 
     public TenantApiController(
         TenantService tenantService,
-        TenantResolutionService resolutionService,
+        ITenantResolutionService resolutionService,
         ILogger<TenantApiController> logger)
     {
         _tenantService = tenantService;

@@ -36,7 +36,7 @@ public class TenantResolutionMiddleware
 
     public async Task InvokeAsync(
         HttpContext context,
-        TenantResolutionService tenantResolutionService)
+        ITenantResolutionService tenantResolutionService)
     {
         // Check if the current request path is in the excluded paths
         if (_tenantIsolationOptions.ExcludedPaths != null &&

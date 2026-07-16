@@ -62,6 +62,7 @@ public static class DependencyInjectionExtensions
         // Register services
         services.AddScoped<TenantService>();
         services.AddScoped<TenantResolutionService>();
+        services.AddScoped<ITenantResolutionService>(sp => sp.GetRequiredService<TenantResolutionService>());
         services.AddScoped<DataIsolationService>();
         services.AddScoped<ConfigurationService>();
 
