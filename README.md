@@ -1399,6 +1399,114 @@ This example demonstrates creating a `ConfigurationService` instance and using i
 
 ## Controllers
 
+### CompaniesController
+
+The `CompaniesController` provides RESTful API endpoints for managing organizations/companies within a multi-tenant application. It handles CRUD operations for company entities, feature availability checks, and tenant-specific settings management. The controller integrates with tenant resolution, organization repository, configuration service, and feature service to provide complete company management capabilities.
+
+**Key capabilities:**
+- List all companies for the current tenant
+- Retrieve, create, update, and delete individual companies
+- Check feature availability for company management operations
+- Manage tenant-specific company settings and configurations
+- Enforce tenant isolation and access control
+
+**Public members:**
+- `ListCompanies()` - List all companies for the current tenant
+- `GetCompany(Guid id)` - Get a specific company by ID
+- `CreateCompany(CreateCompanyRequest request)` - Create a new company
+- `UpdateCompany(Guid id, UpdateCompanyRequest request)` - Update a company
+- `DeleteCompany(Guid id)` - Delete a company (soft delete)
+- `GetCompanySettings(Guid id)` - Get company-specific settings
+- `UpdateCompanySettings(Guid id, Dictionary<string, string> settings)` - Update company settings
+- `IsFeatureAvailable(string featureKey)` - Check if a feature is available
+
+**Usage example**
+
+```csharp
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
+using TenantIsolation.Controllers;
+using TenantIsolation.Models;
+using TenantIsolation.Services;
+
+public class CompaniesControllerExample
+{
+    public static async Task Main(string[] args)
+    {
+        // Setup dependency injection
+        var services = new ServiceCollection();
+        services.AddLogging(configure => configure.AddConsole());
+        services.AddScoped<CompaniesController>();
+        services.AddScoped<TenantResolutionService>();
+        services.AddScoped<OrganizationRepository>();
+        services.AddScoped<ConfigurationService>();
+        services.AddScoped<TenantFeatureService>();
+
+        var provider = services.BuildServiceProvider();
+        var companiesController = provider.GetRequiredService<CompaniesController>();
+
+        // List all companies for current tenant
+        var listResult = await companiesController.ListCompanies();
+        var companies = ((OkObjectResult)listResult).Value as List<Organization>;
+        Console.WriteLine($"Companies count: {companies?.Count}");
+
+        // Create a new company
+        var createRequest = new CompaniesController.CreateCompanyRequest
+        {
+            Name = "ACME Corporation",
+            Slug = "acme-corp",
+            Description = "Enterprise manufacturing solutions provider"
+        };
+
+        var createResult = await companiesController.CreateCompany(createRequest);
+        var createdCompany = ((CreatedAtActionResult)createResult).Value as Organization;
+        Console.WriteLine($"Created company: {createdCompany?.Name} (Id: {createdCompany?.Id})");
+
+        var companyId = createdCompany.Id;
+
+        // Get a specific company
+        var getResult = await companiesController.GetCompany(companyId);
+        var retrievedCompany = ((OkObjectResult)getResult).Value as Organization;
+        Console.WriteLine($"Retrieved company: {retrievedCompany?.Name}");
+
+        // Update company
+        var updateRequest = new CompaniesController.UpdateCompanyRequest
+        {
+            Name = "ACME Corporation Updated",
+            Description = "Updated description for ACME Corporation"
+        };
+
+        var updateResult = await companiesController.UpdateCompany(companyId, updateRequest);
+        Console.WriteLine($"Update successful: {updateResult is NoContentResult}");
+
+        // Check feature availability
+        var featureResult = await companiesController.IsFeatureAvailable("multiple-organizations");
+        var isFeatureAvailable = ((OkObjectResult)featureResult).Value as bool?;
+        Console.WriteLine($"Feature available: {isFeatureAvailable}");
+
+        // Get company settings
+        var settingsResult = await companiesController.GetCompanySettings(companyId);
+        var companySettings = ((OkObjectResult)settingsResult).Value as object;
+        Console.WriteLine($"Company settings: {companySettings}");
+
+        // Update company settings
+        var updateSettings = new Dictionary<string, string>
+        {
+            { "theme", "dark" },
+            { "notifications.enabled", "true" }
+        };
+
+        var settingsUpdateResult = await companiesController.UpdateCompanySettings(companyId, updateSettings);
+        Console.WriteLine($"Settings update successful: {settingsUpdateResult is NoContentResult}");
+
+        // Delete company (soft delete)
+        var deleteResult = await companiesController.DeleteCompany(companyId);
+        Console.WriteLine($"Delete successful: {deleteResult is NoContentResult}");
+    }
+}
+```
+
 ### TenantApiController
 REST API endpoints for tenant management. The `TenantApiController` provides CRUD operations and lifecycle management for tenants in a multi-tenant application, including tenant creation, retrieval, activation, suspension, and deletion. It integrates with the `TenantService` to perform tenant operations and uses the `ITenantResolutionService` to access the current tenant context.
 
