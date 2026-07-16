@@ -937,6 +937,122 @@ public class AuditLoggingExample
 }
 ```
 
+## TenantRepository
+
+The `TenantRepository` class provides data access operations for tenant management in multi-tenant applications. It extends the base `Repository<Tenant>` class and offers specialized methods for querying, filtering, and managing tenants based on various criteria such as status, subscription dates, activity, and more.
+
+**Key capabilities:**
+- Retrieve tenants by slug, status, or custom criteria
+- Search and filter tenants with complex queries
+- Manage tenant lifecycle (activation, suspension)
+- Get billing and usage summaries
+- Check uniqueness constraints (e.g., slug validation)
+- Track tenant activity and inactivity
+
+**Usage example**
+
+```csharp
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
+using TenantIsolation.Models;
+using TenantIsolation.Data;
+using TenantIsolation.Constants;
+
+public class TenantRepositoryExample
+{
+    public static async Task Main(string[] args)
+    {
+        // Setup dependency injection
+        var services = new ServiceCollection();
+        services.AddLogging(configure => configure.AddConsole());
+        services.AddDbContext<TenantDbContext>();
+        services.AddScoped<ITenantDbContextFactory<TenantDbContext>, TenantDbContextFactory<TenantDbContext>>();
+        services.AddScoped<TenantRepository>();
+
+        var provider = services.BuildServiceProvider();
+
+        // Get repository instance
+        var tenantRepository = provider.GetRequiredService<TenantRepository>();
+
+        // Create a tenant for demonstration
+        var tenant = new Tenant
+        {
+            Id = Guid.NewGuid(),
+            Slug = "acme-corp",
+            Name = "ACME Corporation",
+            AdminEmail = "admin@acme-corp.com",
+            Status = TenantStatus.Active,
+            PlanId = "enterprise-pro",
+            MaxUsers = 500,
+            MaxStorageGb = 1024.50m,
+            SubscriptionExpiresAt = DateTime.UtcNow.AddYears(1),
+            CreatedAt = DateTime.UtcNow,
+            UpdatedAt = DateTime.UtcNow
+        };
+
+        // Add tenant to database (in real usage, this would be through TenantService)
+        // For this example, we'll query existing tenants
+
+        // Get tenant by slug
+        var tenantBySlug = await tenantRepository.GetBySlugAsync("acme-corp");
+        Console.WriteLine($"Found tenant by slug: {tenantBySlug?.Name}");
+
+        // Get all active tenants
+        var activeTenants = await tenantRepository.GetActiveTenantAsync();
+        Console.WriteLine($"Active tenants count: {activeTenants.Count}");
+
+        // Get tenants by status
+        var trialTenants = await tenantRepository.GetByStatusAsync(TenantStatus.Trial);
+        Console.WriteLine($"Trial tenants count: {trialTenants.Count}");
+
+        // Search tenants
+        var searchResults = await tenantRepository.SearchAsync("acme");
+        Console.WriteLine($"Search results count: {searchResults.Count}");
+
+        // Get tenants with expiring subscriptions
+        var expiringSoon = await tenantRepository.GetExpiringSubscriptionsAsync(daysUntilExpiry: 30);
+        Console.WriteLine($"Tenants with expiring subscriptions: {expiringSoon.Count}");
+
+        // Get recently created tenants
+        var recentTenants = await tenantRepository.GetRecentlyCreatedAsync(days: 7);
+        Console.WriteLine($"Recently created tenants: {recentTenants.Count}");
+
+        // Get tenant with details
+        var tenantWithDetails = await tenantRepository.GetWithDetailsAsync(tenant.Id);
+        Console.WriteLine($"Tenant with details: {tenantWithDetails?.Name}");
+
+        // Get status counts
+        var statusCounts = await tenantRepository.GetStatusCountsAsync();
+        foreach (var statusCount in statusCounts)
+        {
+            Console.WriteLine($"Status {statusCount.Key}: {statusCount.Value} tenants");
+        }
+
+        // Check if slug is unique
+        var isSlugUnique = await tenantRepository.IsSlugUniqueAsync("new-tenant-slug");
+        Console.WriteLine($"Is slug unique: {isSlugUnique}");
+
+        // Get inactive tenants
+        var inactiveTenants = await tenantRepository.GetInactiveTenantsAsync(inactiveDays: 90);
+        Console.WriteLine($"Inactive tenants: {inactiveTenants.Count}");
+
+        // Activate tenant
+        var activationResult = await tenantRepository.ActivateTenantAsync(tenant.Id);
+        Console.WriteLine($"Activation successful: {activationResult}");
+
+        // Suspend tenant
+        var suspendResult = await tenantRepository.SuspendTenantAsync(tenant.Id, "Account suspended for non-payment");
+        Console.WriteLine($"Suspension successful: {suspendResult}");
+
+        // Get billing summary
+        var billingSummary = await tenantRepository.GetBillingSummaryAsync();
+        Console.WriteLine($"Billing summary retrieved: {billingSummary}");
+    }
+}
+```
+
+This example demonstrates creating a `TenantRepository` instance through dependency injection and using its public methods to query, filter, and manage tenants in a multi-tenant application.
+
 ## DynamicTenantStore
 
 The `ComponentHealthInfo` class represents the health status of a specific system component (database, cache, event bus, etc.) in a multi-tenant application. It tracks individual component health metrics including response time, status, and descriptive messages, enabling detailed health monitoring and troubleshooting.
