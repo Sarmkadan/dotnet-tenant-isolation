@@ -1368,6 +1368,75 @@ public class TenantDbContextExample
 
 The `OrganizationRepository` class provides data access operations for organization management within multi-tenant applications. It extends the base `Repository<Organization>` class and offers specialized methods for querying, filtering, and managing organizations based on various criteria such as slug, industry, country, and activity status.
 
+## UsageMeteringOptions
+
+The `UsageMeteringOptions` class configures tenant usage metering and quota enforcement behavior in multi-tenant applications. It allows customization of warning thresholds, default billing periods, enforcement behavior, and metric tracking limits when registering usage metering services.
+
+**Key capabilities:**
+- Set warning threshold percentage for quota consumption
+- Configure default billing period for new usage records
+- Control whether quota violations throw exceptions
+- Limit the number of distinct metrics tracked per tenant
+
+**Usage example**
+
+```csharp
+using Microsoft.Extensions.DependencyInjection;
+using TenantIsolation.Configuration;
+using TenantIsolation.Services;
+
+public class UsageMeteringExample
+{
+    public static void Main(string[] args)
+    {
+        // Setup dependency injection with custom usage metering options
+        var services = new ServiceCollection();
+        
+        services.AddTenantUsageMetering(options =>
+        {
+            // Set warning threshold to 90% of quota
+            options.WarningThresholdPercent = 90;
+            
+            // Use weekly billing period instead of monthly
+            options.DefaultPeriod = UsagePeriod.Weekly;
+            
+            // Throw exceptions when quota is exceeded
+            options.ThrowOnQuotaExceeded = true;
+            
+            // Allow tracking up to 1000 distinct metrics per tenant
+            options.MaxMetricsPerTenant = 1000;
+        });
+        
+        // Build service provider
+        var provider = services.BuildServiceProvider();
+        
+        // Resolve the usage metering service
+        var meteringService = provider.GetRequiredService<ITenantUsageMeteringService>();
+        var options = provider.GetRequiredService<UsageMeteringOptions>();
+        
+        Console.WriteLine($"Usage metering configured:");
+        Console.WriteLine($"  Warning threshold: {options.WarningThresholdPercent}%");
+        Console.WriteLine($"  Default period: {options.DefaultPeriod}");
+        Console.WriteLine($"  Throw on quota exceeded: {options.ThrowOnQuotaExceeded}");
+        Console.WriteLine($"  Max metrics per tenant: {options.MaxMetricsPerTenant}");
+        
+        // Use the metering service with a tenant
+        var tenantId = Guid.NewGuid();
+        const string metricKey = "api_calls";
+        
+        // Set quota limit
+        await meteringService.SetQuotaAsync(tenantId, metricKey, 1000);
+        
+        // Record usage
+        await meteringService.RecordUsageAsync(tenantId, metricKey, 50);
+        
+        // Check quota status
+        var quotaCheck = await meteringService.CheckQuotaAsync(tenantId, metricKey);
+        Console.WriteLine($"Quota status: {(quotaCheck.IsAllowed ? "Allowed" : "Denied")} - {quotaCheck.CurrentUsage}/{quotaCheck.QuotaLimit}");
+    }
+}
+```
+
 ## UserRepository
 
 The `UserRepository` class provides data access operations for user management within multi-tenant applications. It extends the base `Repository<User>` class and offers specialized methods for querying, filtering, and managing users based on various criteria such as email, role, organization, and authentication status.
