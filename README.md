@@ -877,6 +877,99 @@ public class AuditLoggingExample
 
 ```
 
+## TracingContext
+
+The `TracingContext` class provides distributed tracing capabilities for tracking requests across multiple services in multi-tenant applications. It captures correlation IDs, trace IDs, span IDs, tenant context, user context, and metadata to enable comprehensive request tracing and debugging.
+
+**Key capabilities:**
+- Track requests with correlation IDs and trace IDs
+- Support nested operations with parent/child span relationships
+- Include tenant and user context for multi-tenant applications
+- Store operation metadata for debugging and monitoring
+- Provide structured logging integration
+
+**Usage example**
+
+```csharp
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
+using TenantIsolation.Utilities;
+
+public class TracingExample
+{
+    public static async Task Main(string[] args)
+    {
+        // Setup dependency injection
+        var services = new ServiceCollection();
+        services.AddLogging(configure => configure.AddConsole());
+        services.AddDistributedTracing();
+
+        var provider = services.BuildServiceProvider();
+        var loggerFactory = provider.GetRequiredService<ILoggerFactory>();
+        var logger = loggerFactory.CreateLogger<TracingExample>();
+
+        // Create a new tracing context for a request
+        var tracingContext = new TracingContext
+        {
+            RequestPath = "/api/users/get",
+            TenantId = Guid.Parse("3fa85f6-4717-4562-b3fc-2c963f66afa6"),
+            UserId = "user-12345"
+        };
+
+        // Add custom metadata
+        tracingContext.Metadata["operation"] = "GetUserDetails";
+        tracingContext.Metadata["user_type"] = "premium";
+
+        // Set as current context
+        DistributedTracingExtensions.SetCurrentContext(tracingContext);
+
+        // Log with tracing context
+        logger.LogWithTracing(LogLevel.Information, "Starting user details operation");
+
+        // Create child context for nested operation
+        var childContext = DistributedTracingExtensions.CreateChildContext("DatabaseQuery");
+        childContext.Metadata["query"] = "SELECT * FROM Users WHERE Id = @id";
+
+        using (DistributedTracingExtensions.BeginTracingScope(childContext))
+        {
+            // Simulate database operation
+            logger.LogWithTracing(LogLevel.Debug, "Executing database query");
+            
+            // Add more metadata during operation
+            DistributedTracingExtensions.AddMetadata("query_duration_ms", "42");
+        }
+
+        // Get current context
+        var currentContext = DistributedTracingExtensions.GetCurrentContext();
+        Console.WriteLine($"Correlation ID: {currentContext?.CorrelationId}");
+        Console.WriteLine($"Trace ID: {currentContext?.TraceId}");
+        Console.WriteLine($"Span ID: {currentContext?.SpanId}");
+        Console.WriteLine($"Tenant ID: {currentContext?.TenantId}");
+        Console.WriteLine($"User ID: {currentContext?.UserId}");
+
+        // Use structured logging state
+        var logState = DistributedTracingExtensions.GetTracingLogState();
+        foreach (var kvp in logState)
+        {
+            Console.WriteLine($"{kvp.Key}: {kvp.Value}");
+        }
+
+        // Execute operation with automatic tracing
+        var result = await DistributedTracingExtensions.ExecuteWithTracingAsync(
+            "ProcessUserRequest",
+            async () =>
+            {
+                await Task.Delay(100); // Simulate work
+                return "User processed successfully";
+            },
+            logger
+        );
+
+        Console.WriteLine($"Result: {result}");
+    }
+}
+```
+
 ## DynamicTenantStore
     public static async Task Main(string[] args)
     {
@@ -2667,6 +2760,99 @@ public class TenantRepositoryExample
 ```
 
 This example demonstrates creating a `TenantRepository` instance through dependency injection and using its public methods to query, filter, and manage tenants in a multi-tenant application.
+
+## TracingContext
+
+The `TracingContext` class provides distributed tracing capabilities for tracking requests across multiple services in multi-tenant applications. It captures correlation IDs, trace IDs, span IDs, tenant context, user context, and metadata to enable comprehensive request tracing and debugging.
+
+**Key capabilities:**
+- Track requests with correlation IDs and trace IDs
+- Support nested operations with parent/child span relationships
+- Include tenant and user context for multi-tenant applications
+- Store operation metadata for debugging and monitoring
+- Provide structured logging integration
+
+**Usage example**
+
+```csharp
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
+using TenantIsolation.Utilities;
+
+public class TracingExample
+{
+    public static async Task Main(string[] args)
+    {
+        // Setup dependency injection
+        var services = new ServiceCollection();
+        services.AddLogging(configure => configure.AddConsole());
+        services.AddDistributedTracing();
+
+        var provider = services.BuildServiceProvider();
+        var loggerFactory = provider.GetRequiredService<ILoggerFactory>();
+        var logger = loggerFactory.CreateLogger<TracingExample>();
+
+        // Create a new tracing context for a request
+        var tracingContext = new TracingContext
+        {
+            RequestPath = "/api/users/get",
+            TenantId = Guid.Parse("3fa85f6-4717-4562-b3fc-2c963f66afa6"),
+            UserId = "user-12345"
+        };
+
+        // Add custom metadata
+        tracingContext.Metadata["operation"] = "GetUserDetails";
+        tracingContext.Metadata["user_type"] = "premium";
+
+        // Set as current context
+        DistributedTracingExtensions.SetCurrentContext(tracingContext);
+
+        // Log with tracing context
+        logger.LogWithTracing(LogLevel.Information, "Starting user details operation");
+
+        // Create child context for nested operation
+        var childContext = DistributedTracingExtensions.CreateChildContext("DatabaseQuery");
+        childContext.Metadata["query"] = "SELECT * FROM Users WHERE Id = @id";
+
+        using (DistributedTracingExtensions.BeginTracingScope(childContext))
+        {
+            // Simulate database operation
+            logger.LogWithTracing(LogLevel.Debug, "Executing database query");
+            
+            // Add more metadata during operation
+            DistributedTracingExtensions.AddMetadata("query_duration_ms", "42");
+        }
+
+        // Get current context
+        var currentContext = DistributedTracingExtensions.GetCurrentContext();
+        Console.WriteLine($"Correlation ID: {currentContext?.CorrelationId}");
+        Console.WriteLine($"Trace ID: {currentContext?.TraceId}");
+        Console.WriteLine($"Span ID: {currentContext?.SpanId}");
+        Console.WriteLine($"Tenant ID: {currentContext?.TenantId}");
+        Console.WriteLine($"User ID: {currentContext?.UserId}");
+
+        // Use structured logging state
+        var logState = DistributedTracingExtensions.GetTracingLogState();
+        foreach (var kvp in logState)
+        {
+            Console.WriteLine($"{kvp.Key}: {kvp.Value}");
+        }
+
+        // Execute operation with automatic tracing
+        var result = await DistributedTracingExtensions.ExecuteWithTracingAsync(
+            "ProcessUserRequest",
+            async () =>
+            {
+                await Task.Delay(100); // Simulate work
+                return "User processed successfully";
+            },
+            logger
+        );
+
+        Console.WriteLine($"Result: {result}");
+    }
+}
+```
 
 ## DynamicTenantStore
 
