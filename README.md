@@ -318,3 +318,32 @@ Learn about data isolation patterns in [Data Isolation Guide](docs/data-isolatio
 ## API Reference
 
 See the full [API Reference](docs/api-reference.md) for detailed documentation.
+
+## ErrorHandlingMiddleware
+
+The `ErrorHandlingMiddleware` catches unhandled exceptions in the request pipeline, logs them, and returns a consistent JSON error response containing fields such as `Code`, `Message`, `StatusCode`, `TraceId`, `Details`, and `Timestamp`. This centralizes error handling and provides clients with structured error information.
+
+**Usage example**
+
+```csharp
+using Microsoft.AspNetCore.Builder;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
+using TenantIsolation.Middleware;
+
+var builder = WebApplication.CreateBuilder(args);
+
+// Register logging (already added by default)
+builder.Services.AddLogging();
+
+var app = builder.Build();
+
+// Register the error handling middleware early in the pipeline
+app.UseMiddleware<ErrorHandlingMiddleware>();
+
+app.MapGet("/", () => "Hello World!");
+
+app.Run();
+```
+
+In this example the middleware is added to the ASP.NET Core pipeline with `app.UseMiddleware<ErrorHandlingMiddleware>()`. When an exception occurs downstream, the middleware logs the error and returns a JSON payload with the standardized properties (`Code`, `Message`, `StatusCode`, `TraceId`, `Details`, `Timestamp`).
