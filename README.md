@@ -2104,6 +2104,73 @@ public class CachingExample
 }
 ```
 
+## StringExtensions
+
+The `StringExtensions` class provides a comprehensive set of string utility extension methods for common operations like slug generation, truncation, validation, and formatting. These methods are designed for use in multi-tenant applications where consistent string handling is essential for URLs, identifiers, and display purposes.
+
+Here's an example usage demonstrating the key public members:
+
+```csharp
+using System;
+using TenantIsolation.Utilities;
+
+public class StringExtensionsExample
+{
+    public static void Main(string[] args)
+    {
+        // Convert to URL-safe slug
+        string companyName = "ACME Corporation Ltd.";
+        string slug = companyName.ToSlug();
+        Console.WriteLine($"Slug: {slug}"); // Output: "slug-acme-corporation-ltd"
+
+        // Truncate long strings
+        string longText = "This is a very long text that needs to be shortened for display purposes";
+        string truncated = longText.Truncate(20);
+        Console.WriteLine($"Truncated: {truncated}"); // Output: "This is a very long..."
+
+        // Validate email format
+        string email = "user@example.com";
+        bool isValidEmail = email.IsValidEmail();
+        Console.WriteLine($"Is valid email: {isValidEmail}"); // Output: True
+
+        // Validate URL format
+        string url = "https://example.com/path?query=value";
+        bool isValidUrl = url.IsValidUrl();
+        Console.WriteLine($"Is valid URL: {isValidUrl}"); // Output: True
+
+        // Safe substring extraction
+        string text = "Hello World";
+        string safeSubstring = text.SafeSubstring(6, 5);
+        Console.WriteLine($"Safe substring: {safeSubstring}"); // Output: "World"
+
+        // Remove special characters
+        string specialText = "Hello, World! 123#";
+        string cleaned = specialText.RemoveSpecialCharacters();
+        Console.WriteLine($"Cleaned text: {cleaned}"); // Output: "HelloWorld123"
+
+        // Mask sensitive data
+        string sensitiveEmail = "admin@company.com";
+        string masked = sensitiveEmail.MaskSensitiveData();
+        Console.WriteLine($"Masked email: {masked}"); // Output: "adm*******"
+
+        // Convert to PascalCase
+        string camelCase = "helloWorld";
+        string pascalCase = camelCase.ToPascalCase();
+        Console.WriteLine($"PascalCase: {pascalCase}"); // Output: "HelloWorld"
+
+        // Convert to human-readable format
+        string pascalCaseText = "UserProfileSettings";
+        string humanReadable = pascalCaseText.ToHumanReadable();
+        Console.WriteLine($"Human readable: {humanReadable}"); // Output: "User Profile Settings"
+
+        // Get deterministic hash code
+        string data = "tenant-12345";
+        int hashCode = data.GetDeterministicHashCode();
+        Console.WriteLine($"Hash code: {hashCode}");
+    }
+}
+```
+
 ## UserRepository
 
 The `UserRepository` class provides data access operations for user management within multi-tenant applications. It extends the base `Repository<User>` class and offers specialized methods for querying, filtering, and managing users based on various criteria such as email, role, organization, and authentication status.
