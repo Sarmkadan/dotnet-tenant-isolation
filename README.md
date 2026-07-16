@@ -694,6 +694,76 @@ REST API endpoints for tenant management.
 ### FeaturesController
 Feature flag management for tenant-specific features.
 
+### AdminController
+The `AdminController` provides administrative endpoints for tenant management and system operations. It requires administrative authorization in production environments and exposes endpoints for retrieving system statistics, managing tenant lifecycles, monitoring background tasks, and handling expiring subscriptions.
+
+**Key capabilities:**
+- Retrieve system-wide statistics and tenant overview
+- List, filter, and paginate all tenants by status
+- Suspend and activate tenant accounts with administrative control
+- Monitor background task queue statistics and performance
+- Enqueue manual cleanup tasks for system maintenance
+- Generate reports on expiring subscriptions
+
+**Usage example**
+
+```csharp
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
+using TenantIsolation.Controllers;
+using TenantIsolation.Models;
+
+public class AdminControllerExample
+{
+    public static async Task Main(string[] args)
+    {
+        // Setup dependency injection
+        var services = new ServiceCollection();
+        services.AddLogging(configure => configure.AddConsole());
+        services.AddScoped<AdminController>();
+        
+        var provider = services.BuildServiceProvider();
+        var adminController = provider.GetRequiredService<AdminController>();
+        
+        // Get system statistics
+        var statsResult = await adminController.GetStatistics();
+        Console.WriteLine($"System statistics retrieved: {statsResult.Value?.Data}");
+        
+        // Get all active tenants (paginated)
+        var tenantsResult = await adminController.GetAllTenants(page: 1, pageSize: 20, status: "active");
+        Console.WriteLine($"Active tenants count: {tenantsResult.Value?.Data?.TotalCount}");
+        
+        // Suspend a tenant
+        var suspendResult = await adminController.SuspendTenant(
+            Guid.Parse("3fa85f64-5717-4562-b3fc-2c963f66afa6"),
+            new AdminController.SuspensionRequest { Reason = "Account suspended for non-payment" }
+        );
+        Console.WriteLine($"Suspension result: {suspendResult.Value?.Success}");
+        
+        // Activate a tenant
+        var activateResult = await adminController.ActivateTenant(
+            Guid.Parse("3fa85f64-5717-4562-b3fc-2c963f66afa6")
+        );
+        Console.WriteLine($"Activation result: {activateResult.Value?.Success}");
+        
+        // Get queue statistics
+        var queueStats = adminController.GetQueueStatistics();
+        Console.WriteLine($"Queue size: {queueStats.Value?.Data?.TotalItems}");
+        
+        // Enqueue a maintenance task
+        var taskResult = adminController.EnqueueTask(new AdminController.TaskRequest {
+            TaskName = "Cleanup expired subscriptions",
+            Priority = 2
+        });
+        Console.WriteLine($"Task queued: {taskResult.Value?.Success}");
+        
+        // Get expiring subscriptions report
+        var expiringResult = await adminController.GetExpiringSubscriptions(daysUntilExpiry: 30);
+        Console.WriteLine($"Expiring subscriptions: {expiringResult.Value?.Data?.Count}");
+    }
+}
+```
+
 ## Getting Started
 
 See the [Getting Started Guide](docs/getting-started.md) for installation and basic setup instructions.
