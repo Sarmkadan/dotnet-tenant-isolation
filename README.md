@@ -155,6 +155,80 @@ public class DatabaseSetup
 
 This example demonstrates creating a `TenantConnectionString` instance with all required properties, validating the connection string, and using helper methods to manage database connections for multi-tenant applications.
 
+## User
+
+
+
+The `User` class represents a user within a multi-tenant system, storing core identity information, authentication state, and tenant association. It supports user lifecycle management, authentication tracking, and provides navigation properties for related tenant and organization entities.
+
+
+
+
+Here's an example usage:
+
+```csharp
+using TenantIsolation.Models;
+using TenantIsolation.Constants;
+
+public class UserManagement
+{
+public static void Main(string[] args)
+{
+// Create a new user for a tenant
+var user = new User
+{
+Id = Guid.NewGuid(),
+TenantId = Guid.Parse("3fa85f64-5717-4562-b3fc-2c963f66afa6"),
+OrganizationId = Guid.Parse("4fa85f64-5717-4562-b3fc-2c963f66afa6"),
+Email = "john.doe@acme-corp.com",
+FirstName = "John",
+LastName = "Doe",
+Role = UserRole.Administrator,
+PasswordHash = BCrypt.Net.BCrypt.HashPassword("SecurePassword123!"),
+IsActive = true,
+IsEmailVerified = true,
+IsTwoFactorEnabled = false,
+LastLoginAt = DateTime.UtcNow.AddDays(-1),
+FailedLoginAttempts = 0,
+LockedUntil = null,
+PhoneNumber = "+1-555-0101",
+AvatarUrl = "https://acme-corp.com/avatars/john-doe.jpg",
+Preferences = "{\\"theme\\": \\"dark\\", \\"language\\": \\"en-US\\"}",
+LastPasswordChangeAt = DateTime.UtcNow.AddDays(-7),
+CreatedAt = DateTime.UtcNow,
+UpdatedAt = DateTime.UtcNow
+};
+
+// Check user status
+bool canLogin = user.CanLogin(); // true
+bool isLocked = user.IsLocked(); // false
+bool requiresPasswordChange = user.RequiresPasswordChange(); // false
+
+// Update user properties
+user.FirstName = "Jonathan";
+user.LastLoginAt = DateTime.UtcNow;
+user.FailedLoginAttempts = 0;
+user.UpdatedAt = DateTime.UtcNow;
+
+// Reset failed login attempts
+user.ResetFailedLoginAttempts();
+
+// Check tenant and organization navigation
+if (user.Tenant != null)
+{
+Console.WriteLine($"User belongs to tenant: {user.Tenant.Name}");
+}
+
+if (user.Organization != null)
+{
+Console.WriteLine($"User belongs to organization: {user.Organization.Name}");
+}
+}
+}
+```
+
+This example demonstrates creating a `User` instance with all required properties, checking authentication status, updating user properties, and using navigation properties to access related entities.
+
 
 
 ## TenantUsageRecord
