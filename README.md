@@ -937,6 +937,120 @@ public class AuditLoggingExample
 }
 ```
 
+## Repository
+
+The `Repository<TEntity>` class is a generic base repository that provides tenant-aware CRUD operations for multi-tenant applications. It automatically handles tenant isolation through the `ITenantDbContextFactory<TenantDbContext>` and ensures all operations are scoped to the current tenant's database context.
+
+**Key capabilities:**
+- Generic CRUD operations for any entity type
+- Tenant-aware database operations
+- Pagination support for large datasets
+- Bulk operations for performance
+- Queryable interface for custom LINQ queries
+- Soft-delete pattern support
+
+**Usage example**
+
+```csharp
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
+using TenantIsolation.Models;
+using TenantIsolation.Data;
+
+public class ProductRepositoryExample
+{
+    public static async Task Main(string[] args)
+    {
+        // Setup dependency injection
+        var services = new ServiceCollection();
+        services.AddLogging(configure => configure.AddConsole());
+        services.AddDbContext<TenantDbContext>();
+        services.AddScoped<ITenantDbContextFactory<TenantDbContext>, TenantDbContextFactory<TenantDbContext>>();
+        services.AddScoped(typeof(Repository<>));
+
+        var provider = services.BuildServiceProvider();
+
+        // Get repository instance for Product entity
+        var repository = provider.GetRequiredService<Repository<Product>>();
+
+        // Create a new product
+        var newProduct = new Product
+        {
+            Id = Guid.NewGuid(),
+            Name = "Premium Widget",
+            Description = "High-quality widget for enterprise use",
+            Price = 99.99m,
+            StockQuantity = 100,
+            Category = "Hardware"
+        };
+
+        // Add product to database
+        var addedProduct = await repository.AddAsync(newProduct);
+        Console.WriteLine($"Added product: {addedProduct.Name} (Id: {addedProduct.Id})");
+
+        // Get product by ID
+        var retrievedProduct = await repository.GetByIdAsync(addedProduct.Id);
+        Console.WriteLine($"Retrieved product: {retrievedProduct?.Name}");
+
+        // Update product
+        retrievedProduct.Price = 89.99m;
+        var updatedProduct = await repository.UpdateAsync(retrievedProduct);
+        Console.WriteLine($"Updated product price to: {updatedProduct.Price}");
+
+        // Get all products
+        var allProducts = await repository.GetAllAsync();
+        Console.WriteLine($"Total products: {allProducts.Count}");
+
+        // Find products by criteria
+        var expensiveProducts = await repository.FindAsync(p => p.Price > 50);
+        Console.WriteLine($"Products over $50: {expensiveProducts.Count}");
+
+        // Get first matching product
+        var firstExpensive = await repository.FindFirstAsync(p => p.Price > 50);
+        Console.WriteLine($"First expensive product: {firstExpensive?.Name}");
+
+        // Check if product exists
+        var exists = await repository.ExistsAsync(p => p.Name == "Premium Widget");
+        Console.WriteLine($"Product exists: {exists}");
+
+        // Count products
+        var productCount = await repository.CountAsync();
+        Console.WriteLine($"Total product count: {productCount}");
+
+        // Pagination example
+        var (pagedProducts, totalCount) = await repository.GetPagedAsync(pageNumber: 1, pageSize: 10);
+        Console.WriteLine($"Page 1: {pagedProducts.Count} of {totalCount} total products");
+
+        // Bulk update example
+        var updatedCount = await repository.BulkUpdateAsync(
+            p => p.Category == "Hardware",
+            setters => setters.SetProperty(p => p.Price, p => p.Price * 0.9m) // 10% discount
+        );
+        Console.WriteLine($"Updated {updatedCount} products with bulk operation");
+
+        // Bulk delete example
+        var deletedCount = await repository.BulkDeleteAsync(p => p.StockQuantity == 0);
+        Console.WriteLine($"Deleted {deletedCount} out-of-stock products");
+
+        // Delete product
+        var deleteSuccess = await repository.DeleteAsync(addedProduct.Id);
+        Console.WriteLine($"Delete successful: {deleteSuccess}");
+
+        // Use AsQueryable for custom queries
+        var query = repository.AsQueryable()
+            .Where(p => p.Price > 50)
+            .OrderBy(p => p.Name)
+            .Take(5);
+        
+        var topExpensive = await query.ToListAsync();
+        Console.WriteLine($"Top 5 most expensive products: {topExpensive.Count}");
+    }
+}
+```
+
+This example demonstrates creating a generic `Repository<TEntity>` instance through dependency injection and using its public methods for common CRUD operations, bulk operations, and custom queries in a tenant-aware multi-tenant application.
+
+
 ## TenantRepository
 
 The `TenantRepository` class provides data access operations for tenant management in multi-tenant applications. It extends the base `Repository<Tenant>` class and offers specialized methods for querying, filtering, and managing tenants based on various criteria such as status, subscription dates, activity, and more.
