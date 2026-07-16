@@ -96,8 +96,6 @@ public class TenantManagement
 
 This example demonstrates creating a `Tenant` instance, checking its status and limits, and managing its lifecycle through the public members and methods.
 
-
-
 ### TenantConnectionString
 
 
@@ -193,7 +191,7 @@ FailedLoginAttempts = 0,
 LockedUntil = null,
 PhoneNumber = "+1-555-0101",
 AvatarUrl = "https://acme-corp.com/avatars/john-doe.jpg",
-Preferences = "{\\"theme\\": \\"dark\\", \\"language\\": \\"en-US\\"}",
+Preferences = "{\"theme\": \"dark\", \"language\": \"en-US\"}",
 LastPasswordChangeAt = DateTime.UtcNow.AddDays(-7),
 CreatedAt = DateTime.UtcNow,
 UpdatedAt = DateTime.UtcNow
@@ -231,57 +229,63 @@ This example demonstrates creating a `User` instance with all required propertie
 
 
 
-## TenantUsageRecord
+## TenantFeature
 
-
-
-The `TenantUsageRecord` class tracks accumulated usage for a single named metric scoped to one tenant. It maintains counters for billing periods (hourly, daily, monthly, yearly, or lifetime), quota limits, and provides computed properties to determine whether usage has exceeded limits or is approaching thresholds.
-
-
-
-Here's an example usage:
+`TenantFeature` represents a feature flag for a specific tenant. It stores metadata such as the feature key, display name, rollout percentage, availability dates, usage limits, and provides helper methods to determine if the feature is currently available, if its usage limit has been exceeded, and whether it can be used in the current context.
 
 ```csharp
+using System;
 using TenantIsolation.Models;
 
-public class UsageMonitor
+public class FeatureDemo
 {
-  public static void Main(string[] args)
-  {
-    // Create a usage record for API calls with a monthly quota
-    var apiCallsRecord = new TenantUsageRecord
+    public static void Main(string[] args)
     {
-      TenantId = Guid.Parse("3fa85f64-5717-4562-b3fc-2c963f66afa6"),
-      MetricKey = "api_calls",
-      CurrentValue = 1500,
-      QuotaLimit = 5000,
-      Period = UsagePeriod.Monthly,
-      PeriodStart = DateTime.UtcNow.Date,
-      ResetAt = null,
-      CreatedAt = DateTime.UtcNow,
-      UpdatedAt = DateTime.UtcNow
-    };
+        // Create a new feature flag for a tenant
+        var feature = new TenantFeature
+        {
+            Id = Guid.NewGuid(),
+            TenantId = Guid.NewGuid(),
+            FeatureKey = "advanced-reporting",
+            DisplayName = "Advanced Reporting",
+            Description = "Enables detailed analytics reports.",
+            IsEnabled = true,
+            Category = "Analytics",
+            RolloutPercentage = 75,               // 75% of users see the feature
+            AvailabilityLevel = "Beta",
+            AvailableFrom = DateTime.UtcNow.AddDays(-1),
+            DeprecatedAt = null,
+            UsageLimit = 10_000,                  // max 10,000 uses
+            CurrentUsage = 0,
+            Metadata = "{\"requiresLicense\":true}",
+            CreatedAt = DateTime.UtcNow,
+            UpdatedAt = DateTime.UtcNow
+        };
 
-    // Check quota status
-    bool isExceeded = apiCallsRecord.IsQuotaExceeded; // false
-    bool isApproaching = apiCallsRecord.IsApproachingLimit(80); // true (30%)
-    double usagePercent = apiCallsRecord.UsagePercentage; // 30.0
+        // Determine if the feature is currently available
+        bool available = feature.IsAvailable();
 
-    // Update usage
-    apiCallsRecord.CurrentValue += 100;
-    apiCallsRecord.UpdatedAt = DateTime.UtcNow;
+        // Check usage limits
+        bool limitExceeded = feature.IsUsageLimitExceeded();
 
-    // Check quota check result factory methods
-    var checkResult = TenantUsageRecord.QuotaCheckResult.Allow("api_calls", apiCallsRecord.CurrentValue, apiCallsRecord.QuotaLimit);
-    
-    Console.WriteLine($"Allowed: {checkResult.IsAllowed}, Usage: {checkResult.CurrentUsage}, Limit: {checkResult.QuotaLimit}");
-  }
+        // Try to use the feature
+        if (feature.CanUseFeature(out string? error))
+        {
+            Console.WriteLine($"{feature.DisplayName} can be used.");
+            feature.RecordUsage(); // increment usage counter
+        }
+        else
+        {
+            Console.WriteLine($"Cannot use feature: {error}");
+        }
+
+        // Output status
+        Console.WriteLine($"Feature status: {feature.GetStatus()}");
+    }
 }
 ```
 
-This example demonstrates creating a `TenantUsageRecord` instance, checking quota status, updating usage, and using the `QuotaCheckResult` factory methods to evaluate limits.
-
-
+The example demonstrates constructing a `TenantFeature`, checking its availability, enforcing usage limits, and recording usage—all using the public members defined on the type.
 
 ## Services
 
