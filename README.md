@@ -1732,6 +1732,89 @@ public class CacheExample
 }
 ```
 
+## ITenantAwareDistributedCacheProvider
+
+The `ITenantAwareDistributedCacheProvider` interface provides a tenant-aware caching abstraction that automatically prefixes cache keys with the current tenant's identifier. This ensures data isolation between tenants when using distributed caching solutions like Redis, SQL Server, or other distributed cache implementations.
+
+**Key capabilities:**
+- Automatic tenant-based key prefixing for cache isolation
+- Thread-safe asynchronous operations
+- Support for both in-memory and distributed cache implementations
+- Time-based expiration with tenant context
+- Graceful fallback when tenant context is unavailable
+
+**Usage example**
+
+```csharp
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
+using TenantIsolation.Caching;
+using TenantIsolation.Configuration;
+
+public class CacheServiceExample
+{
+    public static async Task Main(string[] args)
+    {
+        // Setup dependency injection
+        var services = new ServiceCollection();
+        services.AddLogging(configure => configure.AddConsole());
+        
+        // Register distributed cache (e.g., Redis)
+        services.AddDistributedMemoryCache();
+        
+        // Register tenant-aware cache provider
+        services.AddTenantAwareCacheProvider();
+        
+        // Register tenant isolation services
+        services.AddTenantIsolationInMemory();
+        
+        var provider = services.BuildServiceProvider();
+        
+        // Resolve the cache provider
+        var cacheProvider = provider.GetRequiredService<ICacheProvider>();
+        
+        // Alternatively, resolve the tenant-aware distributed cache provider directly
+        var tenantAwareCache = provider.GetRequiredService<ITenantAwareDistributedCacheProvider>();
+        
+        var tenantId = Guid.NewGuid();
+        var userId = Guid.NewGuid();
+        
+        // Create a cache key using the builder
+        var cacheKey = new CacheKeyBuilder("user-profile")
+            .WithTenant(tenantId.ToString())
+            .WithUser(userId.ToString())
+            .Add("preferences")
+            .Build();
+        
+        // Store user preferences in cache with 10 minute expiration
+        var userPreferences = new 
+        {
+            Theme = "dark",
+            Language = "en-US",
+            Timezone = "UTC-5",
+            NotificationsEnabled = true
+        };
+        
+        await cacheProvider.SetAsync(cacheKey, userPreferences, TimeSpan.FromMinutes(10));
+        
+        // Retrieve user preferences from cache
+        var cachedPreferences = await cacheProvider.GetAsync<object>(cacheKey);
+        Console.WriteLine($"Retrieved preferences: {cachedPreferences != null}");
+        
+        // Check if key exists
+        var exists = await cacheProvider.ExistsAsync(cacheKey);
+        Console.WriteLine($"Key exists: {exists}");
+        
+        // Remove specific key
+        await cacheProvider.RemoveAsync(cacheKey);
+        
+        // Get all cache keys (returns empty for distributed cache)
+        var allKeys = await cacheProvider.GetAllKeysAsync();
+        Console.WriteLine($"Total cache keys: {allKeys.Count()}");
+    }
+}
+```
+
 ## UserRepository
 
 The `UserRepository` class provides data access operations for user management within multi-tenant applications. It extends the base `Repository<User>` class and offers specialized methods for querying, filtering, and managing users based on various criteria such as email, role, organization, and authentication status.
