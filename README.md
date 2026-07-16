@@ -691,8 +691,101 @@ This example demonstrates creating a `ConfigurationService` instance and using i
 ### TenantApiController
 REST API endpoints for tenant management.
 
-### FeaturesController
-Feature flag management for tenant-specific features.
+## FeaturesController
+
+The `FeaturesController` provides RESTful API endpoints for managing tenant-specific feature flags in a multi-tenant application. It enables feature toggle management through endpoints for checking feature status, enabling/disabling features, setting rollout percentages, tracking usage, and retrieving statistics. The controller integrates with the `TenantFeatureService` to provide tenant-aware feature management operations.
+
+**Key capabilities:**
+- Check if a feature is enabled for the current tenant
+- Retrieve feature details and all features for a tenant
+- Enable and disable features with tenant scope
+- Set rollout percentages for gradual feature deployment
+- Record feature usage and check usage limits
+- Retrieve feature statistics and reports
+- Initialize default features for new tenants
+
+**Usage example**
+
+```csharp
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.DependencyInjection;
+using TenantIsolation.Controllers;
+using TenantIsolation.Models;
+
+public class FeaturesControllerExample
+{
+    public static async Task Main(string[] args)
+    {
+        // Setup dependency injection
+        var services = new ServiceCollection();
+        services.AddLogging(configure => configure.AddConsole());
+        services.AddScoped<FeaturesController>();
+        services.AddScoped<ITenantResolutionService, TenantResolutionService>();
+        services.AddScoped<TenantFeatureService>();
+        
+        var provider = services.BuildServiceProvider();
+        var featuresController = provider.GetRequiredService<FeaturesController>();
+        
+        // Get current tenant (simulated)
+        var tenant = new Tenant
+        {
+            Id = Guid.Parse("3fa85f6-4717-4562-b3fc-2c963f66afa6"),
+            Name = "ACME Corporation",
+            Slug = "acme-corp"
+        };
+        
+        // Initialize default features
+        var initResult = await featuresController.InitializeDefaults();
+        Console.WriteLine($"Default features initialized: {initResult}");
+        
+        // Enable a feature
+        var enableResult = await featuresController.EnableFeature("advanced-reporting");
+        Console.WriteLine($"Feature enabled: {enableResult}");
+        
+        // Check if feature is enabled
+        var checkResult = await featuresController.IsFeatureEnabled("advanced-reporting");
+        Console.WriteLine($"Feature enabled check: {checkResult}");
+        
+        // Get feature details
+        var featureResult = await featuresController.GetFeature("advanced-reporting");
+        Console.WriteLine($"Feature details: {featureResult}");
+        
+        // Set rollout percentage
+        var setRolloutResult = await featuresController.SetRolloutPercentage(
+            "advanced-reporting", 
+            new SetRolloutRequest { Percentage = 75 }
+        );
+        Console.WriteLine($"Rollout percentage set: {setRolloutResult}");
+        
+        // Record feature usage
+        var usageResult = await featuresController.RecordUsage(
+            "advanced-reporting",
+            new RecordUsageRequest { Amount = 5 }
+        );
+        Console.WriteLine($"Usage recorded: {usageResult}");
+        
+        // Check usage limit
+        var limitResult = await featuresController.CheckUsageLimit("advanced-reporting");
+        Console.WriteLine($"Usage limit check: {limitResult}");
+        
+        // Get all enabled features
+        var enabledFeatures = await featuresController.GetEnabledFeatures();
+        Console.WriteLine($"Enabled features count: {((OkObjectResult)enabledFeatures).Value}");
+        
+        // Get all features
+        var allFeatures = await featuresController.GetAllFeatures();
+        Console.WriteLine($"All features count: {((OkObjectResult)allFeatures).Value}");
+        
+        // Get statistics
+        var statsResult = await featuresController.GetStatistics();
+        Console.WriteLine($"Feature statistics: {((OkObjectResult)statsResult).Value}");
+        
+        // Disable feature
+        var disableResult = await featuresController.DisableFeature("advanced-reporting");
+        Console.WriteLine($"Feature disabled: {disableResult}");
+    }
+}
+```
 
 ### AdminController
 The `AdminController` provides administrative endpoints for tenant management and system operations. It requires administrative authorization in production environments and exposes endpoints for retrieving system statistics, managing tenant lifecycles, monitoring background tasks, and handling expiring subscriptions.
