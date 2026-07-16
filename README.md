@@ -1304,6 +1304,81 @@ public class User
     public string Name { get; set; }
     public int Age { get; set; }
 }
+
+## DateTimeExtensions
+
+The `DateTimeExtensions` class provides a comprehensive set of extension methods for common date and time operations in multi-tenant applications. It includes methods for getting the start/end of various time periods (day, week, month, year), checking date relationships (today, past, future), calculating business days, and generating human-readable relative time strings.
+
+
+
+
+
+Here's an example usage demonstrating the key public members:
+
+```csharp
+using System;
+using TenantIsolation.Utilities;
+
+public class DateTimeExtensionsExample
+{
+    public static void Main(string[] args)
+    {
+        var now = DateTime.UtcNow;
+        var today = now.StartOfDay();
+        var endOfDay = now.EndOfDay();
+        
+        Console.WriteLine($"Start of day: {today:yyyy-MM-dd HH:mm:ss}");
+        Console.WriteLine($"End of day: {endOfDay:yyyy-MM-dd HH:mm:ss}");
+        
+        // Week operations
+        var startOfWeek = now.StartOfWeek();
+        var endOfWeek = now.EndOfWeek();
+        Console.WriteLine($"Week starts: {startOfWeek:yyyy-MM-dd} (Monday)");
+        Console.WriteLine($"Week ends: {endOfWeek:yyyy-MM-dd} (Sunday)");
+        
+        // Month operations
+        var startOfMonth = now.StartOfMonth();
+        var endOfMonth = now.EndOfMonth();
+        Console.WriteLine($"Month starts: {startOfMonth:yyyy-MM-dd}");
+        Console.WriteLine($"Month ends: {endOfMonth:yyyy-MM-dd}");
+        
+        // Date checks
+        Console.WriteLine($"Is today: {now.IsToday()}");
+        Console.WriteLine($"Is past: {now.AddDays(-1).IsPast()}");
+        Console.WriteLine($"Is future: {now.AddDays(1).IsFuture()}");
+        
+        // Relative time
+        var yesterday = now.AddDays(-1);
+        var tomorrow = now.AddDays(1);
+        Console.WriteLine($"Yesterday: {yesterday.ToRelativeTime()}");
+        Console.WriteLine($"Tomorrow: {tomorrow.ToRelativeTime()}");
+        
+        // Business days
+        var businessDaysAdded = now.AddBusinessDays(5);
+        Console.WriteLine($"5 business days from now: {businessDaysAdded:yyyy-MM-dd}");
+        
+        var daysBetween = now.GetBusinessDaysBetween(now.AddDays(-7), now);
+        Console.WriteLine($"Business days in last week: {daysBetween}");
+        
+        // Age calculation
+        var birthDate = new DateTime(1990, 5, 15);
+        var age = birthDate.GetAgeInYears();
+        Console.WriteLine($"Age in years: {age}");
+        
+        // ISO 8601 format
+        var isoDate = now.ToIso8601String();
+        Console.WriteLine($"ISO 8601 format: {isoDate}");
+        
+        // Range check
+        var inRange = now.IsInRange(now.AddDays(-1), now.AddDays(1));
+        Console.WriteLine($"Is in range: {inRange}");
+        
+        // Expiry checks
+        var expiryDate = now.AddDays(30);
+        Console.WriteLine($"Is expiring within 7 days: {expiryDate.IsExpiringWithin(7)}");
+        Console.WriteLine($"Has expired: {expiryDate.AddDays(-60).HasExpired()}");
+    }
+}
 ```
 
 ## ServiceRegistrationExtensions
