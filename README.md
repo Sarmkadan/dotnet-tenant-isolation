@@ -1177,6 +1177,82 @@ public class JsonUtilityExample
 }
 ```
 
+## CryptographyUtility
+
+The `CryptographyUtility` class provides cryptographic operations for hashing, encryption, and security in multi-tenant applications. It implements secure algorithms like SHA-256, SHA-512, HMAC-SHA256, AES-256 encryption, and PBKDF2 password hashing to ensure data protection and identity verification.
+
+**Key capabilities:**
+- Generate cryptographic hashes (SHA-256, SHA-512) for data integrity
+- Create secure random tokens and codes for authentication
+- Encrypt and decrypt sensitive data using AES-256
+- Generate and verify HMAC signatures for message authentication
+- Secure password hashing with salt using PBKDF2
+- Generate cryptographically secure GUIDs and fingerprints
+
+**Usage example**
+
+```csharp
+using System;
+using TenantIsolation.Utilities;
+
+public class CryptographyExample
+{
+    public static void Main(string[] args)
+    {
+        // Generate cryptographic hashes
+        string data = "sensitive-data-123";
+        string sha256Hash = CryptographyUtility.GenerateSha256Hash(data);
+        string sha512Hash = CryptographyUtility.GenerateSha512Hash(data);
+        
+        Console.WriteLine($"SHA256 hash: {sha256Hash}");
+        Console.WriteLine($"SHA512 hash: {sha512Hash}");
+
+        // Generate secure random tokens and codes
+        string secureToken = CryptographyUtility.GenerateSecureToken(32);
+        string randomCode = CryptographyUtility.GenerateRandomNumericCode(6);
+        string randomPassword = CryptographyUtility.GenerateRandomString(12, true);
+        
+        Console.WriteLine($"Secure token: {secureToken}");
+        Console.WriteLine($"Random code: {randomCode}");
+        Console.WriteLine($"Random password: {randomPassword}");
+
+        // Generate and verify HMAC signatures
+        string secretKey = "my-secret-key";
+        string message = "webhook-payload";
+        string signature = CryptographyUtility.GenerateHmacSha256(message, secretKey);
+        bool isValid = CryptographyUtility.VerifyHmacSha256(message, signature, secretKey);
+        
+        Console.WriteLine($"HMAC signature: {signature}");
+        Console.WriteLine($"Signature valid: {isValid}");
+
+        // Encrypt and decrypt sensitive data
+        string plainText = "Top secret message";
+        string encryptionKey = "strong-encryption-key-123";
+        string encrypted = CryptographyUtility.EncryptAes256(plainText, encryptionKey);
+        string decrypted = CryptographyUtility.DecryptAes256(encrypted, encryptionKey);
+        
+        Console.WriteLine($"Encrypted: {encrypted}");
+        Console.WriteLine($"Decrypted: {decrypted}");
+
+        // Secure password hashing and verification
+        string password = "user-password-123";
+        var (hash, salt) = CryptographyUtility.HashPassword(password);
+        bool passwordValid = CryptographyUtility.VerifyPassword(password, hash, salt);
+        
+        Console.WriteLine($"Password hash: {hash}");
+        Console.WriteLine($"Salt: {salt}");
+        Console.WriteLine($"Password valid: {passwordValid}");
+
+        // Generate secure GUID and fingerprint
+        Guid secureGuid = CryptographyUtility.GenerateSecureGuid();
+        string fingerprint = CryptographyUtility.ComputeFingerprint("device-id", "hardware-info", "os-version");
+        
+        Console.WriteLine($"Secure GUID: {secureGuid}");
+        Console.WriteLine($"Device fingerprint: {fingerprint}");
+    }
+}
+```
+
 ## CollectionExtensions
 
 The `CollectionExtensions` class provides a comprehensive set of extension methods for working with collections, lists, dictionaries, and enumerables in .NET applications. These methods offer safe collection manipulation patterns, prevent common exceptions like `IndexOutOfRangeException`, and provide convenient operations for filtering, partitioning, and transforming collections while maintaining thread safety and proper null handling.
