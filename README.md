@@ -1039,6 +1039,99 @@ Learn about data isolation patterns in [Data Isolation Guide](docs/data-isolatio
 
 See the full [API Reference](docs/api-reference.md) for detailed documentation.
 
+## ApiResponse
+
+The `ApiResponse<T>` class provides a standardized API response format wrapper that ensures consistent response structure across all endpoints in the multi-tenant application. It includes properties for tracking operation success, response data, error messages, timestamps, and request context information.
+
+**Key capabilities:**
+- Standardized response structure for all API endpoints
+- Support for success and error responses with consistent formatting
+- Automatic inclusion of request context (path, trace ID, timestamp)
+- Generic type support for typed data responses
+- Error dictionary for detailed validation and business rule violations
+
+**Public members:**
+- `Success`: Indicates whether the operation succeeded
+- `Data`: The response data (nullable)
+- `Message`: Optional success/error message
+- `Errors`: Dictionary of field-specific error messages
+- `Timestamp`: When the response was generated
+- `Path`: Request path that generated this response
+- `TraceId`: Correlation/trace identifier
+
+**Usage example**
+
+```csharp
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.DependencyInjection;
+using TenantIsolation.Formatters;
+using TenantIsolation.Models;
+
+public class ApiResponseExample
+{
+    public static async Task Main(string[] args)
+    {
+        // Setup dependency injection
+        var services = new ServiceCollection();
+        services.AddHttpContextAccessor();
+        services.AddResponseFormatter();
+        
+        var provider = services.BuildServiceProvider();
+        var responseFormatter = provider.GetRequiredService<IResponseFormatter>();
+        
+        // Create a successful response with data
+        var tenant = new Tenant
+        {
+            Id = Guid.NewGuid(),
+            Name = "Acme Corporation",
+            Slug = "acme-corp",
+            Status = TenantStatus.Active
+        };
+        
+        var successResponse = responseFormatter.Success(tenant, "Tenant retrieved successfully");
+        Console.WriteLine($"Success: {successResponse.Success}");
+        Console.WriteLine($"Message: {successResponse.Message}");
+        Console.WriteLine($"Data: {successResponse.Data?.Name}");
+        Console.WriteLine($"Timestamp: {successResponse.Timestamp}");
+        Console.WriteLine($"Path: {successResponse.Path}");
+        Console.WriteLine($"TraceId: {successResponse.TraceId}");
+        
+        // Create a success response without data
+        var simpleSuccess = responseFormatter.Success("Operation completed successfully");
+        Console.WriteLine($"\nSimple success - Success: {simpleSuccess.Success}, Message: {simpleSuccess.Message}");
+        
+        // Create an error response
+        var errorResponse = responseFormatter.Error("Validation failed", new Dictionary<string, string[]>
+        {
+            { "email", new[] { "Email is required", "Email format is invalid" } },
+            { "password", new[] { "Password must be at least 8 characters" } }
+        });
+        Console.WriteLine($"\nError response - Success: {errorResponse.Success}, Message: {errorResponse.Message}");
+        Console.WriteLine($"Errors count: {errorResponse.Errors?.Count}");
+        
+        // Create a paginated response
+        var users = new List<User>
+        {
+            new User { Id = Guid.NewGuid(), Email = "user1@acme.com", FirstName = "John", LastName = "Doe" },
+            new User { Id = Guid.NewGuid(), Email = "user2@acme.com", FirstName = "Jane", LastName = "Smith" }
+        };
+        
+        var paginatedResponse = responseFormatter.Paginated(
+            users,
+            total: 150,
+            page: 1,
+            pageSize: 2
+        );
+        
+        Console.WriteLine($"\nPaginated response - Success: {paginatedResponse.Success}");
+        Console.WriteLine($"Total items: {paginatedResponse.Data?.Total}");
+        Console.WriteLine($"Page: {paginatedResponse.Data?.Page}");
+        Console.WriteLine($"Page size: {paginatedResponse.Data?.PageSize}");
+        Console.WriteLine($"Items count: {paginatedResponse.Data?.Items.Count}");
+    }
+}
+```
+
 ## Notification
 
 The `Notification` class represents an in-app notification for multi-tenant applications. It stores notification details including title, message, type, recipient information, timestamps, and metadata. Notifications support tracking read status, expiration dates, and can be associated with either individual users or entire tenants.
