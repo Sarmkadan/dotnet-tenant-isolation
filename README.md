@@ -557,6 +557,84 @@ public class NotificationManagement
 
 This example demonstrates creating a `Notification` instance with all properties, registering the notification service, and using its public methods to send, retrieve, mark as read, and delete notifications.
 
+## DynamicTenantStore
+
+The `DynamicTenantStore` is a SQL-backed implementation of `IDynamicTenantStore` that provides and caches tenant information from a database repository. It supports automatic periodic reloading of tenant data to keep the cache in sync with database changes, and raises events when tenants are added, updated, or removed.
+
+The store is designed to be used with dependency injection and can be configured to reload tenant data at specified intervals. It implements `IDisposable` to clean up background timers.
+
+**Usage example**
+
+```csharp
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
+using TenantIsolation.Models;
+using TenantIsolation.Services;
+using TenantIsolation.Data;
+using TenantIsolation.Configuration;
+
+public class DynamicTenantStoreExample
+{
+    public static async Task Main(string[] args)
+    {
+        // Setup dependency injection
+        var services = new ServiceCollection();
+        services.AddLogging(configure => configure.AddConsole());
+        services.AddDbContext<TenantDbContext>();
+        services.AddScoped<TenantRepository>();
+        
+        // Configure tenant isolation options
+        services.Configure<TenantIsolationOptions>(options =>
+        {
+            options.DynamicTenantStoreReloadIntervalMinutes = 5; // Reload every 5 minutes
+        });
+        
+        // Register DynamicTenantStore as a service
+        services.AddSingleton<IDynamicTenantStore, DynamicTenantStore>();
+        services.AddSingleton<DynamicTenantStore>(); // Also register concrete type
+        
+        var provider = services.BuildServiceProvider();
+        
+        // Get the tenant store instance
+        var tenantStore = provider.GetRequiredService<DynamicTenantStore>();
+        
+        // Start automatic reloading of tenant data
+        tenantStore.StartReloading();
+        
+        // Get all active tenants
+        var activeTenants = await tenantStore.GetAllActiveTenantsAsync();
+        Console.WriteLine($"Active tenants count: {activeTenants.Count()}");
+        
+        // Get a specific tenant by ID
+        var tenantId = Guid.Parse("3fa85f64-5717-4562-b3fc-2c963f66afa6");
+        var tenant = await tenantStore.GetTenantByIdAsync(tenantId);
+        
+        if (tenant != null)
+        {
+            Console.WriteLine($"Found tenant: {tenant.Name} (Slug: {tenant.Slug}, Status: {tenant.Status})");
+        }
+        
+        // Subscribe to tenant change events
+        tenantStore.OnTenantRegistered += (sender, e) =>
+        {
+            Console.WriteLine($"Tenant registered: {e.Tenant.Name} (Id: {e.Tenant.Id})");
+        };
+        
+        tenantStore.OnTenantRemoved += (sender, e) =>
+        {
+            Console.WriteLine($"Tenant removed: {e.Tenant.Name} (Id: {e.Tenant.Id})");
+        };
+        
+        // When shutting down the application, stop the reloading timer
+        // tenantStore.StopReloading();
+        
+        // Dispose when done (stops the timer)
+        tenantStore.Dispose();
+    }
+}
+```
+
 ## ComponentHealthInfo
 
 The `ComponentHealthInfo` class represents the health status of a specific system component (database, cache, event bus, etc.) in a multi-tenant application. It tracks individual component health metrics including response time, status, and descriptive messages, enabling detailed health monitoring and troubleshooting.
