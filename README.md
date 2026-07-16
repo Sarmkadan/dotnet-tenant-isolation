@@ -297,7 +297,86 @@ The example demonstrates constructing a `TenantFeature`, checking its availabili
 Provides tenant resolution strategies for multi-tenant applications.
 
 ### TenantService
-Manages tenant lifecycle and configuration.
+
+The `TenantService` provides services for managing tenant lifecycles, including creation, activation, suspension, and deletion. It handles tenant operations such as creating new tenants, retrieving tenant information, managing tenant status, and providing tenant statistics.
+
+**Usage example**
+
+```csharp
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
+using TenantIsolation.Models;
+using TenantIsolation.Services;
+using TenantIsolation.Data;
+using TenantIsolation.Constants;
+
+public class TenantManagementExample
+{
+    public static async Task Main(string[] args)
+    {
+        // Setup dependency injection
+        var services = new ServiceCollection();
+        services.AddLogging(configure => configure.AddConsole());
+        services.AddSingleton<IDynamicTenantStore, InMemoryDynamicTenantStore>(); // Replace with real implementation
+        services.AddScoped<TenantRepository>();
+        services.AddScoped<TenantService>();
+        
+        var provider = services.BuildServiceProvider();
+        
+        var tenantService = provider.GetRequiredService<TenantService>();
+        
+        // Create a new tenant
+        var newTenant = await tenantService.CreateTenantAsync(
+            name: "Acme Corporation",
+            slug: "acme-corp",
+            adminEmail: "admin@acme-corp.com",
+            strategy: TenantIsolationStrategy.DatabasePerTenant
+        );
+        
+        Console.WriteLine($"Created tenant: {newTenant.Name} (Id: {newTenant.Id})");
+        
+        // Get tenant by ID
+        var retrievedTenant = await tenantService.GetTenantAsync(newTenant.Id);
+        Console.WriteLine($"Retrieved tenant: {retrievedTenant.Name}");
+        
+        // Activate tenant
+        var activationResult = await tenantService.ActivateTenantAsync(newTenant.Id);
+        Console.WriteLine($"Activation successful: {activationResult}");
+        
+        // Check subscription validity
+        var isValid = await tenantService.IsSubscriptionValidAsync(newTenant.Id);
+        Console.WriteLine($"Subscription valid: {isValid}");
+        
+        // Get all active tenants
+        var activeTenants = await tenantService.GetActiveTenantsAsync();
+        Console.WriteLine($"Active tenants count: {activeTenants.Count}");
+        
+        // Search tenants
+        var searchResults = await tenantService.SearchTenantsAsync("acme");
+        Console.WriteLine($"Search results: {searchResults.Count}");
+        
+        // Get tenant statistics
+        var statistics = await tenantService.GetTenantStatisticsAsync();
+        Console.WriteLine($"Total tenants: {statistics.TotalTenants}, Active: {statistics.ActiveTenants}");
+        
+        // Update tenant
+        await tenantService.UpdateTenantAsync(newTenant.Id, tenant => {
+            tenant.Description = "Enterprise manufacturing solutions provider";
+            tenant.MaxUsers = 500;
+        });
+        
+        // Suspend tenant
+        var suspendResult = await tenantService.SuspendTenantAsync(newTenant.Id, "Account suspended for non-payment");
+        Console.WriteLine($"Suspension successful: {suspendResult}");
+        
+        // Delete tenant (soft delete)
+        var deleteResult = await tenantService.DeleteTenantAsync(newTenant.Id);
+        Console.WriteLine($"Deletion successful: {deleteResult}");
+    }
+}
+```
+
+*Note:* `InMemoryDynamicTenantStore` is a placeholder for your own `IDynamicTenantStore` implementation.
 
 ### ConfigurationService
 Handles tenant-specific configuration settings with encryption and validation.
