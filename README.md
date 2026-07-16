@@ -2,6 +2,10 @@
 
 A .NET library for implementing multi-tenant data isolation patterns in ASP.NET Core applications.
 
+## Architecture
+
+Tenants are resolved once per request (header -> claims -> route -> subdomain), cached in `HttpContext.Items`, and every downstream component - the tenant-aware `DbContext` factory, caching, feature toggles, usage metering - works off that resolved tenant. See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for the full component breakdown, data flow, design decisions and known limitations.
+
 ## Models
 
 ### TenantConfiguration
