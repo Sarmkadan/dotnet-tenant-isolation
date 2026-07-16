@@ -537,6 +537,130 @@ public class ExportExample
 
 This example demonstrates creating an `ExportRequest` instance with all required properties, registering the export service, and using it to export data in JSON format with filtering and field selection.
 
+## TenantRepositoryTests
+
+The `TenantRepositoryTests` class provides comprehensive unit test coverage for the `TenantRepository` class, validating all tenant repository operations including tenant retrieval, status filtering, subscription management, and lifecycle operations. It tests tenant querying with various filters, tenant search functionality, and tenant status transitions across multiple realistic scenarios.
+
+**Key capabilities:**
+- Test tenant retrieval by slug with soft deletion and status filtering
+- Validate active tenant queries and ordering
+- Test tenant status-based queries (Active, Trial, Suspended)
+- Verify subscription management and expiring subscription detection
+- Test tenant lifecycle operations (activate, suspend)
+- Validate tenant search functionality (by name, slug, email)
+- Test tenant uniqueness validation for slugs
+- Verify billing summary generation
+
+**Public members tested:**
+- `InitializeAsync()` - Sets up test database
+- `DisposeAsync()` - Cleans up test resources
+- `GetBySlugAsync_WithValidSlug_ReturnsTenant()` - Retrieves tenant by slug
+- `GetBySlugAsync_WithDeletedTenant_ReturnsNull()` - Handles deleted tenants
+- `GetBySlugAsync_WithInactiveStatus_ReturnsNull()` - Filters by tenant status
+- `GetBySlugAsync_WithNullOrWhitespaceSlug_ThrowsArgumentException()` - Validates input
+- `GetBySlugAsync_WithNonExistentSlug_ReturnsNull()` - Handles missing tenants
+- `GetActiveTenantAsync_ReturnsOnlyActiveTenants()` - Queries active tenants
+- `GetActiveTenantAsync_ExcludesDeletedTenants()` - Filters soft-deleted tenants
+- `GetActiveTenantAsync_OrdersByName()` - Validates result ordering
+- `GetByStatusAsync_WithValidStatus_ReturnsTenants()` - Status-based queries
+- `GetByStatusAsync_OrdersByCreatedAtDescending()` - Validates ordering
+- `GetTrialTenantsAsync_ReturnsOnlyTrialTenants()` - Trial tenant filtering
+- `GetExpiringSubscriptionsAsync_ReturnsTenantsExpiringWithin30Days()` - Subscription management
+- `GetExpiringSubscriptionsAsync_WithCustomDays_UsesCustomThreshold()` - Custom threshold support
+- `GetExpiringSubscriptionsAsync_ExcludesAlreadyExpired()` - Filters expired subscriptions
+- `GetExpiringSubscriptionsAsync_ExcludesDeletedTenants()` - Filters deleted tenants
+- `GetExpiringSubscriptionsAsync_WithNegativeDays_ThrowsArgumentOutOfRangeException()` - Validates input
+- `GetExpiringSubscriptionsAsync_OrdersBySubscriptionExpiryAsc()` - Validates ordering
+
+**Usage example**
+
+```csharp
+using FluentAssertions;
+using Microsoft.EntityFrameworkCore;
+using TenantIsolation.Constants;
+using TenantIsolation.Data;
+using TenantIsolation.Models;
+using TenantIsolation.Tests;
+using Xunit;
+
+public class TenantRepositoryTestsExample
+{
+    private readonly TenantRepositoryTests _tenantRepositoryTests;
+
+    public TenantRepositoryTestsExample()
+    {
+        _tenantRepositoryTests = new TenantRepositoryTests();
+    }
+
+    public async Task RunTenantRepositoryTests()
+    {
+        // Initialize test database
+        await _tenantRepositoryTests.InitializeAsync();
+
+        try
+        {
+            // Test tenant retrieval by slug
+            var tenant = new Tenant
+            {
+                Id = Guid.NewGuid(),
+                Name = "ACME Corporation",
+                Slug = "acme-corp",
+                AdminEmail = "admin@acme-corp.com",
+                Status = TenantStatus.Active,
+                IsDeleted = false,
+                SubscriptionExpiresAt = DateTime.UtcNow.AddDays(30)
+            };
+
+            // Create repository with in-memory database
+            var options = new DbContextOptionsBuilder<TenantDbContext>()
+                .UseInMemoryDatabase($"TenantRepositoryTests_{Guid.NewGuid()}")
+                .Options;
+            var dbContext = new TenantDbContext(options);
+            var repository = new TenantRepository(new InMemoryTenantDbContextFactory(dbContext));
+
+            await dbContext.Database.EnsureCreatedAsync();
+            dbContext.Tenants.Add(tenant);
+            await dbContext.SaveChangesAsync();
+
+            // Test GetBySlugAsync
+            var retrievedTenant = await repository.GetBySlugAsync("acme-corp");
+            retrievedTenant.Should().NotBeNull();
+            retrievedTenant!.Name.Should().Be("ACME Corporation");
+
+            // Test GetActiveTenantAsync
+            var activeTenants = await repository.GetActiveTenantAsync();
+            activeTenants.Should().HaveCount(1);
+            activeTenants[0].Status.Should().Be(TenantStatus.Active);
+
+            // Test GetByStatusAsync
+            var trialTenants = await repository.GetByStatusAsync(TenantStatus.Trial);
+            trialTenants.Should().BeEmpty();
+
+            // Test GetExpiringSubscriptionsAsync
+            var expiringSoon = await repository.GetExpiringSubscriptionsAsync(30);
+            expiringSoon.Should().HaveCount(1);
+            expiringSoon[0].SubscriptionExpiresAt.Should().HaveValue();
+
+            // Test tenant lifecycle operations
+            var activationResult = await repository.ActivateTenantAsync(tenant.Id);
+            activationResult.Should().BeTrue();
+
+            var suspensionResult = await repository.SuspendTenantAsync(tenant.Id, "Payment failed");
+            suspensionResult.Should().BeTrue();
+
+            // Test search functionality
+            var searchResults = await repository.SearchAsync("acme");
+            searchResults.Should().HaveCount(1);
+        }
+        finally
+        {
+            // Clean up
+            await _tenantRepositoryTests.DisposeAsync();
+        }
+    }
+}
+```
+
 ## ConfigurationServiceTests
 
 The `ConfigurationServiceTests` class provides comprehensive unit test coverage for the `ConfigurationService` class, validating all configuration management operations including CRUD operations, caching, batch operations, validation, and error scenarios. It tests configuration creation, retrieval, updates, deletion, type conversion, encryption, and batch operations across multiple realistic scenarios.
