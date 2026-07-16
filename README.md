@@ -192,7 +192,7 @@ LockedUntil = null,
 PhoneNumber = "+1-555-0101",
 AvatarUrl = "https://acme-corp.com/avatars/john-doe.jpg",
 Preferences = "{\"theme\": \"dark\", \"language\": \"en-US\"}",
-LastPasswordChangeAt = DateTime.UtcNow.AddDays(-7),
+LastPasswordChangeAt = DateTime.UtcNow,
 CreatedAt = DateTime.UtcNow,
 UpdatedAt = DateTime.UtcNow
 };
@@ -297,6 +297,40 @@ Manages tenant lifecycle and configuration.
 
 ### ConfigurationService
 Handles tenant-specific configuration settings with encryption and validation.
+
+## ConfigurationService
+The `ConfigurationService` is responsible for managing tenant-specific configuration settings. It provides methods to set, get, and delete configurations, as well as batch operations and caching for improved performance. Here's an example usage:
+
+```csharp
+using TenantIsolation.Services;
+
+public class ConfigurationExample
+{
+    public static async Task Main(string[] args)
+    {
+        var configurationService = new ConfigurationService(
+            new TenantDbContext(),
+            new MemoryCache(new MemoryCacheOptions()),
+            new LoggerFactory().CreateLogger<ConfigurationService>());
+
+        // Set a configuration value
+        var config = await configurationService.SetConfigurationAsync(
+            Guid.NewGuid(),
+            "features:api:enabled",
+            "true",
+            "string",
+            false);
+
+        // Get a configuration value
+        var getConfig = await configurationService.GetConfigurationAsync<Guid>(Guid.NewGuid(), "features:api:enabled");
+
+        // Delete a configuration
+        var deleted = await configurationService.DeleteConfigurationAsync(Guid.NewGuid(), "features:api:enabled");
+    }
+}
+```
+
+This example demonstrates creating a `ConfigurationService` instance and using its public members to manage configuration settings.
 
 ## Controllers
 
