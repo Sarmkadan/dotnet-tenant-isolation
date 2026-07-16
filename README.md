@@ -1346,6 +1346,118 @@ public class ValidationExample
 public enum UserRole { Administrator, User, Guest }
 ```
 
+## WebhookController
+
+The `WebhookController` provides RESTful API endpoints for managing webhook subscriptions in multi-tenant applications. It allows tenants to register, retrieve, update, and delete webhook endpoints for receiving event notifications, with support for delivery history and testing capabilities.
+
+**Key capabilities:**
+- Register webhook endpoints for specific event types
+- Retrieve webhook subscriptions by ID or tenant
+- Delete webhook subscriptions
+- View webhook delivery history
+- Test webhook endpoints with sample payloads
+- Secure webhook endpoints with optional secrets for signature verification
+
+**Public members:**
+- `TenantId` - Tenant identifier
+- `EventType` - Event type to subscribe to
+- `Url` - Webhook endpoint URL
+- `Secret` - Optional secret for webhook signature verification
+- `RegisterWebhook(RegisterWebhookRequest)` - Register a new webhook endpoint
+- `GetWebhook(Guid)` - Get webhook by ID
+- `GetTenantWebhooks(string, string?)` - Get all webhooks for a tenant
+- `DeleteWebhook(Guid)` - Delete webhook subscription
+- `GetWebhookDeliveries(Guid, int)` - Get webhook delivery history
+- `TestWebhook(Guid)` - Test webhook by sending a sample payload
+
+**Usage example**
+
+```csharp
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
+using TenantIsolation.Controllers;
+using TenantIsolation.Models;
+
+public class WebhookControllerExample
+{
+    public static async Task Main(string[] args)
+    {
+        // Setup dependency injection
+        var services = new ServiceCollection();
+        services.AddLogging(configure => configure.AddConsole());
+        services.AddScoped<WebhookController>();
+        
+        // Mock implementations for example
+        services.AddScoped<IWebhookHandler>(_ => new MockWebhookHandler());
+        services.AddScoped<IResponseFormatter, ResponseFormatter>();
+        
+        var provider = services.BuildServiceProvider();
+        var webhookController = provider.GetRequiredService<WebhookController>();
+        
+        // Register a new webhook subscription
+        var registerRequest = new WebhookController.RegisterWebhookRequest
+        {
+            TenantId = Guid.NewGuid().ToString(),
+            EventType = "user.created",
+            Url = "https://webhook.site/12345-abcde",
+            Secret = "my-secret-key-for-signature-verification"
+        };
+        
+        var registerResult = await webhookController.RegisterWebhook(registerRequest);
+        var subscription = ((Microsoft.AspNetCore.Mvc.CreatedAtActionResult)registerResult.Result).Value as ApiResponse<WebhookSubscription>;
+        Console.WriteLine($"Registered webhook: {subscription?.Data?.Id}");
+        
+        // Get webhook by ID
+        var getResult = await webhookController.GetWebhook(subscription.Data.Id);
+        var retrievedWebhook = ((Microsoft.AspNetCore.Mvc.OkObjectResult)getResult.Result).Value as ApiResponse<WebhookSubscription>;
+        Console.WriteLine($"Retrieved webhook: {retrievedWebhook?.Data?.Url}");
+        
+        // Get all webhooks for a tenant
+        var tenantId = Guid.NewGuid().ToString();
+        var tenantWebhooksResult = await webhookController.GetTenantWebhooks(tenantId, "user.created");
+        var tenantWebhooks = ((Microsoft.AspNetCore.Mvc.OkObjectResult)tenantWebhooksResult.Result).Value as ApiResponse<List<WebhookSubscription>>;
+        Console.WriteLine($"Tenant webhooks count: {tenantWebhooks?.Data?.Count}");
+        
+        // Get webhook delivery history
+        var deliveriesResult = await webhookController.GetWebhookDeliveries(subscription.Data.Id, 10);
+        var deliveries = ((Microsoft.AspNetCore.Mvc.OkObjectResult)deliveriesResult.Result).Value as ApiResponse<List<WebhookDelivery>>;
+        Console.WriteLine($"Delivery history count: {deliveries?.Data?.Count}");
+        
+        // Test webhook by sending sample payload
+        var testResult = await webhookController.TestWebhook(subscription.Data.Id);
+        var testResponse = ((Microsoft.AspNetCore.Mvc.OkObjectResult)testResult.Result).Value as ApiResponse<object>;
+        Console.WriteLine($"Test initiated: {testResponse?.Message}");
+        
+        // Delete webhook subscription
+        var deleteResult = await webhookController.DeleteWebhook(subscription.Data.Id);
+        var deleteResponse = ((Microsoft.AspNetCore.Mvc.OkObjectResult)deleteResult.Result).Value as ApiResponse<object>;
+        Console.WriteLine($"Webhook deleted: {deleteResponse?.Success}");
+    }
+}
+
+// Mock implementation for example
+public class MockWebhookHandler : IWebhookHandler
+{
+    public Task<WebhookSubscription> RegisterWebhookAsync(Guid tenantId, string eventType, string url, string? secret)
+    {
+        return Task.FromResult(new WebhookSubscription
+        {
+            Id = Guid.NewGuid(),
+            TenantId = tenantId,
+            EventType = eventType,
+            Url = url,
+            Secret = secret,
+            CreatedAt = DateTime.UtcNow
+        });
+    }
+    
+    public Task<WebhookSubscription?> GetWebhookByIdAsync(Guid id) => Task.FromResult<WebhookSubscription?>(null);
+    public Task<IEnumerable<WebhookSubscription>> GetWebhooksAsync(Guid tenantId, string? eventType) => Task.FromResult(Enumerable.Empty<WebhookSubscription>());
+    public Task<bool> UnregisterWebhookAsync(Guid id) => Task.FromResult(false);
+    public Task<IEnumerable<WebhookDelivery>> GetDeliveryHistoryAsync(Guid webhookId, int limit) => Task.FromResult(Enumerable.Empty<WebhookDelivery>());
+}
+```
+
 ## DynamicTenantStore
     public static async Task Main(string[] args)
     {
