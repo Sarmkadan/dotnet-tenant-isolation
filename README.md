@@ -1575,6 +1575,76 @@ public class TracingExample
 }
 ```
 
+## ValidationUtilityTests
+
+The `ValidationUtilityTests` class provides comprehensive unit test coverage for the `ValidationUtility` class, validating all validation methods including email validation, slug validation, GUID validation, and various range/positive value requirements. It uses FluentAssertions for expressive test assertions and Xunit for test discovery.
+
+**Key capabilities:**
+- Test email format validation with various inputs (valid and invalid formats)
+- Test tenant slug validation (lowercase alphanumeric with hyphens, 3-50 characters)
+- Test GUID format validation
+- Test exception-throwing validation methods that throw `TenantIsolationException` with helpful messages
+- Test range validation (minimum, maximum, and positive value requirements)
+- Test whitespace-only and null string validation
+
+**Usage example**
+
+```csharp
+using TenantIsolation.Utilities;
+using TenantIsolation.Exceptions;
+
+public class ValidationExample
+{
+    public static void Main(string[] args)
+    {
+        // Test email validation
+        bool isEmailValid = ValidationUtility.IsValidEmail("user@example.com");
+        Console.WriteLine($"Email is valid: {isEmailValid}"); // true
+
+        // Test slug validation
+        bool isSlugValid = ValidationUtility.IsValidSlug("acme-corp");
+        Console.WriteLine($"Slug is valid: {isSlugValid}"); // true
+
+        // Test GUID validation
+        bool isGuidValid = ValidationUtility.IsValidGuid(Guid.NewGuid().ToString());
+        Console.WriteLine($"GUID is valid: {isGuidValid}"); // true
+
+        // Test exception-throwing validation methods
+        try
+        {
+            ValidationUtility.RequireNotEmpty(null, "TenantName");
+        }
+        catch (TenantIsolationException ex)
+        {
+            Console.WriteLine($"Validation failed: {ex.Message}");
+        }
+
+        try
+        {
+            ValidationUtility.RequirePositive(0, "MaxUsers");
+        }
+        catch (TenantIsolationException ex)
+        {
+            Console.WriteLine($"Validation failed: {ex.Message}");
+        }
+
+        try
+        {
+            ValidationUtility.RequireRange(0, 1, 100, "Percentage");
+        }
+        catch (TenantIsolationException ex)
+        {
+            Console.WriteLine($"Validation failed: {ex.Message}");
+        }
+
+        // Test range validation that succeeds
+        ValidationUtility.RequirePositive(42, "MaxUsers");
+        ValidationUtility.RequireRange(50, 1, 100, "Percentage");
+        Console.WriteLine("Range validations passed successfully");
+    }
+}
+```
+
 ## ITimeProvider
 
 The `ITimeProvider` interface provides a dependency injection-friendly abstraction for time operations, enabling testable and mockable time-dependent code in multi-tenant applications. It supports both real system time and mock time for testing scenarios.
@@ -3784,111 +3854,17 @@ public class TracingExample
 }
 ```
 
-## ITimeProvider
+## ValidationUtilityTests
 
-The `ITimeProvider` interface provides a dependency injection-friendly abstraction for time operations, enabling testable and mockable time-dependent code in multi-tenant applications. It supports both real system time and mock time for testing scenarios.
-
-**Key capabilities:**
-- Get current UTC, local, or date-only time
-- Convert between UTC and tenant-specific timezones
-- Check business hours and calculate deadlines
-- Mock time for deterministic testing
-
-**Usage example**
-
-```csharp
-using Microsoft.Extensions.DependencyInjection;
-using TenantIsolation.Utilities;
-
-public class TimeProviderExample
-{
-    public static void Main(string[] args)
-    {
-        // Setup dependency injection with real time provider
-        var services = new ServiceCollection();
-        services.AddTimeProvider(useMock: false);
-        
-        var provider = services.BuildServiceProvider();
-        var timeProvider = provider.GetRequiredService<ITimeProvider>();
-        
-        // Get current time
-        Console.WriteLine($"Current UTC time: {timeProvider.UtcNow}");
-        Console.WriteLine($"Current local time: {timeProvider.Now}");
-        Console.WriteLine($"Current date: {timeProvider.Today}");
-        Console.WriteLine($"Timezone: {timeProvider.TimeZone.DisplayName}");
-        
-        // Convert between UTC and tenant time
-        var tenantTimeZoneId = "Eastern Standard Time";
-        var utcTime = DateTime.UtcNow;
-        var tenantTime = timeProvider.ConvertToTenantTime(utcTime, tenantTimeZoneId);
-        Console.WriteLine($"Tenant time: {tenantTime}");
-        
-        var backToUtc = timeProvider.ConvertFromTenantTime(tenantTime, tenantTimeZoneId);
-        Console.WriteLine($"Back to UTC: {backToUtc}");
-        
-        // Check business hours
-        bool isBusinessHours = timeProvider.IsBusinessHours(DateTime.UtcNow);
-        Console.WriteLine($"Is business hours: {isBusinessHours}");
-        
-        // Calculate deadlines
-        var deadline = timeProvider.CalculateSlaDeadline(businessHoursNeeded: 2);
-        Console.WriteLine($"SLA deadline in 2 business hours: {deadline}");
-        
-        var timeUntilDeadline = timeProvider.GetTimeUntilDeadline(deadline);
-        Console.WriteLine($"Time until deadline: {timeUntilDeadline.TotalMinutes} minutes");
-        
-        bool deadlineExceeded = timeProvider.IsDeadlineExceeded(deadline);
-        Console.WriteLine($"Deadline exceeded: {deadlineExceeded}");
-    }
-}
-```
-
-### Using Mock Time Provider for Testing
-
-```csharp
-using Microsoft.Extensions.DependencyInjection;
-using TenantIsolation.Utilities;
-
-public class TimeProviderTestingExample
-{
-    public static void Main(string[] args)
-    {
-        // Setup dependency injection with mock time provider
-        var services = new ServiceCollection();
-        services.AddTimeProvider(useMock: true);
-        
-        var provider = services.BuildServiceProvider();
-        var mockTimeProvider = provider.GetRequiredService<ITimeProvider>() as MockTimeProvider;
-        
-        // Set mock time
-        mockTimeProvider.SetCurrentTime(new DateTime(2024, 1, 15, 10, 30, 0));
-        Console.WriteLine($"Mock time set to: {mockTimeProvider.UtcNow}");
-        
-        // Advance time
-        mockTimeProvider.AdvanceTime(TimeSpan.FromHours(2));
-        Console.WriteLine($"Time advanced by 2 hours: {mockTimeProvider.UtcNow}");
-        
-        // Reset to system time
-        mockTimeProvider.Reset();
-        Console.WriteLine($"Reset to system time: {mockTimeProvider.UtcNow}");
-    }
-}
-```
-
-## ValidationUtility
-
-The `ValidationUtility` class provides centralized validation methods for common data validation patterns across the tenant isolation framework. It includes validation for email addresses, slugs, GUIDs, URLs, and various string and numeric constraints, with both boolean check methods and exception-throwing validation methods for different use cases.
+The `ValidationUtilityTests` class provides comprehensive unit test coverage for the `ValidationUtility` class, validating all validation methods including email validation, slug validation, GUID validation, and various range/positive value requirements. It uses FluentAssertions for expressive test assertions and Xunit for test discovery.
 
 **Key capabilities:**
-- Validate email format (RFC-compliant regex pattern)
-- Validate tenant slug format (lowercase alphanumeric with hyphens, 3-63 characters)
-- Validate GUID format
-- Validate URL format (HTTP/HTTPS only)
-- Validate string length constraints (min, max, range)
-- Validate numeric ranges and positivity
-- Validate date relationships (future, past, valid ranges)
-- Validate enum values
-- Throw `TenantIsolationException` for invalid values or provide boolean results
+- Test email format validation with various inputs (valid and invalid formats)
+- Test tenant slug validation (lowercase alphanumeric with hyphens, 3-50 characters)
+- Test GUID format validation
+- Test exception-throwing validation methods that throw `TenantIsolationException` with helpful messages
+- Test range validation (minimum, maximum, and positive value requirements)
+- Test whitespace-only and null string validation
 
 **Usage example**
 
@@ -3900,56 +3876,22 @@ public class ValidationExample
 {
     public static void Main(string[] args)
     {
-        // Validate email format
-        string email = "user@example.com";
-        bool isEmailValid = ValidationUtility.IsValidEmail(email);
-        Console.WriteLine($"Email '{email}' is valid: {isEmailValid}");
+        // Test email validation
+        bool isEmailValid = ValidationUtility.IsValidEmail("user@example.com");
+        Console.WriteLine($"Email is valid: {isEmailValid}"); // true
 
-        // Validate tenant slug
-        string slug = "acme-corp";
-        bool isSlugValid = ValidationUtility.IsValidSlug(slug);
-        Console.WriteLine($"Slug '{slug}' is valid: {isSlugValid}");
+        // Test slug validation
+        bool isSlugValid = ValidationUtility.IsValidSlug("acme-corp");
+        Console.WriteLine($"Slug is valid: {isSlugValid}"); // true
 
-        // Validate GUID
-        string guid = Guid.NewGuid().ToString();
-        bool isGuidValid = ValidationUtility.IsValidGuid(guid);
-        Console.WriteLine($"GUID '{guid}' is valid: {isGuidValid}");
+        // Test GUID validation
+        bool isGuidValid = ValidationUtility.IsValidGuid(Guid.NewGuid().ToString());
+        Console.WriteLine($"GUID is valid: {isGuidValid}"); // true
 
-        // Validate URL
-        string url = "https://example.com/api/users";
-        bool isUrlValid = ValidationUtility.IsValidUrl(url);
-        Console.WriteLine($"URL '{url}' is valid: {isUrlValid}");
-
-        // String length validation
-        string name = "John Doe";
-        ValidationUtility.RequireMinLength(name, 3, nameof(name));
-        ValidationUtility.RequireMaxLength(name, 50, nameof(name));
-        ValidationUtility.RequireLengthBetween(name, 3, 50, nameof(name));
-
-        // Numeric validation
-        int userCount = 42;
-        ValidationUtility.RequirePositive(userCount, nameof(userCount));
-        ValidationUtility.RequireRange(userCount, 1, 1000, nameof(userCount));
-
-        // Date validation
-        DateTime futureDate = DateTime.UtcNow.AddDays(30);
-        ValidationUtility.RequireFutureDate(futureDate, nameof(futureDate));
-
-        DateTime pastDate = DateTime.UtcNow.AddDays(-1);
-        ValidationUtility.RequirePastDate(pastDate, nameof(pastDate));
-
-        // Date range validation
-        DateTime startDate = DateTime.UtcNow;
-        DateTime endDate = DateTime.UtcNow.AddDays(7);
-        ValidationUtility.RequireValidDateRange(startDate, endDate, nameof(startDate), nameof(endDate));
-
-        // Enum validation
-        ValidationUtility.RequireValidEnum(UserRole.Administrator);
-
-        // Exception-throwing validation methods
+        // Test exception-throwing validation methods
         try
         {
-            ValidationUtility.RequireNotEmpty(null, nameof(email));
+            ValidationUtility.RequireNotEmpty(null, "TenantName");
         }
         catch (TenantIsolationException ex)
         {
@@ -3958,172 +3900,27 @@ public class ValidationExample
 
         try
         {
-            ValidationUtility.RequireValidEmail("invalid-email");
+            ValidationUtility.RequirePositive(0, "MaxUsers");
         }
         catch (TenantIsolationException ex)
         {
-            Console.WriteLine($"Email validation failed: {ex.Message}");
+            Console.WriteLine($"Validation failed: {ex.Message}");
         }
 
         try
         {
-            ValidationUtility.RequireValidSlug("Invalid Slug");
+            ValidationUtility.RequireRange(0, 1, 100, "Percentage");
         }
         catch (TenantIsolationException ex)
         {
-            Console.WriteLine($"Slug validation failed: {ex.Message}");
+            Console.WriteLine($"Validation failed: {ex.Message}");
         }
 
-        try
-        {
-            ValidationUtility.RequireValidGuid("not-a-guid", nameof(guid));
-        }
-        catch (TenantIsolationException ex)
-        {
-            Console.WriteLine($"GUID validation failed: {ex.Message}");
-        }
-
-        try
-        {
-            ValidationUtility.RequireValidUrl("ftp://invalid.com", nameof(url));
-        }
-        catch (TenantIsolationException ex)
-        {
-            Console.WriteLine($"URL validation failed: {ex.Message}");
-        }
-    }
-}
-
-public enum UserRole { Administrator, User, Guest }
-```
-
-## DynamicTenantStore
-
-The `ComponentHealthInfo` class represents the health status of a specific system component (database, cache, event bus, etc.) in a multi-tenant application. It tracks individual component health metrics including response time, status, and descriptive messages, enabling detailed health monitoring and troubleshooting.
-
-Here's an example usage:
-
-```csharp
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
-using TenantIsolation.Services;
-using TenantIsolation.Data;
-
-public class HealthMonitoringExample
-{
-    public static async Task Main(string[] args)
-    {
-        // Setup dependency injection
-        var services = new ServiceCollection();
-        services.AddLogging(configure => configure.AddConsole());
-        services.AddDbContext<TenantDbContext>();
-        services.AddHealthCheckService();
-
-        var provider = services.BuildServiceProvider();
-
-        // Get the health check service
-        var healthCheckService = provider.GetRequiredService<IHealthCheckService>();
-
-        // Perform a component-specific health check
-        var databaseHealth = await healthCheckService.CheckComponentAsync("database");
-        
-        Console.WriteLine($"Component: {databaseHealth.Name}");
-        Console.WriteLine($"Status: {databaseHealth.Status}");
-        Console.WriteLine($"Message: {databaseHealth.Message}");
-        Console.WriteLine($"Response Time: {databaseHealth.ResponseTimeMs}ms");
-        Console.WriteLine($"Checked At: {databaseHealth.CheckedAt}");
-
-        // Check overall system health
-        var healthReport = await healthCheckService.PerformHealthCheckAsync();
-        
-        Console.WriteLine($"\nOverall Status: {healthReport.Status}");
-        Console.WriteLine($"Total Duration: {healthReport.TotalCheckDuration.TotalMilliseconds}ms");
-        Console.WriteLine($"Checked At: {healthReport.CheckedAt}");
-        
-        foreach (var component in healthReport.Components)
-        {
-            Console.WriteLine($"\nComponent: {component.Key}");
-            Console.WriteLine($"  Status: {component.Value.Status}");
-            Console.WriteLine($"  Message: {component.Value.Message}");
-            Console.WriteLine($"  Response Time: {component.Value.ResponseTimeMs}ms");
-        }
-        
-        // Get cached report if available
-        var cachedReport = healthCheckService.GetCachedHealthReport();
-        if (cachedReport != null)
-        {
-            Console.WriteLine($"\nUsing cached report from: {cachedReport.CheckedAt}");
-            Console.WriteLine($"Cached message: {cachedReport.GetMessage()}");
-        }
+        // Test range validation that succeeds
+        ValidationUtility.RequirePositive(42, "MaxUsers");
+        ValidationUtility.RequireRange(50, 1, 100, "Percentage");
+        Console.WriteLine("Range validations passed successfully");
     }
 }
 ```
-
-This example demonstrates creating a `ComponentHealthInfo` instance through the health check service, checking individual components, and retrieving comprehensive health reports using the public members defined on the type.
-
-## ErrorHandlingMiddleware
-
-The `ErrorHandlingMiddleware` catches unhandled exceptions in the request pipeline, logs them, and returns a consistent JSON error response containing fields such as `Code`, `Message`, `StatusCode`, `TraceId`, `Details`, and `Timestamp`. This centralizes error handling and provides clients with structured error information.
-
-**Usage example**
-
-```csharp
-using Microsoft.AspNetCore.Builder;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
-using TenantIsolation.Middleware;
-
-var builder = WebApplication.CreateBuilder(args);
-
-// Register logging (already added by default)
-builder.Services.AddLogging();
-
-var app = builder.Build();
-
-// Register the error handling middleware early in the pipeline
-app.UseMiddleware<ErrorHandlingMiddleware>();
-
-app.MapGet("/", () => "Hello World!");
-
-app.Run();
-```
-
-In this example the middleware is added to the ASP.NET Core pipeline with `app.UseMiddleware<ErrorHandlingMiddleware>()`. When an exception occurs downstream, the middleware logs the error and returns a JSON payload with the standardized properties (`Code`, `Message`, `StatusCode`, `TraceId`, `Details`, `Timestamp`).
-
-
-## RateLimitingMiddleware
-
-The `RateLimitingMiddleware` implements sliding window rate limiting to prevent abuse and excessive resource consumption in multi-tenant applications. It tracks requests per tenant and IP address, protecting against DoS attacks and ensuring fair resource distribution across tenants. The middleware uses a configurable requests-per-minute limit and provides standard HTTP rate limiting headers in responses.
-
-**Usage example**
-
-```csharp
-using Microsoft.AspNetCore.Builder;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
-using TenantIsolation.Middleware;
-
-var builder = WebApplication.CreateBuilder(args);
-
-// Register logging (already added by default)
-builder.Services.AddLogging();
-
-var app = builder.Build();
-
-// Configure rate limiting options
-var rateLimitOptions = new RateLimitOptions
-{
-    RequestsPerMinute = 100,  // Allow 100 requests per minute
-    RetryAfterSeconds = 30,    // Wait 30 seconds before retry
-    Enabled = true             // Enable rate limiting
-};
-
-// Register the rate limiting middleware in the pipeline
-app.UseRateLimiting(rateLimitOptions);
-
-app.MapGet("/api/data", () => "Data response");
-
-app.Run();
-```
-
-In this example, the middleware is configured with custom rate limiting options and added to the ASP.NET Core pipeline using the `UseRateLimiting` extension method. The middleware will track requests per tenant (from `context.Items["TenantId"]`) and IP address, returning HTTP 429 (Too Many Requests) with a `Retry-After` header when the limit is exceeded. Response headers include `X-RateLimit-Limit`, `X-RateLimit-Remaining`, and `X-RateLimit-Reset` for client-side rate limiting coordination.
+## ITimeProvider
