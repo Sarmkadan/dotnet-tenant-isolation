@@ -443,6 +443,102 @@ public class ExportExample
 
 This example demonstrates creating an `ExportRequest` instance with all required properties, registering the export service, and using it to export data in JSON format with filtering and field selection.
 
+## TenantServiceTests
+
+The `TenantServiceTests` class provides comprehensive unit test coverage for the `TenantService` class, validating all tenant operations including creation, retrieval, activation, suspension, deletion, updates, and statistics. It uses mock repositories and stores to test behavior in isolation without requiring database dependencies.
+
+**Key capabilities:**
+- Test tenant creation with valid and invalid inputs
+- Validate tenant retrieval by ID and slug
+- Test tenant lifecycle operations (activation, suspension, deletion)
+- Verify tenant update functionality
+- Test subscription validation and trial detection
+- Validate tenant search and filtering
+- Test statistics and status aggregation
+
+**Usage example**
+
+```csharp
+using FluentAssertions;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
+using Moq;
+using TenantIsolation.Constants;
+using TenantIsolation.Data;
+using TenantIsolation.Models;
+using TenantIsolation.Services;
+using TenantIsolation.Tests;
+using Xunit;
+
+public class TenantServiceTestsExample
+{
+    private readonly TenantServiceTests _tenantServiceTests;
+    
+    public TenantServiceTestsExample()
+    {
+        // Setup mocks for testing
+        var options = new DbContextOptionsBuilder<TenantDbContext>()
+            .UseInMemoryDatabase($"TenantServiceTests_{Guid.NewGuid()}")
+            .Options;
+        var contextFactory = new InMemoryTenantDbContextFactory(new TenantDbContext(options));
+        
+        var mockTenantRepository = new Mock<TenantRepository>(MockBehavior.Strict, contextFactory);
+        var mockDynamicTenantStore = new Mock<IDynamicTenantStore>(MockBehavior.Strict);
+        var mockLogger = new Mock<ILogger<TenantService>>();
+        
+        var tenantService = new TenantService(
+            mockTenantRepository.Object,
+            mockDynamicTenantStore.Object,
+            mockLogger.Object
+        );
+        
+        _tenantServiceTests = new TenantServiceTests();
+    }
+    
+    public async Task RunTenantServiceTests()
+    {
+        // Test tenant creation with valid input
+        var tenant = await _tenantServiceTests._sut.CreateTenantAsync(
+            name: "Test Tenant",
+            slug: "test-tenant",
+            adminEmail: "admin@test.com"
+        );
+        
+        tenant.Should().NotBeNull();
+        tenant.Name.Should().Be("Test Tenant");
+        tenant.Slug.Should().Be("test-tenant");
+        tenant.Status.Should().Be(TenantStatus.Provisioning);
+        
+        // Test tenant retrieval
+        var retrievedTenant = await _tenantServiceTests._sut.GetTenantAsync(tenant.Id);
+        retrievedTenant.Should().Be(tenant);
+        
+        // Test tenant activation
+        var activationResult = await _tenantServiceTests._sut.ActivateTenantAsync(tenant.Id);
+        activationResult.Should().BeTrue();
+        
+        // Test tenant suspension
+        var suspensionResult = await _tenantServiceTests._sut.SuspendTenantAsync(tenant.Id);
+        suspensionResult.Should().BeTrue();
+        
+        // Test tenant deletion
+        var deletionResult = await _tenantServiceTests._sut.DeleteTenantAsync(tenant.Id);
+        deletionResult.Should().BeTrue();
+        tenant.IsDeleted.Should().BeTrue();
+        
+        // Test getting active tenants
+        var activeTenants = await _tenantServiceTests._sut.GetActiveTenantsAsync();
+        activeTenants.Should().BeEmpty();
+        
+        // Test tenant statistics
+        var statistics = await _tenantServiceTests._sut.GetTenantStatisticsAsync();
+        statistics.Should().NotBeNull();
+    }
+}
+```
+
+This example demonstrates creating a `TenantServiceTests` instance with mock dependencies and running various tenant service tests to validate tenant operations.
+
 ## Services
 
 ### TenantResolutionService
