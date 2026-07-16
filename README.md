@@ -537,6 +537,65 @@ public class ExportExample
 
 This example demonstrates creating an `ExportRequest` instance with all required properties, registering the export service, and using it to export data in JSON format with filtering and field selection.
 
+## ExportServiceTests
+
+The `ExportServiceTests` class provides comprehensive unit test coverage for the `ExportService` class, validating all export functionality including JSON, CSV, and XML format handling, null request validation, and supported format enumeration. It uses FluentAssertions for expressive test assertions and Xunit for test discovery.
+
+**Key capabilities:**
+- Test export with JSON format validation and content type verification
+- Test export with CSV format validation and content structure validation
+- Test export with XML format validation and XML structure validation
+- Validate null request handling with ArgumentNullException
+- Test supported formats enumeration returns all three formats (JSON, CSV, XML)
+
+**Public members tested:**
+- `ExportAsync_WithNullRequest_ThrowsArgumentNullException()` - Validates null request handling
+- `ExportAsync_JsonFormat_ReturnsValidJson()` - Tests JSON export functionality
+- `ExportAsync_CsvFormat_ReturnsValidCsv()` - Tests CSV export functionality
+- `ExportAsync_XmlFormat_ReturnsValidXml()` - Tests XML export functionality
+- `GetSupportedFormats_ReturnsAllFormats()` - Tests supported formats enumeration
+
+**Usage example**
+
+```csharp
+using FluentAssertions;
+using Microsoft.Extensions.Logging;
+using Moq;
+using TenantIsolation.Services;
+using System.Text;
+using Xunit;
+
+public class ExportServiceTestsExample
+{
+    private readonly ExportServiceTests _exportServiceTests;
+
+    public ExportServiceTestsExample()
+    {
+        _exportServiceTests = new ExportServiceTests();
+    }
+
+    public async Task RunExportServiceTests()
+    {
+        // Test null request handling
+        await _exportServiceTests.ExportAsync_WithNullRequest_ThrowsArgumentNullException();
+
+        // Test JSON export
+        await _exportServiceTests.ExportAsync_JsonFormat_ReturnsValidJson();
+
+        // Test CSV export
+        await _exportServiceTests.ExportAsync_CsvFormat_ReturnsValidCsv();
+
+        // Test XML export
+        await _exportServiceTests.ExportAsync_XmlFormat_ReturnsValidXml();
+
+        // Test supported formats
+        _exportServiceTests.GetSupportedFormats_ReturnsAllFormats();
+    }
+}
+```
+
+This example demonstrates running all ExportService tests to validate export functionality across different formats and edge cases using the public members defined on the type.
+
 ## TenantRepositoryTests
 
 The `TenantRepositoryTests` class provides comprehensive unit test coverage for the `TenantRepository` class, validating all tenant repository operations including tenant retrieval, status filtering, subscription management, and lifecycle operations. It tests tenant querying with various filters, tenant search functionality, and tenant status transitions across multiple realistic scenarios.
