@@ -857,6 +857,66 @@ public class AdminControllerExample
 }
 ```
 
+## AnalyticsController
+
+The `AnalyticsController` provides RESTful API endpoints for monitoring tenant usage and system health in multi-tenant applications. It exposes endpoints to retrieve health status, tenant activity metrics, API usage statistics, and error metrics, enabling comprehensive observability and monitoring capabilities.
+
+**Key capabilities:**
+- Get system health status with component breakdown
+- Retrieve tenant-specific activity metrics (active users, requests, storage usage)
+- Access API usage statistics with filtering by time period and tenant
+- Monitor error rates and exception metrics across the system
+
+**Public members:**
+- `GetHealth()` - Get system health status
+- `GetTenantActivity(Guid tenantId)` - Get tenant activity metrics
+- `GetUsageStatistics(string? period, string? tenantId)` - Get API usage statistics
+- `GetErrorMetrics(string? period)` - Get error rate and exception metrics
+
+**Usage example**
+
+```csharp
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
+using TenantIsolation.Controllers;
+
+public class AnalyticsControllerExample
+{
+    public static async Task Main(string[] args)
+    {
+        // Setup dependency injection
+        var services = new ServiceCollection();
+        services.AddLogging(configure => configure.AddConsole());
+        services.AddScoped<AnalyticsController>();
+        services.AddScoped<IResponseFormatter, ResponseFormatter>();
+        
+        var provider = services.BuildServiceProvider();
+        var analyticsController = provider.GetRequiredService<AnalyticsController>();
+        
+        // Get system health status
+        var healthResult = await analyticsController.GetHealth();
+        var healthStatus = ((Microsoft.AspNetCore.Mvc.OkObjectResult)healthResult.Result).Value as ApiResponse<HealthStatus>;
+        Console.WriteLine($"System health: {healthStatus?.Data?.Status}");
+        
+        // Get tenant activity metrics
+        var tenantId = Guid.Parse("3fa85f64-5717-4562-b3fc-2c963f66afa6");
+        var activityResult = await analyticsController.GetTenantActivity(tenantId);
+        var activityMetrics = ((Microsoft.AspNetCore.Mvc.OkObjectResult)activityResult.Result).Value as ApiResponse<TenantActivityMetrics>;
+        Console.WriteLine($"Tenant {tenantId} has {activityMetrics?.Data?.ActiveUsers} active users");
+        
+        // Get API usage statistics for the last 24 hours
+        var usageResult = await analyticsController.GetUsageStatistics(period: "1d");
+        var usageStats = ((Microsoft.AspNetCore.Mvc.OkObjectResult)usageResult.Result).Value as ApiResponse<UsageStatistics>;
+        Console.WriteLine($"Total requests in last 24h: {usageStats?.Data?.TotalRequests}");
+        
+        // Get error metrics for the last hour
+        var errorResult = await analyticsController.GetErrorMetrics(period: "1h");
+        var errorMetrics = ((Microsoft.AspNetCore.Mvc.OkObjectResult)errorResult.Result).Value as ApiResponse<ErrorMetrics>;
+        Console.WriteLine($"Error rate in last hour: {errorMetrics?.Data?.ErrorRate:P}");
+    }
+}
+```
+
 ## Getting Started
 
 See the [Getting Started Guide](docs/getting-started.md) for installation and basic setup instructions.
