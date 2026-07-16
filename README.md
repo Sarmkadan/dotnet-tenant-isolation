@@ -896,6 +896,90 @@ public class FeaturesControllerExample
 }
 ```
 
+## IntegrationTests
+
+The `IntegrationTests` class provides comprehensive end-to-end testing capabilities for the tenant isolation framework, validating the complete tenant lifecycle and multi-tenant configuration scenarios. It tests tenant creation, updates, deletion, restoration, subscription management, concurrent operations, cache handling, querying, search functionality, configuration import/export, status transitions, and inactive tenant detection across multiple realistic scenarios.
+
+**Key capabilities:**
+- Test tenant lifecycle operations (create, update, delete, restore)
+- Validate multi-tenant configuration isolation
+- Verify subscription management and expiring subscription detection
+- Test trial-to-active conversion workflows
+- Validate concurrent operations across multiple tenants and threads
+- Ensure cache consistency and race condition prevention
+- Test tenant querying with various filters
+- Validate tenant search functionality (by name, slug, email)
+- Verify configuration import/export round-trip preservation
+- Test tenant status transitions (suspend, reactivate)
+- Validate inactive tenant detection based on update timestamps
+
+**Usage example**
+
+```csharp
+using Xunit;
+using TenantIsolation.Models;
+using TenantIsolation.Constants;
+using TenantIsolation.Tests;
+
+public class IntegrationTestsExample
+{
+    private readonly IntegrationTests _integrationTests;
+
+    public IntegrationTestsExample()
+    {
+        _integrationTests = new IntegrationTests();
+    }
+
+    public async Task RunTenantLifecycleTests()
+    {
+        // Initialize test database
+        await _integrationTests.InitializeAsync();
+
+        try
+        {
+            // Test tenant lifecycle: create, update, delete, restore
+            var tenant = await _integrationTests.TenantLifecycle_CreateUpdateDeleteRestore_WorksEndToEnd();
+            Assert.NotNull(tenant);
+            Assert.Equal(TenantStatus.Active, tenant.Status);
+
+            // Test multi-tenant configuration isolation
+            await _integrationTests.MultiTenantConfiguration_IsolatedPerTenant_WorksCorrectly();
+
+            // Test subscription management
+            await _integrationTests.SubscriptionManagement_ExpiringSubscriptionDetection_WorksCorrectly();
+
+            // Test trial conversion
+            await _integrationTests.TrialConversion_PromoteTrialToActive_WorksCorrectly();
+
+            // Test concurrent operations
+            await _integrationTests.ConcurrentConfigurationUpdates_MultipleTenants_AllSucceed();
+            await _integrationTests.ConcurrentTenantCreation_MultipleThreads_AllSucceed();
+            await _integrationTests.ConcurrentCacheAccess_SameConfiguration_DoesNotCauseRaceCondition();
+
+            // Test tenant querying
+            await _integrationTests.TenantQuerying_VariousFilters_ReturnCorrectResults();
+
+            // Test tenant search
+            await _integrationTests.TenantSearch_ByNameSlugAndEmail_FindsCorrectTenants();
+
+            // Test configuration import/export
+            await _integrationTests.ConfigurationImportExport_RoundTrip_PreservesData();
+
+            // Test tenant status transitions
+            await _integrationTests.TenantStatusTransitions_SuspendAndReactivate_WorksCorrectly();
+
+            // Test inactive tenant detection
+            await _integrationTests.InactiveTenantDetection_FindsTenantsNotUpdatedRecently();
+        }
+        finally
+        {
+            // Clean up
+            await _integrationTests.DisposeAsync();
+        }
+    }
+}
+```
+
 ### AdminController
 The `AdminController` provides administrative endpoints for tenant management and system operations. It requires administrative authorization in production environments and exposes endpoints for retrieving system statistics, managing tenant lifecycles, monitoring background tasks, and handling expiring subscriptions.
 
