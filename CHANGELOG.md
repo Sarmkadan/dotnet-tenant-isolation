@@ -1,3 +1,8 @@
+## [Unreleased]
+### Changed
+- Architecture documentation rewritten to match the current codebase; now lives in docs/ARCHITECTURE.md
+- Extracted ITenantResolutionService; middleware, DbContext factory and controllers now depend on the interface (concrete registration kept, no breaking change)
+
 ## [2.0.2] - 2026-05-27
 ### Fixed
 - Fix cross-tenant data leak when connection pool returns wrong connection
