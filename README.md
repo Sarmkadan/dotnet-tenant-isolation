@@ -443,18 +443,21 @@ public class ExportExample
 
 This example demonstrates creating an `ExportRequest` instance with all required properties, registering the export service, and using it to export data in JSON format with filtering and field selection.
 
-## TenantServiceTests
+## TenantResolutionServiceTests
 
-The `TenantServiceTests` class provides comprehensive unit test coverage for the `TenantService` class, validating all tenant operations including creation, retrieval, activation, suspension, deletion, updates, and statistics. It uses mock repositories and stores to test behavior in isolation without requiring database dependencies.
+The `TenantResolutionServiceTests` class provides comprehensive unit test coverage for the `TenantResolutionService` class, validating all tenant resolution strategies including header-based, claims-based, route-based, and subdomain-based resolution. It tests caching behavior, error scenarios, status validation, and the correct priority order of resolution strategies.
 
 **Key capabilities:**
-- Test tenant creation with valid and invalid inputs
-- Validate tenant retrieval by ID and slug
-- Test tenant lifecycle operations (activation, suspension, deletion)
-- Verify tenant update functionality
-- Test subscription validation and trial detection
-- Validate tenant search and filtering
-- Test statistics and status aggregation
+- Test tenant resolution from Tenant-Id and Tenant-Slug headers
+- Validate claims-based tenant resolution (Tenant-Id and Tenant-Slug claims)
+- Test route-based tenant resolution (Tenant-Id and Tenant-Slug route parameters)
+- Test subdomain-based tenant resolution with case-insensitive matching
+- Verify caching behavior (tenant stored in HttpContext.Items)
+- Test error scenarios (missing HTTP context, no resolution strategies available)
+- Validate tenant status enforcement (Active vs Suspended/Archived/Provisioning)
+- Verify correct resolution priority: headers > claims > routes > subdomains
+- Test reserved subdomain handling (www, api, admin, mail, auth, login)
+- Test tenant retrieval helper methods (GetCurrentTenant, GetCurrentTenantId, HasTenant)
 
 **Usage example**
 
@@ -537,7 +540,93 @@ public class TenantServiceTestsExample
 }
 ```
 
-This example demonstrates creating a `TenantServiceTests` instance with mock dependencies and running various tenant service tests to validate tenant operations.
+This example demonstrates creating a `TenantResolutionServiceTests` instance with mock dependencies and running various tenant resolution service tests to validate tenant resolution strategies.
+
+```csharp
+using FluentAssertions;
+using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Logging;
+using Moq;
+using System.Security.Claims;
+using TenantIsolation.Constants;
+using TenantIsolation.Models;
+using TenantIsolation.Services;
+using TenantIsolation.Tests;
+using Xunit;
+
+public class TenantResolutionServiceTestsExample
+{
+    private readonly TenantResolutionServiceTests _tenantResolutionServiceTests;
+    private readonly Mock<IHttpContextAccessor> _mockHttpContextAccessor;
+    private readonly Mock<IDynamicTenantStore> _mockTenantStore;
+    private readonly Mock<ILogger<TenantResolutionService>> _mockLogger;
+
+    public TenantResolutionServiceTestsExample()
+    {
+        // Setup mocks for testing
+        _mockHttpContextAccessor = new Mock<IHttpContextAccessor>();
+        _mockTenantStore = new Mock<IDynamicTenantStore>(MockBehavior.Strict);
+        _mockLogger = new Mock<ILogger<TenantResolutionService>>();
+
+        // Create the service under test
+        var tenantResolutionService = new TenantResolutionService(
+            _mockHttpContextAccessor.Object,
+            _mockTenantStore.Object,
+            _mockLogger.Object
+        );
+
+        _tenantResolutionServiceTests = new TenantResolutionServiceTests();
+    }
+
+    public async Task RunTenantResolutionTests()
+    {
+        // Test header-based tenant resolution
+        var tenantId = Guid.NewGuid();
+        var tenant = new Tenant { Id = tenantId, Status = TenantStatus.Active };
+        
+        var httpContext = new DefaultHttpContext();
+        httpContext.Request.Headers[TenantConstants.TenantIdHeader] = tenantId.ToString();
+        _mockHttpContextAccessor.Setup(x => x.HttpContext).Returns(httpContext);
+        
+        _mockTenantStore.Setup(s => s.GetTenantByIdAsync(tenantId))
+            .ReturnsAsync(tenant);
+
+        // Resolve tenant from header
+        var resolvedTenant = await _tenantResolutionServiceTests._sut.ResolveTenantAsync();
+        resolvedTenant.Should().Be(tenant);
+        resolvedTenant.Id.Should().Be(tenantId);
+
+        // Test claims-based tenant resolution
+        var slug = "test-tenant";
+        var slugTenant = new Tenant { Id = Guid.NewGuid(), Slug = slug, Status = TenantStatus.Active };
+        
+        var claims = new List<Claim> { new Claim(TenantConstants.TenantSlugClaimType, slug) };
+        var identity = new ClaimsIdentity(claims, "test");
+        var principal = new ClaimsPrincipal(identity);
+        httpContext.User = principal;
+        
+        var tenants = new List<Tenant> { slugTenant };
+        _mockTenantStore.Setup(s => s.GetAllActiveTenantsAsync())
+            .ReturnsAsync(tenants);
+
+        // Resolve tenant from claims
+        var claimResolvedTenant = await _tenantResolutionServiceTests._sut.ResolveTenantAsync();
+        claimResolvedTenant.Should().Be(slugTenant);
+
+        // Test GetCurrentTenant helper method
+        var cachedTenant = _tenantResolutionServiceTests._sut.GetCurrentTenant();
+        cachedTenant.Should().Be(slugTenant);
+
+        // Test GetCurrentTenantId helper method
+        var currentTenantId = _tenantResolutionServiceTests._sut.GetCurrentTenantId();
+        currentTenantId.Should().Be(slugTenant.Id);
+
+        // Test HasTenant helper method
+        var hasTenant = _tenantResolutionServiceTests._sut.HasTenant();
+        hasTenant.Should().BeTrue();
+    }
+}
+```
 
 ## Services
 
