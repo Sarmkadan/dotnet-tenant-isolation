@@ -386,6 +386,95 @@ public class TenantFeatureTestsExample
 }
 ```
 
+## TenantModelTests
+
+The `TenantModelTests` class provides comprehensive unit test coverage for the `Tenant` model, validating all tenant lifecycle operations and status management functionality. It tests tenant activation eligibility, subscription validation, user limit enforcement, soft deletion, restoration, suspension, and trial status detection across multiple realistic scenarios.
+
+**Key capabilities:**
+- Test tenant activation eligibility based on status, deletion state, and subscription validity
+- Validate subscription management including null expiry handling and expiration detection
+- Verify user limit enforcement with exact limit, below limit, and unlimited scenarios
+- Test tenant lifecycle operations (delete, restore, suspend) and status transitions
+- Validate trial status detection and conversion workflows
+
+**Public members tested:**
+- `CanActivate()` - Checks if tenant can be activated
+- `IsUserLimitExceeded(int currentUsers)` - Checks if user limit has been reached
+- `IsSubscriptionValid()` - Validates subscription is still active
+- `Delete()` - Soft deletes tenant and archives status
+- `Restore()` - Restores deleted tenant and clears deleted flag
+- `Suspend(string reason)` - Suspends tenant with status transition
+- `IsInTrial()` - Checks if tenant is in trial period
+
+**Usage example**
+
+```csharp
+using FluentAssertions;
+using TenantIsolation.Models;
+using TenantIsolation.Constants;
+
+public class TenantModelTestsExample
+{
+    public void RunTenantModelTests()
+    {
+        // Test tenant activation eligibility
+        var activeTenant = new Tenant
+        {
+            Status = TenantStatus.Active,
+            IsDeleted = false,
+            SubscriptionExpiresAt = DateTime.UtcNow.AddDays(30)
+        };
+
+        activeTenant.CanActivate().Should().BeTrue();
+
+        // Test deleted tenant
+        var deletedTenant = new Tenant { IsDeleted = true, Status = TenantStatus.Active };
+        deletedTenant.CanActivate().Should().BeFalse();
+
+        // Test archived status
+        var archivedTenant = new Tenant { IsDeleted = false, Status = TenantStatus.Archived };
+        archivedTenant.CanActivate().Should().BeFalse();
+
+        // Test subscription validation
+        var validSubscriptionTenant = new Tenant { SubscriptionExpiresAt = null };
+        validSubscriptionTenant.IsSubscriptionValid().Should().BeTrue();
+
+        var expiredTenant = new Tenant { SubscriptionExpiresAt = DateTime.UtcNow.AddDays(-1) };
+        expiredTenant.IsSubscriptionValid().Should().BeFalse();
+
+        // Test user limit enforcement
+        var limitedTenant = new Tenant { MaxUsers = 50 };
+        limitedTenant.IsUserLimitExceeded(50).Should().BeTrue();
+        limitedTenant.IsUserLimitExceeded(49).Should().BeFalse();
+
+        // Test unlimited tenant
+        var unlimitedTenant = new Tenant { MaxUsers = null };
+        unlimitedTenant.IsUserLimitExceeded(int.MaxValue).Should().BeFalse();
+
+        // Test tenant lifecycle operations
+        var tenant = new Tenant { Status = TenantStatus.Active };
+        
+        tenant.Delete();
+        tenant.IsDeleted.Should().BeTrue();
+        tenant.Status.Should().Be(TenantStatus.Archived);
+        
+        tenant.Restore();
+        tenant.IsDeleted.Should().BeFalse();
+        tenant.Status.Should().Be(TenantStatus.Active);
+        
+        tenant.Suspend("Payment overdue");
+        tenant.Status.Should().Be(TenantStatus.Suspended);
+
+        // Test trial status
+        var trialTenant = new Tenant { Status = TenantStatus.Trial };
+        trialTenant.IsInTrial().Should().BeTrue();
+        
+        var activeNonTrialTenant = new Tenant { Status = TenantStatus.Active };
+        activeNonTrialTenant.IsInTrial().Should().BeFalse();
+    }
+}
+```
+
 ## TenantFeatureService
 
 The `TenantFeatureService` manages tenant-specific feature flags, enabling or disabling features, tracking usage, and enforcing rollout percentages. It provides methods to check feature availability, enable/disable features, set rollout percentages, record usage metrics, and retrieve feature statistics.
