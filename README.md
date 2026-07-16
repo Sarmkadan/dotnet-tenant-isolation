@@ -381,6 +381,80 @@ public class TenantManagementExample
 ### ConfigurationService
 Handles tenant-specific configuration settings with encryption and validation.
 
+## ITenantUsageMeteringService
+
+The `ITenantUsageMeteringService` interface provides per-tenant usage metering and quota enforcement capabilities for tracking resource consumption in multi-tenant applications. It allows recording usage metrics, checking quota limits, and enforcing those limits across different metric keys for each tenant.
+
+**Key capabilities:**
+- Record usage for specific metrics (API calls, storage, users, etc.)
+- Check and enforce quota limits
+- Retrieve current usage records
+- Reset usage counters
+- Set or update quota limits
+
+**Usage example**
+
+```csharp
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
+using TenantIsolation.Models;
+using TenantIsolation.Services;
+
+public class UsageMeteringExample
+{
+    public static async Task Main(string[] args)
+    {
+        // Setup dependency injection
+        var services = new ServiceCollection();
+        services.AddLogging(configure => configure.AddConsole());
+        services.AddSingleton<ITenantUsageMeteringService, TenantUsageMeteringService>();
+        
+        var provider = services.BuildServiceProvider();
+        
+        var meteringService = provider.GetRequiredService<ITenantUsageMeteringService>();
+        
+        var tenantId = Guid.NewGuid();
+        const string metricKey = "api_calls";
+        
+        // Set quota limit for a metric
+        await meteringService.SetQuotaAsync(tenantId, metricKey, 1000);
+        
+        // Record usage
+        var usageRecord = await meteringService.RecordUsageAsync(tenantId, metricKey, 50);
+        Console.WriteLine($"Recorded {usageRecord.CurrentValue} {metricKey} for tenant {tenantId}");
+        
+        // Check quota status
+        var quotaCheck = await meteringService.CheckQuotaAsync(tenantId, metricKey);
+        Console.WriteLine($"Quota status: {(quotaCheck.IsAllowed ? "Allowed" : "Denied")} - {quotaCheck.CurrentUsage}/{quotaCheck.QuotaLimit}");
+        
+        // Get all metrics for a tenant
+        var allMetrics = await meteringService.GetAllMetricsAsync(tenantId);
+        foreach (var metric in allMetrics)
+        {
+            Console.WriteLine($"Metric: {metric.MetricKey} = {metric.CurrentValue}");
+        }
+        
+        // Enforce quota (throws if exceeded)
+        try
+        {
+            await meteringService.EnforceQuotaAsync(tenantId, metricKey);
+            Console.WriteLine("Quota check passed");
+        }
+        catch (TenantIsolationException ex) when (ex.Code == "QUOTA_EXCEEDED")
+        {
+            Console.WriteLine("Quota exceeded!");
+        }
+        
+        // Reset usage
+        await meteringService.ResetUsageAsync(tenantId, metricKey);
+        
+        // Get specific usage record
+        var specificUsage = await meteringService.GetUsageAsync(tenantId, metricKey);
+        Console.WriteLine($"Current usage: {specificUsage?.CurrentValue ?? 0}");
+    }
+}
+```
+
 ## TenantResolutionService
 
 The `TenantResolutionService` resolves the current tenant for each request using a prioritized set of strategies (header → claims → route → subdomain) and caches the result in `HttpContext.Items`. It exposes helper methods to retrieve the resolved tenant, its identifier, and to check whether a tenant is present.
