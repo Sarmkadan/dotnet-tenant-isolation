@@ -970,6 +970,97 @@ public class TracingExample
 }
 ```
 
+## ITimeProvider
+
+The `ITimeProvider` interface provides a dependency injection-friendly abstraction for time operations, enabling testable and mockable time-dependent code in multi-tenant applications. It supports both real system time and mock time for testing scenarios.
+
+**Key capabilities:**
+- Get current UTC, local, or date-only time
+- Convert between UTC and tenant-specific timezones
+- Check business hours and calculate deadlines
+- Mock time for deterministic testing
+
+**Usage example**
+
+```csharp
+using Microsoft.Extensions.DependencyInjection;
+using TenantIsolation.Utilities;
+
+public class TimeProviderExample
+{
+    public static void Main(string[] args)
+    {
+        // Setup dependency injection with real time provider
+        var services = new ServiceCollection();
+        services.AddTimeProvider(useMock: false);
+        
+        var provider = services.BuildServiceProvider();
+        var timeProvider = provider.GetRequiredService<ITimeProvider>();
+        
+        // Get current time
+        Console.WriteLine($"Current UTC time: {timeProvider.UtcNow}");
+        Console.WriteLine($"Current local time: {timeProvider.Now}");
+        Console.WriteLine($"Current date: {timeProvider.Today}");
+        Console.WriteLine($"Timezone: {timeProvider.TimeZone.DisplayName}");
+        
+        // Convert between UTC and tenant time
+        var tenantTimeZoneId = "Eastern Standard Time";
+        var utcTime = DateTime.UtcNow;
+        var tenantTime = timeProvider.ConvertToTenantTime(utcTime, tenantTimeZoneId);
+        Console.WriteLine($"Tenant time: {tenantTime}");
+        
+        var backToUtc = timeProvider.ConvertFromTenantTime(tenantTime, tenantTimeZoneId);
+        Console.WriteLine($"Back to UTC: {backToUtc}");
+        
+        // Check business hours
+        bool isBusinessHours = timeProvider.IsBusinessHours(DateTime.UtcNow);
+        Console.WriteLine($"Is business hours: {isBusinessHours}");
+        
+        // Calculate deadlines
+        var deadline = timeProvider.CalculateSlaDeadline(businessHoursNeeded: 2);
+        Console.WriteLine($"SLA deadline in 2 business hours: {deadline}");
+        
+        var timeUntilDeadline = timeProvider.GetTimeUntilDeadline(deadline);
+        Console.WriteLine($"Time until deadline: {timeUntilDeadline.TotalMinutes} minutes");
+        
+        bool deadlineExceeded = timeProvider.IsDeadlineExceeded(deadline);
+        Console.WriteLine($"Deadline exceeded: {deadlineExceeded}");
+    }
+}
+```
+
+### Using Mock Time Provider for Testing
+
+```csharp
+using Microsoft.Extensions.DependencyInjection;
+using TenantIsolation.Utilities;
+
+public class TimeProviderTestingExample
+{
+    public static void Main(string[] args)
+    {
+        // Setup dependency injection with mock time provider
+        var services = new ServiceCollection();
+        services.AddTimeProvider(useMock: true);
+        
+        var provider = services.BuildServiceProvider();
+        var mockTimeProvider = provider.GetRequiredService<ITimeProvider>() as MockTimeProvider;
+        
+        // Set mock time
+        mockTimeProvider.SetCurrentTime(new DateTime(2024, 1, 15, 10, 30, 0));
+        Console.WriteLine($"Mock time set to: {mockTimeProvider.UtcNow}");
+        
+        // Advance time
+        mockTimeProvider.AdvanceTime(TimeSpan.FromHours(2));
+        Console.WriteLine($"Time advanced by 2 hours: {mockTimeProvider.UtcNow}");
+        
+        // Reset to system time
+        mockTimeProvider.Reset();
+        Console.WriteLine($"Reset to system time: {mockTimeProvider.UtcNow}");
+    }
+}
+```
+
 ## DynamicTenantStore
     public static async Task Main(string[] args)
     {
@@ -2850,6 +2941,97 @@ public class TracingExample
         );
 
         Console.WriteLine($"Result: {result}");
+    }
+}
+```
+
+## ITimeProvider
+
+The `ITimeProvider` interface provides a dependency injection-friendly abstraction for time operations, enabling testable and mockable time-dependent code in multi-tenant applications. It supports both real system time and mock time for testing scenarios.
+
+**Key capabilities:**
+- Get current UTC, local, or date-only time
+- Convert between UTC and tenant-specific timezones
+- Check business hours and calculate deadlines
+- Mock time for deterministic testing
+
+**Usage example**
+
+```csharp
+using Microsoft.Extensions.DependencyInjection;
+using TenantIsolation.Utilities;
+
+public class TimeProviderExample
+{
+    public static void Main(string[] args)
+    {
+        // Setup dependency injection with real time provider
+        var services = new ServiceCollection();
+        services.AddTimeProvider(useMock: false);
+        
+        var provider = services.BuildServiceProvider();
+        var timeProvider = provider.GetRequiredService<ITimeProvider>();
+        
+        // Get current time
+        Console.WriteLine($"Current UTC time: {timeProvider.UtcNow}");
+        Console.WriteLine($"Current local time: {timeProvider.Now}");
+        Console.WriteLine($"Current date: {timeProvider.Today}");
+        Console.WriteLine($"Timezone: {timeProvider.TimeZone.DisplayName}");
+        
+        // Convert between UTC and tenant time
+        var tenantTimeZoneId = "Eastern Standard Time";
+        var utcTime = DateTime.UtcNow;
+        var tenantTime = timeProvider.ConvertToTenantTime(utcTime, tenantTimeZoneId);
+        Console.WriteLine($"Tenant time: {tenantTime}");
+        
+        var backToUtc = timeProvider.ConvertFromTenantTime(tenantTime, tenantTimeZoneId);
+        Console.WriteLine($"Back to UTC: {backToUtc}");
+        
+        // Check business hours
+        bool isBusinessHours = timeProvider.IsBusinessHours(DateTime.UtcNow);
+        Console.WriteLine($"Is business hours: {isBusinessHours}");
+        
+        // Calculate deadlines
+        var deadline = timeProvider.CalculateSlaDeadline(businessHoursNeeded: 2);
+        Console.WriteLine($"SLA deadline in 2 business hours: {deadline}");
+        
+        var timeUntilDeadline = timeProvider.GetTimeUntilDeadline(deadline);
+        Console.WriteLine($"Time until deadline: {timeUntilDeadline.TotalMinutes} minutes");
+        
+        bool deadlineExceeded = timeProvider.IsDeadlineExceeded(deadline);
+        Console.WriteLine($"Deadline exceeded: {deadlineExceeded}");
+    }
+}
+```
+
+### Using Mock Time Provider for Testing
+
+```csharp
+using Microsoft.Extensions.DependencyInjection;
+using TenantIsolation.Utilities;
+
+public class TimeProviderTestingExample
+{
+    public static void Main(string[] args)
+    {
+        // Setup dependency injection with mock time provider
+        var services = new ServiceCollection();
+        services.AddTimeProvider(useMock: true);
+        
+        var provider = services.BuildServiceProvider();
+        var mockTimeProvider = provider.GetRequiredService<ITimeProvider>() as MockTimeProvider;
+        
+        // Set mock time
+        mockTimeProvider.SetCurrentTime(new DateTime(2024, 1, 15, 10, 30, 0));
+        Console.WriteLine($"Mock time set to: {mockTimeProvider.UtcNow}");
+        
+        // Advance time
+        mockTimeProvider.AdvanceTime(TimeSpan.FromHours(2));
+        Console.WriteLine($"Time advanced by 2 hours: {mockTimeProvider.UtcNow}");
+        
+        // Reset to system time
+        mockTimeProvider.Reset();
+        Console.WriteLine($"Reset to system time: {mockTimeProvider.UtcNow}");
     }
 }
 ```
