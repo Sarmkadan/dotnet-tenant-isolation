@@ -689,7 +689,116 @@ This example demonstrates creating a `ConfigurationService` instance and using i
 ## Controllers
 
 ### TenantApiController
-REST API endpoints for tenant management.
+REST API endpoints for tenant management. The `TenantApiController` provides CRUD operations and lifecycle management for tenants in a multi-tenant application, including tenant creation, retrieval, activation, suspension, and deletion. It integrates with the `TenantService` to perform tenant operations and uses the `ITenantResolutionService` to access the current tenant context.
+
+**Key capabilities:**
+- Create new tenants with name, slug, and admin email
+- Retrieve tenants by ID or slug
+- List active tenants and search tenants
+- Activate, suspend, and delete tenants
+- Get tenant statistics and current tenant context
+
+**Public members:**
+- `CreateTenant(CreateTenantRequest)` - Create a new tenant
+- `GetTenantById(Guid)` - Get tenant by ID
+- `GetTenantBySlug(string)` - Get tenant by slug
+- `GetActiveTenants()` - Get all active tenants
+- `ActivateTenant(Guid)` - Activate a tenant
+- `SuspendTenant(Guid, SuspendTenantRequest?)` - Suspend a tenant with optional reason
+- `DeleteTenant(Guid)` - Soft delete a tenant
+- `GetCurrentTenant()` - Get the current tenant from context
+- `GetStatistics()` - Get tenant statistics
+- `SearchTenants(string)` - Search tenants by query
+- `Name` - Tenant name property
+- `Slug` - Tenant slug property
+- `AdminEmail` - Tenant admin email property
+- `Reason` - Suspension reason property
+
+**Usage example**
+
+```csharp
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
+using TenantIsolation.Controllers;
+using TenantIsolation.Models;
+
+public class TenantApiControllerExample
+{
+    public static async Task Main(string[] args)
+    {
+        // Setup dependency injection
+        var services = new ServiceCollection();
+        services.AddLogging(configure => configure.AddConsole());
+        services.AddScoped<TenantApiController>();
+        services.AddScoped<ITenantResolutionService, TenantResolutionService>();
+        services.AddScoped<TenantService>();
+        
+        var provider = services.BuildServiceProvider();
+        var tenantController = provider.GetRequiredService<TenantApiController>();
+        
+        // Create a new tenant
+        var createRequest = new TenantApiController.CreateTenantRequest
+        {
+            Name = "Acme Corporation",
+            Slug = "acme-corp",
+            AdminEmail = "admin@acme-corp.com"
+        };
+        
+        var createResult = await tenantController.CreateTenant(createRequest);
+        var createdTenant = ((CreatedAtActionResult)createResult).Value as Tenant;
+        Console.WriteLine($"Created tenant: {createdTenant?.Name} (Id: {createdTenant?.Id})");
+        
+        // Get tenant by ID
+        var tenantId = createdTenant.Id;
+        var getResult = await tenantController.GetTenantById(tenantId);
+        var retrievedTenant = ((OkObjectResult)getResult).Value as Tenant;
+        Console.WriteLine($"Retrieved tenant: {retrievedTenant?.Name}");
+        
+        // Get tenant by slug
+        var slugResult = await tenantController.GetTenantBySlug("acme-corp");
+        var slugTenant = ((OkObjectResult)slugResult).Value as Tenant;
+        Console.WriteLine($"Found tenant by slug: {slugTenant?.Name}");
+        
+        // Get active tenants
+        var activeResult = await tenantController.GetActiveTenants();
+        var activeTenants = ((OkObjectResult)activeResult).Value as List<Tenant>;
+        Console.WriteLine($"Active tenants count: {activeTenants?.Count}");
+        
+        // Activate a tenant
+        var activateResult = await tenantController.ActivateTenant(tenantId);
+        var activationStatus = ((OkObjectResult)activateResult).Value as dynamic;
+        Console.WriteLine($"Activation successful: {activationStatus?.success}");
+        
+        // Suspend a tenant
+        var suspendResult = await tenantController.SuspendTenant(tenantId, new TenantApiController.SuspendTenantRequest
+        {
+            Reason = "Account suspended for non-payment"
+        });
+        var suspensionStatus = ((OkObjectResult)suspendResult).Value as dynamic;
+        Console.WriteLine($"Suspension successful: {suspensionStatus?.success}");
+        
+        // Get current tenant
+        var currentResult = tenantController.GetCurrentTenant();
+        var currentTenant = ((OkObjectResult)currentResult).Value as Tenant;
+        Console.WriteLine($"Current tenant: {currentTenant?.Name}");
+        
+        // Get tenant statistics
+        var statsResult = await tenantController.GetStatistics();
+        var statistics = ((OkObjectResult)statsResult).Value as TenantStatistics;
+        Console.WriteLine($"Total tenants: {statistics?.TotalTenants}, Active: {statistics?.ActiveTenants}");
+        
+        // Search tenants
+        var searchResult = await tenantController.SearchTenants("acme");
+        var searchResults = ((OkObjectResult)searchResult).Value as List<Tenant>;
+        Console.WriteLine($"Search results: {searchResults?.Count}");
+        
+        // Delete tenant (soft delete)
+        var deleteResult = await tenantController.DeleteTenant(tenantId);
+        var deletionStatus = ((OkObjectResult)deleteResult).Value as dynamic;
+        Console.WriteLine($"Deletion successful: {deletionStatus?.success}");
+    }
+}
+```
 
 ## FeaturesController
 
