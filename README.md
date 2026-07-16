@@ -319,6 +319,82 @@ Learn about data isolation patterns in [Data Isolation Guide](docs/data-isolatio
 
 See the full [API Reference](docs/api-reference.md) for detailed documentation.
 
+## Notification
+
+The `Notification` class represents an in-app notification for multi-tenant applications. It stores notification details including title, message, type, recipient information, timestamps, and metadata. Notifications support tracking read status, expiration dates, and can be associated with either individual users or entire tenants.
+
+Here's an example usage:
+
+```csharp
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
+using TenantIsolation.Services;
+using TenantIsolation.Constants;
+
+public class NotificationManagement
+{
+    public static async Task Main(string[] args)
+    {
+        // Create a new notification
+        var notification = new Notification
+        {
+            Title = "Welcome to the platform",
+            Message = "Your account has been successfully created and is ready to use.",
+            Type = NotificationType.Success,
+            RecipientUserId = "user-12345",
+            TenantId = Guid.Parse("3fa85f64-5717-4562-b3fc-2c963f66afa6"),
+            Metadata = new Dictionary<string, string>
+            {
+                { "actionUrl", "/dashboard" },
+                { "priority", "high" }
+            },
+            ExpiresAt = DateTime.UtcNow.AddDays(7),
+            CreatedAt = DateTime.UtcNow
+        };
+
+        // Send notification through service
+        var services = new ServiceCollection();
+        services.AddLogging(configure => configure.AddConsole());
+        services.AddNotificationService();
+        
+        var serviceProvider = services.BuildServiceProvider();
+        var notificationService = serviceProvider.GetRequiredService<INotificationService>();
+        
+        var sentNotification = await notificationService.SendNotificationAsync(notification);
+        Console.WriteLine($"Notification sent: {sentNotification.Id}");
+        
+        // Send tenant-wide notification
+        await notificationService.SendTenantNotificationAsync(
+            tenantId: Guid.Parse("3fa85f64-5717-4562-b3fc-2c963f66afa6"),
+            title: "Maintenance Scheduled",
+            message: "The system will be undergoing maintenance tonight at 2 AM UTC.",
+            type: NotificationType.Warning
+        );
+        
+        // Get unread notifications
+        var unreadNotifications = await notificationService.GetUnreadNotificationsAsync("user-12345");
+        foreach (var unread in unreadNotifications)
+        {
+            Console.WriteLine($"Unread: {unread.Title} - {unread.Message}");
+        }
+        
+        // Mark as read
+        bool markedAsRead = await notificationService.MarkAsReadAsync(sentNotification.Id);
+        Console.WriteLine($"Marked as read: {markedAsRead}");
+        
+        // Get notification history
+        var history = await notificationService.GetNotificationHistoryAsync("user-12345", limit: 10);
+        Console.WriteLine($"Total notifications: {history.Count()}");
+        
+        // Delete notification
+        bool deleted = await notificationService.DeleteNotificationAsync(sentNotification.Id);
+        Console.WriteLine($"Deleted: {deleted}");
+    }
+}
+```
+
+This example demonstrates creating a `Notification` instance with all properties, registering the notification service, and using its public methods to send, retrieve, mark as read, and delete notifications.
+
 ## ErrorHandlingMiddleware
 
 The `ErrorHandlingMiddleware` catches unhandled exceptions in the request pipeline, logs them, and returns a consistent JSON error response containing fields such as `Code`, `Message`, `StatusCode`, `TraceId`, `Details`, and `Timestamp`. This centralizes error handling and provides clients with structured error information.
