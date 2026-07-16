@@ -537,6 +537,166 @@ public class ExportExample
 
 This example demonstrates creating an `ExportRequest` instance with all required properties, registering the export service, and using it to export data in JSON format with filtering and field selection.
 
+## ConfigurationServiceTests
+
+The `ConfigurationServiceTests` class provides comprehensive unit test coverage for the `ConfigurationService` class, validating all configuration management operations including CRUD operations, caching, batch operations, validation, and error scenarios. It tests configuration creation, retrieval, updates, deletion, type conversion, encryption, and batch operations across multiple realistic scenarios.
+
+**Key capabilities:**
+- Test configuration creation and updates with validation
+- Validate caching behavior for individual and batch operations
+- Test type conversion for string values to int, bool, and other types
+- Verify encryption flag handling for sensitive configuration values
+- Test batch operations for setting multiple configurations at once
+- Validate error handling for invalid inputs and edge cases
+- Test configuration export and import functionality
+- Verify statistics calculation and required configuration validation
+
+**Public members tested:**
+- `InitializeAsync()` - Sets up test database
+- `DisposeAsync()` - Cleans up test resources
+- `SetConfigurationAsync_WithNewKey_CreatesConfiguration()` - Creates new configuration
+- `SetConfigurationAsync_WithExistingKey_UpdatesConfiguration()` - Updates existing configuration
+- `SetConfigurationAsync_WithEncryption_SetsEncryptionFlag()` - Handles encryption flag
+- `SetConfigurationAsync_WithNullOrWhitespaceKey_ThrowsException()` - Validates key input
+- `SetConfigurationAsync_InvalidatesCacheAfterSet()` - Tests cache invalidation
+- `GetConfigurationAsync_WithExistingConfiguration_ReturnsConfiguration()` - Retrieves configuration
+- `GetConfigurationAsync_CachesResultAfterFirstCall()` - Tests caching behavior
+- `GetConfigurationAsync_WithNonExistentKey_ReturnsNull()` - Handles missing keys
+- `GetConfigurationAsync_Generic_ConvertsStringToInt()` - Type conversion to int
+- `GetConfigurationAsync_Generic_ConvertsToBool()` - Type conversion to bool
+- `GetConfigurationAsync_Generic_ReturnsDefaultWhenNotFound()` - Returns default values
+- `GetConfigurationAsync_Generic_WithConversionError_ThrowsException()` - Handles conversion errors
+- `DeleteConfigurationAsync_WithExistingKey_DeletesConfiguration()` - Deletes configuration
+- `DeleteConfigurationAsync_WithNonExistentKey_ReturnsFalse()` - Handles missing keys
+- `DeleteConfigurationAsync_InvalidatesCacheAfterDelete()` - Tests cache invalidation
+- `GetAllConfigurationsAsync_ReturnsAllConfigurationsForTenant()` - Retrieves all configurations
+- `GetAllConfigurationsAsync_CachesResult()` - Tests caching behavior
+
+**Usage example**
+
+```csharp
+using FluentAssertions;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Memory;
+using Microsoft.Extensions.Logging;
+using Moq;
+using TenantIsolation.Data;
+using TenantIsolation.Services;
+using Xunit;
+
+public class ConfigurationServiceTestsExample
+{
+    private readonly ConfigurationService _configurationService;
+    private readonly Guid _tenantId = Guid.NewGuid();
+
+    public ConfigurationServiceTestsExample()
+    {
+        // Setup in-memory database
+        var options = new DbContextOptionsBuilder<TenantDbContext>()
+            .UseInMemoryDatabase($"ConfigurationServiceTests_{Guid.NewGuid()}")
+            .Options;
+        var dbContext = new TenantDbContext(options);
+
+        // Setup in-memory cache
+        var cache = new MemoryCache(new MemoryCacheOptions());
+
+        // Setup mock logger
+        var mockLogger = new Mock<ILogger<ConfigurationService>>();
+
+        // Create ConfigurationService instance
+        _configurationService = new ConfigurationService(dbContext, cache, mockLogger.Object);
+    }
+
+    public async Task RunConfigurationTests()
+    {
+        // Test creating a new configuration
+        var newConfig = await _configurationService.SetConfigurationAsync(
+            _tenantId, 
+            "api-key", 
+            "secret-api-key-123",
+            "string",
+            false
+        );
+        
+        newConfig.Should().NotBeNull();
+        newConfig.Key.Should().Be("api-key");
+        newConfig.Value.Should().Be("secret-api-key-123");
+
+        // Test retrieving configuration
+        var retrievedConfig = await _configurationService.GetConfigurationAsync(
+            _tenantId, 
+            "api-key"
+        );
+        
+        retrievedConfig.Should().NotBeNull();
+        retrievedConfig!.Value.Should().Be("secret-api-key-123");
+
+        // Test type conversion
+        await _configurationService.SetConfigurationAsync(
+            _tenantId, 
+            "max-users", 
+            "100",
+            "int",
+            false
+        );
+        
+        var maxUsers = await _configurationService.GetConfigurationAsync<int>(
+            _tenantId, 
+            "max-users"
+        );
+        
+        maxUsers.Should().Be(100);
+
+        // Test updating configuration
+        var updatedConfig = await _configurationService.SetConfigurationAsync(
+            _tenantId, 
+            "api-key", 
+            "new-secret-key-456"
+        );
+        
+        updatedConfig.Value.Should().Be("new-secret-key-456");
+
+        // Test deleting configuration
+        var deleteResult = await _configurationService.DeleteConfigurationAsync(
+            _tenantId, 
+            "api-key"
+        );
+        
+        deleteResult.Should().BeTrue();
+
+        // Test getting all configurations
+        await _configurationService.SetConfigurationAsync(_tenantId, "feature-flag", "true");
+        await _configurationService.SetConfigurationAsync(_tenantId, "timeout", "30");
+        
+        var allConfigs = await _configurationService.GetAllConfigurationsAsync(_tenantId);
+        
+        allConfigs.Should().HaveCount(2);
+        allConfigs.Should().ContainKeys("feature-flag", "timeout");
+
+        // Test batch operations
+        var batch = new Dictionary<string, (string value, string type, bool encrypted)>
+        {
+            { "batch-key1", ("value1", "string", false) },
+            { "batch-key2", ("value2", "int", false) },
+            { "batch-key3", ("value3", "bool", false) }
+        };
+        
+        var batchCount = await _configurationService.SetConfigurationBatchAsync(_tenantId, batch);
+        batchCount.Should().Be(3);
+
+        // Test export and import
+        var exportJson = await _configurationService.ExportConfigurationAsync(_tenantId);
+        exportJson.Should().Contain("feature-flag");
+        
+        var importCount = await _configurationService.ImportConfigurationAsync(
+            _tenantId, 
+            @"{ ""new-key"": ""new-value"" }"
+        );
+        importCount.Should().Be(1);
+    }
+}
+```
+
 ## TenantResolutionServiceTests
 
 The `TenantResolutionServiceTests` class provides comprehensive unit test coverage for the `TenantResolutionService` class, validating all tenant resolution strategies including header-based, claims-based, route-based, and subdomain-based resolution. It tests caching behavior, error scenarios, status validation, and the correct priority order of resolution strategies.
