@@ -557,6 +557,70 @@ public class NotificationManagement
 
 This example demonstrates creating a `Notification` instance with all properties, registering the notification service, and using its public methods to send, retrieve, mark as read, and delete notifications.
 
+## ComponentHealthInfo
+
+The `ComponentHealthInfo` class represents the health status of a specific system component (database, cache, event bus, etc.) in a multi-tenant application. It tracks individual component health metrics including response time, status, and descriptive messages, enabling detailed health monitoring and troubleshooting.
+
+Here's an example usage:
+
+```csharp
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
+using TenantIsolation.Services;
+using TenantIsolation.Data;
+
+public class HealthMonitoringExample
+{
+    public static async Task Main(string[] args)
+    {
+        // Setup dependency injection
+        var services = new ServiceCollection();
+        services.AddLogging(configure => configure.AddConsole());
+        services.AddDbContext<TenantDbContext>();
+        services.AddHealthCheckService();
+
+        var provider = services.BuildServiceProvider();
+
+        // Get the health check service
+        var healthCheckService = provider.GetRequiredService<IHealthCheckService>();
+
+        // Perform a component-specific health check
+        var databaseHealth = await healthCheckService.CheckComponentAsync("database");
+        
+        Console.WriteLine($"Component: {databaseHealth.Name}");
+        Console.WriteLine($"Status: {databaseHealth.Status}");
+        Console.WriteLine($"Message: {databaseHealth.Message}");
+        Console.WriteLine($"Response Time: {databaseHealth.ResponseTimeMs}ms");
+        Console.WriteLine($"Checked At: {databaseHealth.CheckedAt}");
+
+        // Check overall system health
+        var healthReport = await healthCheckService.PerformHealthCheckAsync();
+        
+        Console.WriteLine($"\nOverall Status: {healthReport.Status}");
+        Console.WriteLine($"Total Duration: {healthReport.TotalCheckDuration.TotalMilliseconds}ms");
+        Console.WriteLine($"Checked At: {healthReport.CheckedAt}");
+        
+        foreach (var component in healthReport.Components)
+        {
+            Console.WriteLine($"\nComponent: {component.Key}");
+            Console.WriteLine($"  Status: {component.Value.Status}");
+            Console.WriteLine($"  Message: {component.Value.Message}");
+            Console.WriteLine($"  Response Time: {component.Value.ResponseTimeMs}ms");
+        }
+        
+        // Get cached report if available
+        var cachedReport = healthCheckService.GetCachedHealthReport();
+        if (cachedReport != null)
+        {
+            Console.WriteLine($"\nUsing cached report from: {cachedReport.CheckedAt}");
+            Console.WriteLine($"Cached message: {cachedReport.GetMessage()}");
+        }
+    }
+}
+```
+
+This example demonstrates creating a `ComponentHealthInfo` instance through the health check service, checking individual components, and retrieving comprehensive health reports using the public members defined on the type.
+
 ## ErrorHandlingMiddleware
 
 The `ErrorHandlingMiddleware` catches unhandled exceptions in the request pipeline, logs them, and returns a consistent JSON error response containing fields such as `Code`, `Message`, `StatusCode`, `TraceId`, `Details`, and `Timestamp`. This centralizes error handling and provides clients with structured error information.
