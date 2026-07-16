@@ -1089,6 +1089,135 @@ public class Program
 }
 ```
 
+## CollectionExtensions
+
+The `CollectionExtensions` class provides a comprehensive set of extension methods for working with collections, lists, dictionaries, and enumerables in .NET applications. These methods offer safe collection manipulation patterns, prevent common exceptions like `IndexOutOfRangeException`, and provide convenient operations for filtering, partitioning, and transforming collections while maintaining thread safety and proper null handling.
+
+
+Here's an example usage:
+
+```csharp
+using System;
+using System.Collections.Generic;
+using TenantIsolation.Utilities;
+
+public class CollectionExtensionsExample
+{
+    public static void Main(string[] args)
+    {
+        // Create sample collections
+        var users = new List<User>
+        {
+            new User { Id = Guid.NewGuid(), Name = "Alice", Age = 30 },
+            new User { Id = Guid.NewGuid(), Name = "Bob", Age = 25 },
+            new User { Id = Guid.NewGuid(), Name = "Charlie", Age = 35 },
+            new User { Id = Guid.NewGuid(), Name = "Diana", Age = 28 }
+        };
+
+        var userDictionary = new Dictionary<Guid, User>
+        {
+            { users[0].Id, users[0] },
+            { users[1].Id, users[1] }
+        };
+
+        // Use CollectionExtensions methods
+
+        // Check if collection has items
+        bool hasItems = users.HasItems();
+        Console.WriteLine($"Collection has items: {hasItems}");
+
+        // Safely get item at index
+        var firstUser = users.SafeGetAt(0);
+        var outOfBoundsUser = users.SafeGetAt(10); // returns null
+        Console.WriteLine($"First user: {firstUser?.Name}, Out of bounds: {outOfBoundsUser?.Name}");
+
+        // Add if not exists
+        users.AddIfNotExists(new User { Id = Guid.NewGuid(), Name = "Alice", Age = 30 }); // Won't add duplicate
+        Console.WriteLine($"List count after AddIfNotExists: {users.Count}");
+
+        // Add range
+        users.AddRange(new[] { 
+            new User { Id = Guid.NewGuid(), Name = "Eve", Age = 22 },
+            new User { Id = Guid.NewGuid(), Name = "Frank", Age = 27 }
+        });
+        Console.WriteLine($"List count after AddRange: {users.Count}");
+
+        // Remove where
+        int removedCount = users.RemoveWhere(u => u.Age < 25);
+        Console.WriteLine($"Removed {removedCount} users under 25");
+
+        // Distinct by
+        var usersWithDuplicates = new List<User>
+        {
+            new User { Id = Guid.NewGuid(), Name = "Alice", Age = 30 },
+            new User { Id = Guid.NewGuid(), Name = "Alice", Age = 31 },
+            new User { Id = Guid.NewGuid(), Name = "Bob", Age = 25 }
+        };
+        var distinctUsers = usersWithDuplicates.DistinctBy(u => u.Name);
+        Console.WriteLine($"Distinct users by name: {distinctUsers.Count()}");
+
+        // Chunk
+        var chunks = users.Chunk(2);
+        foreach (var chunk in chunks)
+        {
+            Console.WriteLine($"Chunk: {chunk.Count()} users");
+        }
+
+        // Safe dictionary access
+        var user = userDictionary.SafeGet(users[0].Id);
+        var missingUser = userDictionary.SafeGet(Guid.NewGuid()); // returns null
+        Console.WriteLine($"Found user: {user?.Name}, Missing user: {missingUser?.Name}");
+
+        // Get value or default
+        var defaultUser = userDictionary.GetValueOrDefault(Guid.NewGuid(), new User { Name = "Default" });
+        Console.WriteLine($"Default user: {defaultUser.Name}");
+
+        // MaxBy and MinBy
+        var oldestUser = users.MaxBy(u => u.Age);
+        var youngestUser = users.MinBy(u => u.Age);
+        Console.WriteLine($"Oldest: {oldestUser?.Name} ({oldestUser?.Age}), Youngest: {youngestUser?.Name} ({youngestUser?.Age})");
+
+        // Partition
+        var (adults, minors) = users.Partition(u => u.Age >= 18);
+        Console.WriteLine($"Adults: {adults.Count()}, Minors: {minors.Count()}");
+
+        // Get intersection
+        var moreUsers = new List<User>
+        {
+            new User { Id = Guid.NewGuid(), Name = "George" },
+            new User { Id = Guid.NewGuid(), Name = "Alice" }
+        };
+        var intersection = users.GetIntersection(moreUsers);
+        Console.WriteLine($"Intersection count: {intersection.Count()}");
+
+        // Get difference
+        var difference = users.GetDifference(moreUsers);
+        Console.WriteLine($"Difference count: {difference.Count()}");
+
+        // Flatten
+        var nestedLists = new List<List<User>>
+        {
+            new List<User> { users[0], users[1] },
+            new List<User> { users[2] }
+        };
+        var flattened = nestedLists.Flatten();
+        Console.WriteLine($"Flattened count: {flattened.Count()}");
+
+        // Page
+        var page1 = users.Page(1, 2);
+        var page2 = users.Page(2, 2);
+        Console.WriteLine($"Page 1 count: {page1.Count()}, Page 2 count: {page2.Count()}");
+    }
+}
+
+public class User
+{
+    public Guid Id { get; set; }
+    public string Name { get; set; }
+    public int Age { get; set; }
+}
+```
+
 ## ServiceRegistrationExtensions
 
 The `ServiceRegistrationExtensions` class provides comprehensive service registration methods for configuring Phase 2 features of the tenant isolation framework. It simplifies setup by offering extension methods to register all framework services in one call, with support for custom configuration through options.
