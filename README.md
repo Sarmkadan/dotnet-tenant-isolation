@@ -292,6 +292,100 @@ public class FeatureDemo
 The example demonstrates constructing a `TenantFeature`, checking its availability, enforcing usage limits, and recording usage—all using the public members defined on the type.
 
 
+## TenantFeatureTests
+
+The `TenantFeatureTests` class provides comprehensive unit test coverage for the `TenantFeature` model, validating all feature flag functionality including availability checks, usage limits, deprecation handling, and status reporting. It uses FluentAssertions for expressive test assertions and Xunit for test discovery.
+
+**Key capabilities:**
+- Test feature availability based on enabled status, rollout percentage, and availability dates
+- Validate usage limit enforcement and unlimited usage scenarios
+- Test deprecation behavior and status reporting
+- Verify feature usage tracking and reset functionality
+- Ensure proper rollout percentage formatting in status messages
+
+**Public members tested:**
+- `IsAvailable()` - Checks if feature is currently available
+- `IsUsageLimitExceeded()` - Checks if usage limit has been reached
+- `CanUseFeature(out string? error)` - Validates feature can be used with error message
+- `RecordUsage(int amount)` - Increments usage counter
+- `ResetUsage()` - Resets usage counter to zero
+- `GetStatus()` - Returns current feature status
+
+**Usage example**
+
+```csharp
+using FluentAssertions;
+using TenantIsolation.Models;
+using Xunit;
+
+public class TenantFeatureTestsExample
+{
+    private readonly TenantFeatureTests _tenantFeatureTests;
+
+    public TenantFeatureTestsExample()
+    {
+        _tenantFeatureTests = new TenantFeatureTests();
+    }
+
+    public void RunTenantFeatureTests()
+    {
+        // Test feature availability with full rollout
+        var availableFeature = new TenantFeature
+        {
+            IsEnabled = true,
+            RolloutPercentage = 100,
+            AvailableFrom = DateTime.UtcNow.AddDays(-1),
+            DeprecatedAt = null,
+            UsageLimit = 1000,
+            CurrentUsage = 500
+        };
+        
+        availableFeature.IsAvailable().Should().BeTrue();
+        availableFeature.IsUsageLimitExceeded().Should().BeFalse();
+        availableFeature.CanUseFeature(out var error).Should().BeTrue();
+        error.Should().BeNull();
+        
+        // Test feature with usage limit reached
+        var limitedFeature = new TenantFeature
+        {
+            IsEnabled = true,
+            RolloutPercentage = 100,
+            UsageLimit = 100,
+            CurrentUsage = 100
+        };
+        
+        limitedFeature.IsUsageLimitExceeded().Should().BeTrue();
+        limitedFeature.CanUseFeature(out error).Should().BeFalse();
+        error.Should().Contain("100");
+        
+        // Test deprecation behavior
+        var deprecatedFeature = new TenantFeature
+        {
+            IsEnabled = true,
+            RolloutPercentage = 100,
+            DeprecatedAt = DateTime.UtcNow.AddDays(-1)
+        };
+        
+        deprecatedFeature.IsAvailable().Should().BeFalse();
+        deprecatedFeature.CanUseFeature(out error).Should().BeFalse();
+        error.Should().Contain("deprecated");
+        deprecatedFeature.GetStatus().Should().Be("Deprecated");
+        
+        // Test usage tracking
+        var usageFeature = new TenantFeature { CurrentUsage = 10 };
+        usageFeature.RecordUsage(5);
+        usageFeature.CurrentUsage.Should().Be(15);
+        
+        usageFeature.ResetUsage();
+        usageFeature.CurrentUsage.Should().Be(0);
+        
+        // Test partial rollout status
+        var betaFeature = new TenantFeature { IsEnabled = true, RolloutPercentage = 75 };
+        betaFeature.GetStatus().Should().Be("Beta (75%)");
+    }
+}
+```
+
 ## TenantFeatureService
 
 The `TenantFeatureService` manages tenant-specific feature flags, enabling or disabling features, tracking usage, and enforcing rollout percentages. It provides methods to check feature availability, enable/disable features, set rollout percentages, record usage metrics, and retrieve feature statistics.
