@@ -347,3 +347,41 @@ app.Run();
 ```
 
 In this example the middleware is added to the ASP.NET Core pipeline with `app.UseMiddleware<ErrorHandlingMiddleware>()`. When an exception occurs downstream, the middleware logs the error and returns a JSON payload with the standardized properties (`Code`, `Message`, `StatusCode`, `TraceId`, `Details`, `Timestamp`).
+
+
+## RateLimitingMiddleware
+
+The `RateLimitingMiddleware` implements sliding window rate limiting to prevent abuse and excessive resource consumption in multi-tenant applications. It tracks requests per tenant and IP address, protecting against DoS attacks and ensuring fair resource distribution across tenants. The middleware uses a configurable requests-per-minute limit and provides standard HTTP rate limiting headers in responses.
+
+**Usage example**
+
+```csharp
+using Microsoft.AspNetCore.Builder;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
+using TenantIsolation.Middleware;
+
+var builder = WebApplication.CreateBuilder(args);
+
+// Register logging (already added by default)
+builder.Services.AddLogging();
+
+var app = builder.Build();
+
+// Configure rate limiting options
+var rateLimitOptions = new RateLimitOptions
+{
+    RequestsPerMinute = 100,  // Allow 100 requests per minute
+    RetryAfterSeconds = 30,    // Wait 30 seconds before retry
+    Enabled = true             // Enable rate limiting
+};
+
+// Register the rate limiting middleware in the pipeline
+app.UseRateLimiting(rateLimitOptions);
+
+app.MapGet("/api/data", () => "Data response");
+
+app.Run();
+```
+
+In this example, the middleware is configured with custom rate limiting options and added to the ASP.NET Core pipeline using the `UseRateLimiting` extension method. The middleware will track requests per tenant (from `context.Items["TenantId"]`) and IP address, returning HTTP 429 (Too Many Requests) with a `Retry-After` header when the limit is exceeded. Response headers include `X-RateLimit-Limit`, `X-RateLimit-Remaining`, and `X-RateLimit-Reset` for client-side rate limiting coordination.
