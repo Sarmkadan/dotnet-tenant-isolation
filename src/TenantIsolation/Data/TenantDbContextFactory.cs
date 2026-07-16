@@ -24,14 +24,14 @@ public class TenantDbContextFactory : ITenantDbContextFactory<TenantDbContext>
 {
     private readonly IHttpContextAccessor _httpContextAccessor;
     private readonly ILogger<TenantDbContextFactory> _logger;
-    private readonly TenantResolutionService _tenantResolutionService; // To get the current tenant
+    private readonly ITenantResolutionService _tenantResolutionService; // To get the current tenant
     private readonly IOptions<TenantIsolationOptions> _tenantIsolationOptions;
     private readonly DbContextOptions<TenantDbContext> _masterDbContextOptions; // Base options without tenant-specifics
 
     public TenantDbContextFactory(
         IHttpContextAccessor httpContextAccessor,
         ILogger<TenantDbContextFactory> logger,
-        TenantResolutionService tenantResolutionService,
+        ITenantResolutionService tenantResolutionService,
         IOptions<TenantIsolationOptions> tenantIsolationOptions,
         DbContextOptions<TenantDbContext> masterDbContextOptions) // Injected base options
     {

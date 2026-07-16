@@ -19,7 +19,7 @@ namespace TenantIsolation.Services;
 /// <summary>
 /// Resolves current tenant from HTTP request context.
 /// </summary>
-public class TenantResolutionService
+public class TenantResolutionService : ITenantResolutionService
 {
     // FrozenSet gives O(1) lookups with no per-call allocation; far faster than
     // repeated string equality chains when the reserved list grows.

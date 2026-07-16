@@ -18,12 +18,12 @@ namespace TenantIsolation.Controllers;
 public class FeaturesController : ControllerBase
 {
     private readonly TenantFeatureService _featureService;
-    private readonly TenantResolutionService _resolutionService;
+    private readonly ITenantResolutionService _resolutionService;
     private readonly ILogger<FeaturesController> _logger;
 
     public FeaturesController(
         TenantFeatureService featureService,
-        TenantResolutionService resolutionService,
+        ITenantResolutionService resolutionService,
         ILogger<FeaturesController> logger)
     {
         _featureService = featureService;
