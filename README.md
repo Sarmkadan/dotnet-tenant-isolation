@@ -1815,6 +1815,78 @@ public class CacheServiceExample
 }
 ```
 
+## ICachingService
+
+The `ICachingService` interface provides a high-level caching abstraction for application-specific caching operations. It implements the cache-aside pattern with automatic expiration and provides convenient methods for caching frequently accessed data. The service tracks cache statistics including hits and misses, enabling performance monitoring and optimization.
+
+**Key capabilities:**
+- Get or fetch values with automatic caching
+- Support for both synchronous and asynchronous operations
+- Cache statistics tracking (hits, misses, hit rate)
+- Tenant-aware caching through `TenantAwareCachingService`
+- Automatic expiration with configurable TTL
+
+**Usage example**
+
+```csharp
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
+using TenantIsolation.Caching;
+using TenantIsolation.Services;
+
+public class CachingExample
+{
+    public static async Task Main(string[] args)
+    {
+        // Setup dependency injection
+        var services = new ServiceCollection();
+        services.AddLogging(configure => configure.AddConsole());
+        services.AddScoped<ICachingService, CachingService>();
+        services.AddScoped<ITenantService, TenantService>();
+        
+        var provider = services.BuildServiceProvider();
+        
+        // Resolve the caching service
+        var cachingService = provider.GetRequiredService<ICachingService>();
+        
+        // Cache a value with automatic expiration
+        var cacheKey = "user:12345:profile";
+        
+        // Get or fetch user profile (will cache the result)
+        var userProfile = await cachingService.GetOrFetchAsync(
+            cacheKey,
+            async () => 
+            {
+                // This fetch function will only be called if the value is not in cache
+                var tenantService = provider.GetRequiredService<ITenantService>();
+                var user = await tenantService.GetUserProfileAsync(Guid.Parse("3fa85f64-5717-4562-b3fc-2c963f66afa6"));
+                return user;
+            },
+            TimeSpan.FromMinutes(10) // Cache for 10 minutes
+        );
+        
+        Console.WriteLine($"User profile retrieved: {userProfile?.Name}");
+        
+        // Retrieve from cache (will be much faster)
+        var cachedProfile = await cachingService.GetAsync<object>(cacheKey);
+        Console.WriteLine($"Retrieved from cache: {cachedProfile != null}");
+        
+        // Get cache statistics
+        var stats = await cachingService.GetStatisticsAsync();
+        Console.WriteLine($"Cache stats - Hits: {stats.CacheHits}, Misses: {stats.CacheMisses}, Hit Rate: {stats.HitRate:P0}");
+        
+        // Update cache
+        await cachingService.SetAsync(cacheKey, userProfile, TimeSpan.FromMinutes(15));
+        
+        // Remove specific key
+        await cachingService.RemoveAsync(cacheKey);
+        
+        // Clear all cache entries
+        await cachingService.ClearAsync();
+    }
+}
+```
+
 ## UserRepository
 
 The `UserRepository` class provides data access operations for user management within multi-tenant applications. It extends the base `Repository<User>` class and offers specialized methods for querying, filtering, and managing users based on various criteria such as email, role, organization, and authentication status.
