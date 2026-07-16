@@ -937,6 +937,125 @@ public class AuditLoggingExample
 }
 ```
 
+## ServiceRegistrationExtensions
+
+The `ServiceRegistrationExtensions` class provides comprehensive service registration methods for configuring Phase 2 features of the tenant isolation framework. It simplifies setup by offering extension methods to register all framework services in one call, with support for custom configuration through options.
+
+**Key capabilities:**
+- Register all Phase 2 services with default or custom options
+- Configure tenant-aware caching (automatically detects distributed vs in-memory cache)
+- Set up middleware pipeline with error handling, logging, rate limiting, and tenant resolution
+- Register background services for cleanup and maintenance tasks
+- Configure audit logging, notifications, health checks, and export services
+- Enable/disable features like event bus, webhooks, and distributed tracing
+
+**Usage examples**
+
+### Basic Setup with Default Options
+
+```csharp
+using Microsoft.Extensions.DependencyInjection;
+using TenantIsolation.Configuration;
+
+public class Program
+{
+    public static void Main(string[] args)
+    {
+        var services = new ServiceCollection();
+        
+        // Register all Phase 2 services with default options
+        services.AddTenantIsolationPhase2Services();
+        
+        // Build service provider
+        var provider = services.BuildServiceProvider();
+    }
+}
+```
+
+### Advanced Setup with Custom Options
+
+```csharp
+using Microsoft.Extensions.DependencyInjection;
+using TenantIsolation.Configuration;
+
+public class Program
+{
+    public static void Main(string[] args)
+    {
+        var services = new ServiceCollection();
+        
+        // Register all Phase 2 services with custom configuration
+        services.AddTenantIsolationPhase2Services(options =>
+        {
+            options.EnableCaching = true;
+            options.EnableEventBus = true;
+            options.EnableNotifications = true;
+            options.EnableHealthChecks = true;
+            options.EnableBackgroundTasks = true;
+            options.EnableAuditLogging = true;
+            options.EnableDistributedTracing = true;
+            options.EnableExternalApiClient = true;
+            options.EnableWebhooks = true;
+        });
+        
+        // Build service provider
+        var provider = services.BuildServiceProvider();
+    }
+}
+```
+
+### Configuring Middleware Pipeline
+
+```csharp
+using Microsoft.AspNetCore.Builder;
+using Microsoft.Extensions.DependencyInjection;
+using TenantIsolation.Configuration;
+using TenantIsolation.Middleware;
+
+var builder = WebApplication.CreateBuilder(args);
+
+// Register all Phase 2 services
+builder.Services.AddTenantIsolationPhase2Services();
+
+var app = builder.Build();
+
+// Configure middleware pipeline with Phase 2 middleware
+app.UseTenantIsolationPhase2Middleware();
+
+// Log registered services during startup
+app.LogPhase2ServicesOnStartup();
+
+app.MapGet("/", () => "Hello World!");
+app.Run();
+```
+
+### Tenant-Aware Caching Configuration
+
+```csharp
+using Microsoft.Extensions.DependencyInjection;
+using TenantIsolation.Configuration;
+
+public class Program
+{
+    public static void Main(string[] args)
+    {
+        var services = new ServiceCollection();
+        
+        // Register distributed cache (Redis, SQL Server, etc.)
+        services.AddDistributedMemoryCache();
+        
+        // Register tenant-aware cache provider (automatically detects IDistributedCache)
+        services.AddTenantAwareCacheProvider();
+        
+        // Build service provider
+        var provider = services.BuildServiceProvider();
+        
+        // Resolve the cache provider
+        var cacheProvider = provider.GetRequiredService<ICacheProvider>();
+    }
+}
+```
+
 ## Repository
 
 The `Repository<TEntity>` class is a generic base repository that provides tenant-aware CRUD operations for multi-tenant applications. It automatically handles tenant isolation through the `ITenantDbContextFactory<TenantDbContext>` and ensures all operations are scoped to the current tenant's database context.
