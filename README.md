@@ -1249,6 +1249,120 @@ public class TenantDbContextExample
 
 The `OrganizationRepository` class provides data access operations for organization management within multi-tenant applications. It extends the base `Repository<Organization>` class and offers specialized methods for querying, filtering, and managing organizations based on various criteria such as slug, industry, country, and activity status.
 
+## UserRepository
+
+The `UserRepository` class provides data access operations for user management within multi-tenant applications. It extends the base `Repository<User>` class and offers specialized methods for querying, filtering, and managing users based on various criteria such as email, role, organization, and authentication status.
+
+**Key capabilities:**
+- Retrieve users by email, role, or organization
+- Search and filter users with complex queries
+- Check email uniqueness and user activity status
+- Manage user lifecycle (activation, deactivation, password changes)
+- Get user statistics and activity reports
+- Handle authentication-related operations (locked accounts, verification status)
+
+**Usage example**
+
+```csharp
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
+using TenantIsolation.Models;
+using TenantIsolation.Data;
+
+public class UserManagementExample
+{
+    public static async Task Main(string[] args)
+    {
+        // Setup dependency injection
+        var services = new ServiceCollection();
+        services.AddLogging(configure => configure.AddConsole());
+        services.AddDbContext<TenantDbContext>();
+        services.AddScoped<ITenantDbContextFactory<TenantDbContext>, TenantDbContextFactory<TenantDbContext>>();
+        services.AddScoped<UserRepository>();
+
+        var provider = services.BuildServiceProvider();
+
+        // Get repository instance
+        var userRepository = provider.GetRequiredService<UserRepository>();
+        var tenantId = Guid.Parse("3fa85f64-5717-4562-b3fc-2c963f66afa6");
+        var organizationId = Guid.Parse("4fa85f64-5717-4562-b3fc-2c963f66afa6");
+
+        // Create a sample user for demonstration
+        var user = new User
+        {
+            Id = Guid.NewGuid(),
+            TenantId = tenantId,
+            OrganizationId = organizationId,
+            Email = "john.doe@acme-corp.com",
+            FirstName = "John",
+            LastName = "Doe",
+            Role = "Administrator",
+            PasswordHash = BCrypt.Net.BCrypt.HashPassword("SecurePassword123!"),
+            IsActive = true,
+            IsEmailVerified = true,
+            IsTwoFactorEnabled = false,
+            CreatedAt = DateTime.UtcNow,
+            UpdatedAt = DateTime.UtcNow
+        };
+
+        // Add user to database (in real usage, this would be through UserService)
+        // For this example, we'll query existing users
+
+        // Get user by email
+        var userByEmail = await userRepository.GetByEmailAsync("john.doe@acme-corp.com", tenantId);
+        Console.WriteLine($"Found user by email: {userByEmail?.FirstName} {userByEmail?.LastName}");
+
+        // Get active users in organization
+        var activeUsers = await userRepository.GetActiveUsersInOrganizationAsync(organizationId);
+        Console.WriteLine($"Active users in organization: {activeUsers.Count}");
+
+        // Get users by role
+        var adminUsers = await userRepository.GetByRoleAsync(tenantId, "Administrator");
+        Console.WriteLine($"Administrator users: {adminUsers.Count}");
+
+        // Get unverified users
+        var unverifiedUsers = await userRepository.GetUnverifiedUsersAsync(tenantId);
+        Console.WriteLine($"Unverified users: {unverifiedUsers.Count}");
+
+        // Get never logged in users
+        var neverLoggedIn = await userRepository.GetNeverLoggedInAsync(tenantId);
+        Console.WriteLine($"Never logged in users: {neverLoggedIn.Count}");
+
+        // Get locked accounts
+        var lockedAccounts = await userRepository.GetLockedAccountsAsync(tenantId);
+        Console.WriteLine($"Locked accounts: {lockedAccounts.Count}");
+
+        // Get user count
+        var userCount = await userRepository.GetUserCountAsync(tenantId);
+        Console.WriteLine($"Total users: {userCount}");
+
+        // Get recently active users
+        var recentlyActive = await userRepository.GetRecentlyActiveAsync(tenantId, 7);
+        Console.WriteLine($"Recently active users (last 7 days): {recentlyActive.Count}");
+
+        // Search users
+        var searchResults = await userRepository.SearchAsync(tenantId, "john");
+        Console.WriteLine($"Search results for 'john': {searchResults.Count}");
+
+        // Check if email is unique
+        var isEmailUnique = await userRepository.IsEmailUniqueAsync("jane.smith@acme-corp.com", tenantId);
+        Console.WriteLine($"Is email unique: {isEmailUnique}");
+
+        // Get users requiring password change
+        var usersNeedingPasswordChange = await userRepository.GetUsersRequiringPasswordChangeAsync(tenantId, 90);
+        Console.WriteLine($"Users needing password change: {usersNeedingPasswordChange.Count}");
+
+        // Get user statistics
+        var statistics = await userRepository.GetUserStatisticsAsync(tenantId);
+        Console.WriteLine("User statistics retrieved");
+
+        // Deactivate organization users
+        var deactivatedCount = await userRepository.DeactivateOrganizationUsersAsync(organizationId);
+        Console.WriteLine($"Deactivated {deactivatedCount} users in organization");
+    }
+}
+```
+
 
 **Key capabilities:**
 - Retrieve organizations by slug, industry, country, or registration number
