@@ -716,25 +716,101 @@ public class NotificationManagement
 
 This example demonstrates creating a `Notification` instance with all properties, registering the notification service, and using its public methods to send, retrieve, mark as read, and delete notifications.
 
-## DynamicTenantStore
+## AuditLogEntry
 
-The `DynamicTenantStore` is a SQL-backed implementation of `IDynamicTenantStore` that provides and caches tenant information from a database repository. It supports automatic periodic reloading of tenant data to keep the cache in sync with database changes, and raises events when tenants are added, updated, or removed.
+The `AuditLogEntry` class represents a single audit log entry for tracking system events, user actions, and data changes in a multi-tenant application. It stores metadata about who performed what action on which resource, when, and with what outcome, enabling compliance auditing, security monitoring, and troubleshooting.
 
-The store is designed to be used with dependency injection and can be configured to reload tenant data at specified intervals. It implements `IDisposable` to clean up background timers.
+**Key capabilities:**
+- Track tenant-specific actions (create, read, update, delete, login, etc.)
+- Store user context and IP address for security auditing
+- Capture change sets for data modifications
+- Support filtering by tenant, user, or resource
+- Enforce retention policies with automatic cleanup
 
 **Usage example**
 
 ```csharp
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
 using TenantIsolation.Models;
 using TenantIsolation.Services;
-using TenantIsolation.Data;
-using TenantIsolation.Configuration;
 
-public class DynamicTenantStoreExample
+public class AuditLoggingExample
 {
+    public static async Task Main(string[] args)
+    {
+        // Setup dependency injection
+        var services = new ServiceCollection();
+        services.AddLogging(configure => configure.AddConsole());
+        services.AddSingleton<IAuditLogger, AuditLogger>();
+
+        var provider = services.BuildServiceProvider();
+        var auditLogger = provider.GetRequiredService<IAuditLogger>();
+
+        var tenantId = Guid.NewGuid();
+        var userId = "user-12345";
+
+        // Create a new audit log entry
+        var entry = new AuditLogEntry
+        {
+            TenantId = tenantId,
+            UserId = userId,
+            Action = "Create User",
+            Resource = "User",
+            ResourceId = "user-12345",
+            ActionType = AuditAction.Create,
+            Details = "Creating new user account for john.doe@example.com",
+            Success = true,
+            IpAddress = "192.168.1.100",
+            ChangeSet = new Dictionary<string, object>
+            {
+                { "Email", "john.doe@example.com" },
+                { "Role", "Administrator" },
+                { "FirstName", "John" },
+                { "LastName", "Doe" }
+            }
+        };
+
+        // Log the audit entry
+        await auditLogger.LogAsync(entry);
+        Console.WriteLine($"Audit entry logged: {entry.Id} at {entry.Timestamp}");
+
+        // Use convenience extension methods
+        await auditLogger.LogCreateAsync(
+            tenantId,
+            userId,
+            "User",
+            "user-12345",
+            new Dictionary<string, object>
+            {
+                { "Email", "jane.doe@example.com" },
+                { "Role", "User" }
+            }
+        );
+
+        // Retrieve audit logs
+        var tenantLogs = await auditLogger.GetLogsAsync(tenantId, limit: 50);
+        Console.WriteLine($"Found {tenantLogs.Count()} logs for tenant");
+
+        var userLogs = await auditLogger.GetUserLogsAsync(userId, limit: 20);
+        Console.WriteLine($"Found {userLogs.Count()} logs for user");
+
+        var resourceLogs = await auditLogger.GetResourceLogsAsync(
+            tenantId,
+            "User",
+            "user-12345",
+            limit: 10
+        );
+        Console.WriteLine($"Found {resourceLogs.Count()} logs for specific resource");
+
+        // Clean up old logs (retention policy)
+        await auditLogger.ClearOldLogsAsync(retentionDays: 90);
+    }
+}
+
+```
+
+## DynamicTenantStore
     public static async Task Main(string[] args)
     {
         // Setup dependency injection
@@ -794,7 +870,7 @@ public class DynamicTenantStoreExample
 }
 ```
 
-## ComponentHealthInfo
+## DynamicTenantStore
 
 The `ComponentHealthInfo` class represents the health status of a specific system component (database, cache, event bus, etc.) in a multi-tenant application. It tracks individual component health metrics including response time, status, and descriptive messages, enabling detailed health monitoring and troubleshooting.
 
