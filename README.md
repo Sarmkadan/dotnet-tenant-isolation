@@ -1051,6 +1051,126 @@ public class ProductRepositoryExample
 This example demonstrates creating a generic `Repository<TEntity>` instance through dependency injection and using its public methods for common CRUD operations, bulk operations, and custom queries in a tenant-aware multi-tenant application.
 
 
+## OrganizationRepository
+
+The `OrganizationRepository` class provides data access operations for organization management within multi-tenant applications. It extends the base `Repository<Organization>` class and offers specialized methods for querying, filtering, and managing organizations based on various criteria such as slug, industry, country, and activity status.
+
+
+**Key capabilities:**
+- Retrieve organizations by slug, industry, country, or registration number
+- Search organizations by name, email, or slug
+- Get organizations with user counts and statistics
+- Manage organization lifecycle (activation, deactivation)
+- Check uniqueness constraints (e.g., slug validation)
+- Get recent organizations and bulk operations
+
+**Usage example**
+
+```csharp
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
+using TenantIsolation.Models;
+using TenantIsolation.Data;
+
+public class OrganizationManagementExample
+{
+ public static async Task Main(string[] args)
+ {
+ // Setup dependency injection
+ var services = new ServiceCollection();
+ services.AddLogging(configure => configure.AddConsole());
+ services.AddDbContext<TenantDbContext>();
+ services.AddScoped<ITenantDbContextFactory<TenantDbContext>, TenantDbContextFactory<TenantDbContext>>();
+ services.AddScoped<OrganizationRepository>();
+
+ var provider = services.BuildServiceProvider();
+
+ // Get repository instance
+ var organizationRepository = provider.GetRequiredService<OrganizationRepository>();
+ var tenantId = Guid.Parse("3fa85f64-5717-4562-b3fc-2c963f66afa6");
+
+ // Create a sample organization for demonstration
+ var organization = new Organization
+ {
+ Id = Guid.NewGuid(),
+ TenantId = tenantId,
+ Slug = "acme-corp",
+ Name = "ACME Corporation",
+ Industry = "Manufacturing",
+ CountryCode = "US",
+ RegistrationNumber = "REG-12345",
+ ContactEmail = "contact@acme-corp.com",
+ IsActive = true,
+ CreatedAt = DateTime.UtcNow,
+ UpdatedAt = DateTime.UtcNow
+ };
+
+ // Add organization to database (in real usage, this would be through OrganizationService)
+ // For this example, we'll query existing organizations
+
+ // Get organization by slug
+ var orgBySlug = await organizationRepository.GetBySlugAsync(tenantId, "acme-corp");
+ Console.WriteLine($"Found organization by slug: {orgBySlug?.Name}");
+
+ // Get all active organizations
+ var activeOrgs = await organizationRepository.GetActiveOrganizationsAsync(tenantId);
+ Console.WriteLine($"Active organizations count: {activeOrgs.Count}");
+
+ // Get organizations by industry
+ var manufacturingOrgs = await organizationRepository.GetByIndustryAsync(tenantId, "Manufacturing");
+ Console.WriteLine($"Manufacturing organizations count: {manufacturingOrgs.Count}");
+
+ // Get organizations by country
+ var usOrgs = await organizationRepository.GetByCountryAsync(tenantId, "US");
+ Console.WriteLine($"US organizations count: {usOrgs.Count}");
+
+ // Search organizations
+ var searchResults = await organizationRepository.SearchAsync(tenantId, "acme");
+ Console.WriteLine($"Search results count: {searchResults.Count}");
+
+ // Get organization count
+ var orgCount = await organizationRepository.GetOrganizationCountAsync(tenantId);
+ Console.WriteLine($"Total organizations: {orgCount}");
+
+ // Check if slug is unique
+ var isSlugUnique = await organizationRepository.IsSlugUniqueAsync(tenantId, "new-org");
+ Console.WriteLine($"Is slug unique: {isSlugUnique}");
+
+ // Get organizations with user count
+ var orgsWithUsers = await organizationRepository.GetOrganizationsWithUserCountAsync(tenantId);
+ foreach (var item in orgsWithUsers)
+ {
+ var org = (dynamic)item;
+ Console.WriteLine($"Organization: {org.Organization.Name}, Users: {org.UserCount}");
+ }
+
+ // Get organization by registration number
+ var orgByRegNumber = await organizationRepository.GetByRegistrationNumberAsync(tenantId, "REG-12345");
+ Console.WriteLine($"Found organization by registration number: {orgByRegNumber?.Name}");
+
+ // Get organization statistics
+ var statistics = await organizationRepository.GetStatisticsAsync(tenantId);
+ Console.WriteLine($"Organization statistics retrieved");
+
+ // Get recent organizations
+ var recentOrgs = await organizationRepository.GetRecentAsync(tenantId, 5);
+ Console.WriteLine($"Recent organizations count: {recentOrgs.Count}");
+
+ // Deactivate organization
+ var deactivateResult = await organizationRepository.DeactivateAsync(organization.Id);
+ Console.WriteLine($"Deactivation successful: {deactivateResult}");
+
+ // Bulk activate organizations
+ var bulkActivateCount = await organizationRepository.BulkActivateAsync(tenantId, new List<Guid> { organization.Id });
+ Console.WriteLine($"Bulk activate count: {bulkActivateCount}");
+ }
+}
+```
+
+This example demonstrates creating an `OrganizationRepository` instance through dependency injection and using its public methods to query, filter, and manage organizations in a multi-tenant application.
+
+
+
 ## TenantRepository
 
 The `TenantRepository` class provides data access operations for tenant management in multi-tenant applications. It extends the base `Repository<Tenant>` class and offers specialized methods for querying, filtering, and managing tenants based on various criteria such as status, subscription dates, activity, and more.
