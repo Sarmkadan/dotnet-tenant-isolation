@@ -376,6 +376,73 @@ Console.WriteLine($"Rollout percentage set: {rolloutSet}");
 
 This example demonstrates creating a `TenantFeatureService` instance through dependency injection, initializing default features, enabling/disabling features, checking feature status, recording usage, and retrieving feature statistics using the public members defined on the type.
 
+## ExportRequest
+
+The `ExportRequest` class represents a request to export tenant-specific data in various formats (JSON, CSV, XML). It contains properties to specify the tenant context, resource type to export, output format, filtering criteria, and field selection for selective data export.
+
+**Key properties:**
+- `TenantId`: The unique identifier of the tenant
+- `ResourceType`: The type of resource being exported (e.g., "Users", "Products")
+- `Format`: The export format (JSON, CSV, or XML)
+- `Filters`: Optional dictionary of filter criteria to apply during export
+- `IncludeFields`: Optional list of field names to include in the export
+
+**Usage example**
+
+```csharp
+using System;
+using System.Collections.Generic;
+using TenantIsolation.Services;
+
+public class ExportExample
+{
+    public static async Task Main(string[] args)
+    {
+        // Create an export request for user data
+        var exportRequest = new ExportRequest
+        {
+            TenantId = Guid.Parse("3fa85f64-5717-4562-b3fc-2c963f66afa6"),
+            ResourceType = "Users",
+            Format = ExportFormat.Json,
+            Filters = new Dictionary<string, object>
+            {
+                { "status", "active" },
+                { "createdAfter", DateTime.UtcNow.AddDays(-30) }
+            },
+            IncludeFields = new List<string> { "Id", "Email", "FirstName", "LastName", "Role" }
+        };
+
+        // Get the export service
+        var services = new ServiceCollection();
+        services.AddExportService();
+        services.AddLogging(configure => configure.AddConsole());
+        
+        var provider = services.BuildServiceProvider();
+        var exportService = provider.GetRequiredService<IExportService>();
+
+        // Create sample data to export
+        var users = new List<object>
+        {
+            new { Id = Guid.NewGuid(), Email = "john.doe@acme.com", FirstName = "John", LastName = "Doe", Role = "Administrator" },
+            new { Id = Guid.NewGuid(), Email = "jane.smith@acme.com", FirstName = "Jane", LastName = "Smith", Role = "User" },
+            new { Id = Guid.NewGuid(), Email = "bob.johnson@acme.com", FirstName = "Bob", LastName = "Johnson", Role = "User" }
+        };
+
+        // Export the data
+        var exportResult = await exportService.ExportAsync(exportRequest, users);
+        
+        Console.WriteLine($"Export completed:");
+        Console.WriteLine($"  File: {exportResult.FileName}");
+        Console.WriteLine($"  Format: {exportResult.Format}");
+        Console.WriteLine($"  Size: {exportResult.SizeBytes} bytes");
+        Console.WriteLine($"  Content Type: {exportResult.ContentType}");
+        Console.WriteLine($"  Created: {exportResult.CreatedAt}");
+    }
+}
+```
+
+This example demonstrates creating an `ExportRequest` instance with all required properties, registering the export service, and using it to export data in JSON format with filtering and field selection.
+
 ## Services
 
 ### TenantResolutionService
