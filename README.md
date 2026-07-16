@@ -291,6 +291,91 @@ public class FeatureDemo
 
 The example demonstrates constructing a `TenantFeature`, checking its availability, enforcing usage limits, and recording usage—all using the public members defined on the type.
 
+
+## TenantFeatureService
+
+The `TenantFeatureService` manages tenant-specific feature flags, enabling or disabling features, tracking usage, and enforcing rollout percentages. It provides methods to check feature availability, enable/disable features, set rollout percentages, record usage metrics, and retrieve feature statistics.
+
+**Key capabilities:**
+- Enable and disable features per tenant
+- Set rollout percentages for gradual feature deployment
+- Track and enforce usage limits
+- Retrieve feature statistics and reports
+- Cache feature data for performance
+- Initialize default features for new tenants
+
+**Usage example**
+
+```csharp
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
+using TenantIsolation.Models;
+using TenantIsolation.Services;
+using TenantIsolation.Data;
+
+public class FeatureManagementExample
+{
+public static async Task Main(string[] args)
+{
+// Setup dependency injection
+var services = new ServiceCollection();
+services.AddLogging(configure => configure.AddConsole());
+services.AddDbContext<TenantDbContext>();
+services.AddScoped<TenantFeatureService>();
+
+var provider = services.BuildServiceProvider();
+
+var featureService = provider.GetRequiredService<TenantFeatureService>();
+var tenantId = Guid.Parse("3fa85f64-5717-4562-b3fc-2c963f66afa6");
+
+// Initialize default features for tenant
+await featureService.InitializeDefaultFeaturesAsync(tenantId);
+Console.WriteLine("Default features initialized");
+
+// Enable a feature with 75% rollout
+var enabledFeature = await featureService.EnableFeatureAsync(tenantId, "advanced-reporting", 75);
+Console.WriteLine($"Enabled feature: {enabledFeature.DisplayName} (Rollout: {enabledFeature.RolloutPercentage}%)");
+
+// Check if feature is enabled
+bool isEnabled = await featureService.IsFeatureEnabledAsync(tenantId, "advanced-reporting");
+Console.WriteLine($"Feature enabled: {isEnabled}");
+
+// Get feature details
+var featureDetails = await featureService.GetFeatureAsync(tenantId, "advanced-reporting");
+if (featureDetails != null)
+{
+Console.WriteLine($"Feature details: {featureDetails.DisplayName}, Category: {featureDetails.Category}");
+}
+
+// Record feature usage
+bool usageRecorded = await featureService.RecordFeatureUsageAsync(tenantId, "advanced-reporting", 5);
+Console.WriteLine($"Usage recorded: {usageRecorded}");
+
+// Check usage limit
+bool canUse = await featureService.CheckUsageLimitAsync(tenantId, "advanced-reporting");
+Console.WriteLine($"Can use feature: {canUse}");
+
+// Get all enabled features
+var enabledFeatures = await featureService.GetEnabledFeaturesAsync(tenantId);
+Console.WriteLine($"Enabled features count: {enabledFeatures.Count}");
+
+// Get statistics
+var stats = await featureService.GetStatisticsAsync(tenantId);
+Console.WriteLine($"Total features: {stats.TotalFeatures}, Enabled: {stats.EnabledFeatures}");
+
+// Disable feature
+bool disabled = await featureService.DisableFeatureAsync(tenantId, "advanced-reporting");
+Console.WriteLine($"Feature disabled: {disabled}");
+
+// Set rollout percentage
+bool rolloutSet = await featureService.SetRolloutPercentageAsync(tenantId, "advanced-reporting", 50);
+Console.WriteLine($"Rollout percentage set: {rolloutSet}");
+}
+}
+```
+
+This example demonstrates creating a `TenantFeatureService` instance through dependency injection, initializing default features, enabling/disabling features, checking feature status, recording usage, and retrieving feature statistics using the public members defined on the type.
+
 ## Services
 
 ### TenantResolutionService
