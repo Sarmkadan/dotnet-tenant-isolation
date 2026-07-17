@@ -34,7 +34,7 @@ public static class StringExtensionsValidation
         {
             problems.Add("ToSlug() returned empty or whitespace string");
         }
-        else if (slug.Any(c => char.IsWhiteSpace(c)))
+        else if (slug.Any(static c => char.IsWhiteSpace(c)))
         {
             problems.Add("ToSlug() returned string containing whitespace characters");
         }
@@ -52,9 +52,8 @@ public static class StringExtensionsValidation
             problems.Add("Truncate() returned string longer than maxLength parameter");
         }
 
-        // Validate IsValidEmail behavior
-        var validEmailResult = "test@example.com".IsValidEmail();
-        if (!validEmailResult)
+        // Validate IsValidEmail behavior with comprehensive test cases
+        if (!"test@example.com".IsValidEmail())
         {
             problems.Add("IsValidEmail() failed basic valid email test");
         }
@@ -64,16 +63,35 @@ public static class StringExtensionsValidation
             problems.Add("IsValidEmail() should return false for empty string");
         }
 
+        if (!" ".IsValidEmail())
+        {
+            problems.Add("IsValidEmail() should return false for whitespace-only string");
+        }
+
         if ("invalid-email".IsValidEmail())
         {
             problems.Add("IsValidEmail() should return false for invalid email format");
         }
 
-        // Validate IsValidUrl behavior
-        var validUrlResult = "https://example.com".IsValidUrl();
-        if (!validUrlResult)
+        if ("user@.com".IsValidEmail())
+        {
+            problems.Add("IsValidEmail() should return false for email with consecutive dots");
+        }
+
+        if ("user@domain".IsValidEmail())
+        {
+            problems.Add("IsValidEmail() should return false for email missing TLD");
+        }
+
+        // Validate IsValidUrl behavior with comprehensive test cases
+        if (!"https://example.com".IsValidUrl())
         {
             problems.Add("IsValidUrl() failed basic valid URL test");
+        }
+
+        if (!"http://localhost:5000".IsValidUrl())
+        {
+            problems.Add("IsValidUrl() should accept http://localhost URLs");
         }
 
         if (!"".IsValidUrl())
@@ -81,9 +99,19 @@ public static class StringExtensionsValidation
             problems.Add("IsValidUrl() should return false for empty string");
         }
 
+        if (!" ".IsValidUrl())
+        {
+            problems.Add("IsValidUrl() should return false for whitespace-only string");
+        }
+
         if ("not-a-url".IsValidUrl())
         {
             problems.Add("IsValidUrl() should return false for invalid URL format");
+        }
+
+        if ("ftp://example.com".IsValidUrl())
+        {
+            problems.Add("IsValidUrl() should return false for non-HTTP/HTTPS schemes");
         }
 
         // Validate SafeSubstring behavior
@@ -101,7 +129,7 @@ public static class StringExtensionsValidation
 
         // Validate RemoveSpecialCharacters behavior
         var cleaned = input.RemoveSpecialCharacters();
-        if (cleaned.Any(c => !char.IsLetterOrDigit(c)))
+        if (cleaned.Any(static c => !char.IsLetterOrDigit(c)))
         {
             problems.Add("RemoveSpecialCharacters() returned string containing non-alphanumeric characters");
         }
@@ -112,11 +140,11 @@ public static class StringExtensionsValidation
         {
             problems.Add("MaskSensitiveData() returned empty string");
         }
-        else if (masked.Any(c => c != '*'))
+        else if (masked.Any(static c => c != '*'))
         {
             problems.Add("MaskSensitiveData() should mask with asterisks");
         }
-        else if (input.Length > 3 && masked.Count(c => c == '*') != input.Length - 3)
+        else if (input.Length > 3 && masked.Count(static c => c == '*') != input.Length - 3)
         {
             problems.Add("MaskSensitiveData() should preserve only specified visible characters");
         }
@@ -141,7 +169,7 @@ public static class StringExtensionsValidation
             }
         }
 
-        // Validate GetDeterministicHashCode behavior
+        // Validate GetDeterministicHashCode behavior with comprehensive testing
         try
         {
             var hash1 = "test".GetDeterministicHashCode();
@@ -149,6 +177,18 @@ public static class StringExtensionsValidation
             if (hash1 != hash2)
             {
                 problems.Add("GetDeterministicHashCode() should return consistent value for same input");
+            }
+
+            var hash3 = "different".GetDeterministicHashCode();
+            var hash4 = "different".GetDeterministicHashCode();
+            if (hash3 != hash4)
+            {
+                problems.Add("GetDeterministicHashCode() should return consistent value for same input (different string)");
+            }
+
+            if (hash1 == hash3)
+            {
+                problems.Add("GetDeterministicHashCode() should return different values for different inputs");
             }
         }
         catch
@@ -187,6 +227,8 @@ public static class StringExtensionsValidation
             return;
 
         throw new ArgumentException(
-            $"StringExtensions validation failed:{Environment.NewLine}- {string.Join($"{Environment.NewLine}- ", problems)}");
+            $"StringExtensions validation failed:{Environment.NewLine}- {
+                string.Join($"{Environment.NewLine}- ", problems)
+            }");
     }
 }
