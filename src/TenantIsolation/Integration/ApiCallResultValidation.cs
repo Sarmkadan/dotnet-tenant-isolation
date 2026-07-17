@@ -3,7 +3,7 @@
 // =============================================================================
 // Author: Vladyslav Zaiets | https://sarmkadan.com
 // CTO & Software Architect
-// =============================================================================
+// =====================================================================
 
 using System.Globalization;
 
@@ -33,23 +33,23 @@ public static class ApiCallResultValidation
             problems.Add("Duration must be a positive time span");
         }
 
-        // Validate HttpStatusCode if present and IsSuccess is true
-        if (value.IsSuccess && value.HttpStatusCode.HasValue)
+        // Validate HttpStatusCode if present
+        if (value.HttpStatusCode.HasValue)
         {
             var statusCode = value.HttpStatusCode.Value;
-            if (statusCode < 100 || statusCode > 599)
+            if (statusCode is < 100 or > 599)
             {
-                problems.Add("HttpStatusCode must be a valid HTTP status code (100-599) when IsSuccess is true");
+                problems.Add("HttpStatusCode must be a valid HTTP status code (100-599)");
             }
         }
 
-        // Validate ErrorMessage is not null/empty when IsSuccess is false
-        if (!value.IsSuccess && !string.IsNullOrEmpty(value.ErrorMessage))
+        // Validate ErrorMessage when IsSuccess is true
+        if (value.IsSuccess && !string.IsNullOrEmpty(value.ErrorMessage))
         {
             problems.Add("ErrorMessage must be null or empty when IsSuccess is true");
         }
 
-        // Validate that if IsSuccess is false, ErrorMessage should not be null/empty
+        // Validate that if IsSuccess is false, ErrorMessage must be provided
         if (!value.IsSuccess && string.IsNullOrEmpty(value.ErrorMessage))
         {
             problems.Add("ErrorMessage must be provided when IsSuccess is false");
@@ -86,7 +86,9 @@ public static class ApiCallResultValidation
         if (problems.Count > 0)
         {
             throw new ArgumentException(
-                $"ApiCallResult is invalid:{Environment.NewLine}- {string.Join($"{Environment.NewLine}- ", problems)}");
+                $"ApiCallResult is invalid:{Environment.NewLine}- {
+                    string.Join($"{Environment.NewLine}- ", problems)
+                }");
         }
     }
 }
