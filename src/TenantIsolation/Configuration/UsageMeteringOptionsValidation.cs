@@ -19,7 +19,7 @@ public static class UsageMeteringOptionsValidation
     /// </summary>
     /// <param name="value">The options to validate.</param>
     /// <returns>An immutable list of human-readable validation problems; empty if valid.</returns>
-    /// <exception cref="ArgumentNullException">Thrown if <paramref name="value"/> is <c>null</c>.</exception>
+    /// <exception cref="ArgumentNullException">Thrown if <paramref name="value"/> is <see langword="null"/>.</exception>
     public static IReadOnlyList<string> Validate(this UsageMeteringOptions value)
     {
         ArgumentNullException.ThrowIfNull(value);
@@ -53,15 +53,15 @@ public static class UsageMeteringOptionsValidation
     /// Determines whether the provided <see cref="UsageMeteringOptions"/> instance is valid.
     /// </summary>
     /// <param name="value">The options to check.</param>
-    /// <returns><c>true</c> if valid; otherwise, <c>false</c>.</returns>
-    public static bool IsValid(this UsageMeteringOptions value)
-        => value.Validate().Count == 0;
+    /// <returns><see langword="true"/> if valid; otherwise, <see langword="false"/>.</returns>
+    /// <exception cref="ArgumentNullException">Thrown if <paramref name="value"/> is <see langword="null"/>.</exception>
+    public static bool IsValid(this UsageMeteringOptions? value) => value?.Validate().Count == 0;
 
     /// <summary>
     /// Ensures that the provided <see cref="UsageMeteringOptions"/> instance is valid.
     /// </summary>
     /// <param name="value">The options to validate.</param>
-    /// <exception cref="ArgumentNullException">Thrown if <paramref name="value"/> is <c>null</c>.</exception>
+    /// <exception cref="ArgumentNullException">Thrown if <paramref name="value"/> is <see langword="null"/>.</exception>
     /// <exception cref="ArgumentException">Thrown if validation fails, containing a human-readable list of problems.</exception>
     public static void EnsureValid(this UsageMeteringOptions value)
     {
@@ -72,7 +72,7 @@ public static class UsageMeteringOptionsValidation
             return;
 
         throw new ArgumentException(
-            string.Join(" ", problems),
+            $"UsageMeteringOptions validation failed:{Environment.NewLine}{string.Join(Environment.NewLine, problems)}",
             nameof(value));
     }
 }
