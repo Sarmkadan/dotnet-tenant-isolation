@@ -233,6 +233,88 @@ This example demonstrates creating a `User` instance with all required propertie
 
 
 
+## TenantIsolationExceptionValidation
+
+The `TenantIsolationExceptionValidation` class provides validation helpers for tenant isolation exceptions, ensuring that exception instances are properly configured before being thrown or used. It offers methods to validate exception properties, check validity, and throw exceptions when validation fails.
+
+**Key capabilities:**
+- Validate `TenantIsolationException` and derived exception types
+- Check if an exception instance is valid
+- Throw exceptions when validation fails
+- Support for all tenant isolation exception types: `TenantIsolationException`, `TenantNotResolvedException`, `TenantNotActiveException`, `TenantConfigurationException`, `DataIsolationViolationException`, `TenantDatabaseException`
+
+**Public members:**
+- `Validate(this TenantIsolationException?)` - Validates exception properties and returns validation errors
+- `IsValid(this TenantIsolationException?)` - Determines whether the exception is valid
+- `EnsureValid(this TenantIsolationException?)` - Validates and throws if invalid
+- Extension methods for all derived exception types
+
+**Usage example**
+
+```csharp
+using TenantIsolation.Exceptions;
+
+public class ExceptionValidationExample
+{
+    public static void ValidateTenantException()
+    {
+        // Create a valid exception
+        var validException = new TenantIsolationException(
+            "TENANT_NOT_FOUND",
+            "Tenant with ID 12345 not found"
+        );
+        
+        // Validate the exception
+        var errors = validException.Validate();
+        if (errors.Count > 0)
+        {
+            Console.WriteLine("Validation errors:");
+            foreach (var error in errors)
+            {
+                Console.WriteLine($"- {error}");
+            }
+        }
+        
+        // Check if exception is valid
+        bool isValid = validException.IsValid();
+        Console.WriteLine($"Is valid: {isValid}");
+        
+        // Ensure exception is valid (throws if invalid)
+        validException.EnsureValid();
+        
+        // Example with invalid exception (empty ErrorCode)
+        var invalidException = new TenantIsolationException("", "");
+        
+        // This will return validation errors
+        var invalidErrors = invalidException.Validate();
+        Console.WriteLine($"Invalid exception has {invalidErrors.Count} errors");
+        
+        // This will throw an ArgumentException
+        try
+        {
+            invalidException.EnsureValid();
+        }
+        catch (ArgumentException ex)
+        {
+            Console.WriteLine($"Validation failed: {ex.Message}");
+        }
+        
+        // Example with TenantNotActiveException
+        var tenantNotActiveException = new TenantNotActiveException(
+            Guid.Parse("3fa85f64-5717-4562-b3fc-2c963f66afa6"),
+            "Tenant is not active"
+        );
+        
+        // Validate derived exception type
+        var tenantErrors = tenantNotActiveException.Validate();
+        if (tenantErrors.Count == 0)
+        {
+            Console.WriteLine("TenantNotActiveException is valid");
+        }
+    }
+}
+```
+
 ## TenantFeature
 
 `TenantFeature` represents a feature flag for a specific tenant. It stores metadata such as the feature key, display name, rollout percentage, availability dates, usage limits, and provides helper methods to determine if the feature is currently available, if its usage limit has been exceeded, and whether it can be used in the current context.
