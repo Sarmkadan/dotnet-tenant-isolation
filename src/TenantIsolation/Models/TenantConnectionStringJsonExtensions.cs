@@ -3,7 +3,7 @@
 // =============================================================================
 // Author: Vladyslav Zaiets | https://sarmkadan.com
 // CTO & Software Architect
-// =====================================================================
+// ===================================================================
 
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -35,10 +35,7 @@ public static class TenantConnectionStringJsonExtensions
         ArgumentNullException.ThrowIfNull(value);
 
         var options = indented
-            ? new JsonSerializerOptions(_jsonSerializerOptions)
-            {
-                WriteIndented = true
-            }
+            ? new JsonSerializerOptions(_jsonSerializerOptions) { WriteIndented = true }
             : _jsonSerializerOptions;
 
         return JsonSerializer.Serialize(value, options);
@@ -49,13 +46,11 @@ public static class TenantConnectionStringJsonExtensions
     /// </summary>
     /// <param name="json">The JSON string to deserialize</param>
     /// <returns>The deserialized connection string, or null if the JSON is null or empty</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="json"/> is null or whitespace</exception>
     /// <exception cref="JsonException">Thrown when the JSON is invalid or cannot be deserialized</exception>
     public static TenantConnectionString? FromJson(string json)
     {
-        if (string.IsNullOrWhiteSpace(json))
-        {
-            return null;
-        }
+        ArgumentException.ThrowIfNullOrEmpty(json);
 
         return JsonSerializer.Deserialize<TenantConnectionString>(json, _jsonSerializerOptions);
     }
@@ -66,8 +61,11 @@ public static class TenantConnectionStringJsonExtensions
     /// <param name="json">The JSON string to deserialize</param>
     /// <param name="value">Receives the deserialized connection string, or null if deserialization fails</param>
     /// <returns>True if deserialization succeeded; otherwise, false</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="json"/> is null</exception>
     public static bool TryFromJson(string json, out TenantConnectionString? value)
     {
+        ArgumentNullException.ThrowIfNull(json);
+
         value = null;
 
         if (string.IsNullOrWhiteSpace(json))
