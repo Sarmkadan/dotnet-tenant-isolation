@@ -21,6 +21,8 @@ public static class TenantServiceTestsExtensions
     /// <param name="name">Tenant name. Defaults to "Test Tenant".</param>
     /// <param name="slug">Tenant slug. Defaults to "test-tenant".</param>
     /// <param name="status">Tenant status. Defaults to <see cref="TenantStatus.Active"/>.</param>
+    /// <exception cref="ArgumentNullException"><paramref name="name"/> is <see langword="null"/></exception>
+    /// <exception cref="ArgumentNullException"><paramref name="slug"/> is <see langword="null"/></exception>
     /// <returns>A configured tenant object ready for test assertions.</returns>
     public static Tenant CreateMockTenant(
         this TenantServiceTests _,
@@ -29,6 +31,9 @@ public static class TenantServiceTestsExtensions
         string slug = "test-tenant",
         TenantStatus status = TenantStatus.Active)
     {
+        ArgumentNullException.ThrowIfNull(name);
+        ArgumentNullException.ThrowIfNull(slug);
+
         return new Tenant
         {
             Id = id ?? Guid.NewGuid(),
@@ -47,12 +52,15 @@ public static class TenantServiceTestsExtensions
     /// </summary>
     /// <param name="tenantId">The tenant ID to match.</param>
     /// <param name="tenant">The tenant to return.</param>
+    /// <exception cref="ArgumentNullException"><paramref name="tenant"/> is <see langword="null"/></exception>
     /// <returns>The same <see cref="TenantServiceTests"/> instance for method chaining.</returns>
     public static TenantServiceTests SetupGetTenantById(
         this TenantServiceTests tests,
         Guid tenantId,
         Tenant tenant)
     {
+        ArgumentNullException.ThrowIfNull(tenant);
+
         tests._mockDynamicTenantStore
             .Setup(s => s.GetTenantByIdAsync(tenantId))
             .ReturnsAsync(tenant);
@@ -65,12 +73,17 @@ public static class TenantServiceTestsExtensions
     /// </summary>
     /// <param name="slug">The tenant slug to match (case-insensitive).</param>
     /// <param name="tenant">The tenant to return.</param>
+    /// <exception cref="ArgumentNullException"><paramref name="slug"/> is <see langword="null"/></exception>
+    /// <exception cref="ArgumentNullException"><paramref name="tenant"/> is <see langword="null"/></exception>
     /// <returns>The same <see cref="TenantServiceTests"/> instance for method chaining.</returns>
     public static TenantServiceTests SetupGetTenantBySlug(
         this TenantServiceTests tests,
         string slug,
         Tenant tenant)
     {
+        ArgumentNullException.ThrowIfNull(slug);
+        ArgumentNullException.ThrowIfNull(tenant);
+
         var activeTenants = new List<Tenant> { tenant };
 
         tests._mockDynamicTenantStore
@@ -85,6 +98,7 @@ public static class TenantServiceTestsExtensions
     /// </summary>
     /// <param name="tenantId">The tenant ID that should have been activated.</param>
     /// <param name="times">Optional verification times. Defaults to once.</param>
+    /// <exception cref="ArgumentNullException"><paramref name="times"/> is <see langword="null"/></exception>
     /// <returns>The same <see cref="TenantServiceTests"/> instance for method chaining.</returns>
     public static TenantServiceTests VerifyActivateTenantCalled(
         this TenantServiceTests tests,
@@ -105,6 +119,7 @@ public static class TenantServiceTestsExtensions
     /// </summary>
     /// <param name="count">Number of tenants to create. Defaults to 3.</param>
     /// <param name="status">Status for all tenants. Defaults to <see cref="TenantStatus.Active"/>.</param>
+    /// <exception cref="ArgumentOutOfRangeException"><paramref name="count"/> is negative.</exception>
     /// <returns>An <see cref="IReadOnlyList{Tenant}"/> of configured tenants.</returns>
     public static IReadOnlyList<Tenant> CreateMockTenants(
         this TenantServiceTests _,
