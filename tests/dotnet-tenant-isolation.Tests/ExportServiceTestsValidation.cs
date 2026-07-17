@@ -38,8 +38,10 @@ public static class ExportServiceTestsValidation
     /// </summary>
     /// <param name="value">The ExportServiceTests instance to check.</param>
     /// <returns>True if the instance is valid; otherwise, false.</returns>
+    /// <exception cref="ArgumentNullException">Thrown if value is null.</exception>
     public static bool IsValid(this ExportServiceTests value)
     {
+        ArgumentNullException.ThrowIfNull(value);
         return Validate(value).Count == 0;
     }
 
