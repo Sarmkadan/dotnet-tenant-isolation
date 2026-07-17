@@ -3144,6 +3144,69 @@ public class ValidationExample
 }
 ```
 
+## TenantServiceTestsExtensions
+
+The `TenantServiceTestsExtensions` class provides extension methods for `TenantServiceTests` that simplify unit testing of `TenantService` functionality. It offers reusable utilities for creating mock tenants, setting up tenant repository mocks, and verifying service method calls, reducing boilerplate code in test classes.
+
+**Key capabilities:**
+- Create mock tenant objects with customizable properties for testing
+- Set up mock repository responses for tenant retrieval by ID and slug
+- Verify that service methods like `ActivateTenantAsync` were called with expected parameters
+- Generate collections of mock tenants for testing batch operations and collections
+
+**Public members:**
+- `CreateMockTenant(this TenantServiceTests, Guid?, string, string, TenantStatus)` - Creates a mock tenant with configurable properties
+- `SetupGetTenantById(this TenantServiceTests, Guid, Tenant)` - Sets up mock repository to return a tenant when queried by ID
+- `SetupGetTenantBySlug(this TenantServiceTests, string, Tenant)` - Sets up mock repository to return a tenant when queried by slug
+- `VerifyActivateTenantCalled(this TenantServiceTests, Guid, Times?)` - Verifies that ActivateTenantAsync was called with specified tenant ID
+- `CreateMockTenants(this TenantServiceTests, int, TenantStatus)` - Creates a collection of mock tenants for testing
+
+**Usage example**
+
+```csharp
+using TenantIsolation.Models;
+using TenantIsolation.Services;
+using TenantIsolation.Tests;
+
+public class TenantServiceTestsExample
+{
+    private readonly TenantServiceTests _tenantServiceTests = new TenantServiceTests();
+
+    public async Task TestTenantServiceOperations()
+    {
+        // Create a mock tenant with custom properties
+        var mockTenant = _tenantServiceTests.CreateMockTenant(
+            id: Guid.Parse("3fa85f64-5717-4562-b3fc-2c963f66afa6"),
+            name: "Acme Corporation",
+            slug: "acme-corp",
+            status: TenantStatus.Active
+        );
+
+        // Setup mock repository to return our tenant when queried by ID
+        _tenantServiceTests.SetupGetTenantById(mockTenant.Id, mockTenant);
+
+        // Setup mock repository to return our tenant when queried by slug
+        _tenantServiceTests.SetupGetTenantBySlug("acme-corp", mockTenant);
+
+        // Test tenant activation
+        var tenantService = new TenantService(
+            _tenantServiceTests._mockTenantRepository.Object,
+            _tenantServiceTests._mockDynamicTenantStore.Object,
+            _tenantServiceTests._logger
+        );
+
+        var activationResult = await tenantService.ActivateTenantAsync(mockTenant.Id);
+        
+        // Verify that ActivateTenantAsync was called with our tenant ID
+        _tenantServiceTests.VerifyActivateTenantCalled(mockTenant.Id);
+
+        // Create multiple mock tenants for testing batch operations
+        var tenants = _tenantServiceTests.CreateMockTenants(count: 5);
+        Console.WriteLine($"Created {tenants.Count} mock tenants for testing");
+    }
+}
+```
+
 ## ITimeProvider
 
 The `ITimeProvider` interface provides a dependency injection-friendly abstraction for time operations, enabling testable and mockable time-dependent code in multi-tenant applications. It supports both real system time and mock time for testing scenarios.
@@ -5422,4 +5485,67 @@ public class ValidationExample
     }
 }
 ```
+## TenantServiceTestsExtensions
+
+The `TenantServiceTestsExtensions` class provides extension methods for `TenantServiceTests` that simplify unit testing of `TenantService` functionality. It offers reusable utilities for creating mock tenants, setting up tenant repository mocks, and verifying service method calls, reducing boilerplate code in test classes.
+
+**Key capabilities:**
+- Create mock tenant objects with customizable properties for testing
+- Set up mock repository responses for tenant retrieval by ID and slug
+- Verify that service methods like `ActivateTenantAsync` were called with expected parameters
+- Generate collections of mock tenants for testing batch operations and collections
+
+**Public members:**
+- `CreateMockTenant(this TenantServiceTests, Guid?, string, string, TenantStatus)` - Creates a mock tenant with configurable properties
+- `SetupGetTenantById(this TenantServiceTests, Guid, Tenant)` - Sets up mock repository to return a tenant when queried by ID
+- `SetupGetTenantBySlug(this TenantServiceTests, string, Tenant)` - Sets up mock repository to return a tenant when queried by slug
+- `VerifyActivateTenantCalled(this TenantServiceTests, Guid, Times?)` - Verifies that ActivateTenantAsync was called with specified tenant ID
+- `CreateMockTenants(this TenantServiceTests, int, TenantStatus)` - Creates a collection of mock tenants for testing
+
+**Usage example**
+
+```csharp
+using TenantIsolation.Models;
+using TenantIsolation.Services;
+using TenantIsolation.Tests;
+
+public class TenantServiceTestsExample
+{
+    private readonly TenantServiceTests _tenantServiceTests = new TenantServiceTests();
+
+    public async Task TestTenantServiceOperations()
+    {
+        // Create a mock tenant with custom properties
+        var mockTenant = _tenantServiceTests.CreateMockTenant(
+            id: Guid.Parse("3fa85f64-5717-4562-b3fc-2c963f66afa6"),
+            name: "Acme Corporation",
+            slug: "acme-corp",
+            status: TenantStatus.Active
+        );
+
+        // Setup mock repository to return our tenant when queried by ID
+        _tenantServiceTests.SetupGetTenantById(mockTenant.Id, mockTenant);
+
+        // Setup mock repository to return our tenant when queried by slug
+        _tenantServiceTests.SetupGetTenantBySlug("acme-corp", mockTenant);
+
+        // Test tenant activation
+        var tenantService = new TenantService(
+            _tenantServiceTests._mockTenantRepository.Object,
+            _tenantServiceTests._mockDynamicTenantStore.Object,
+            _tenantServiceTests._logger
+        );
+
+        var activationResult = await tenantService.ActivateTenantAsync(mockTenant.Id);
+        
+        // Verify that ActivateTenantAsync was called with our tenant ID
+        _tenantServiceTests.VerifyActivateTenantCalled(mockTenant.Id);
+
+        // Create multiple mock tenants for testing batch operations
+        var tenants = _tenantServiceTests.CreateMockTenants(count: 5);
+        Console.WriteLine($"Created {tenants.Count} mock tenants for testing");
+    }
+}
+```
+
 ## ITimeProvider
