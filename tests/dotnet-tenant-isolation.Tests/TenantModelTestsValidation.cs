@@ -23,6 +23,7 @@ public static class TenantModelTestsValidation
     /// <param name="tenant">The tenant to validate</param>
     /// <returns>List of validation errors; empty list if valid</returns>
     /// <exception cref="ArgumentNullException">Thrown if tenant is null</exception>
+    /// <exception cref="ArgumentException">Thrown if tenant is invalid, containing validation errors</exception>
     public static IReadOnlyList<string> Validate(this Tenant tenant)
     {
         ArgumentNullException.ThrowIfNull(tenant);
@@ -52,7 +53,7 @@ public static class TenantModelTestsValidation
         {
             errors.Add("AdminEmail is required and cannot be null or whitespace.");
         }
-        else if (!tenant.AdminEmail.Contains("@"))
+        else if (tenant.AdminEmail.IndexOf('@') <= 0 || tenant.AdminEmail.IndexOf('@') >= tenant.AdminEmail.Length - 1 || tenant.AdminEmail.IndexOf('.', tenant.AdminEmail.IndexOf('@')) <= tenant.AdminEmail.IndexOf('@'))
         {
             errors.Add("AdminEmail must be a valid email address.");
         }
@@ -121,12 +122,9 @@ public static class TenantModelTestsValidation
                 errors.Add("If DeletedAt is set, IsDeleted must be true.");
             }
         }
-        else
+        else if (tenant.IsDeleted)
         {
-            if (tenant.IsDeleted)
-            {
-                errors.Add("If IsDeleted is true, DeletedAt must be set.");
-            }
+            errors.Add("If IsDeleted is true, DeletedAt must be set.");
         }
 
         return errors.AsReadOnly();
@@ -137,10 +135,7 @@ public static class TenantModelTestsValidation
     /// </summary>
     /// <param name="tenant">The tenant to check</param>
     /// <returns>True if valid, false otherwise</returns>
-    public static bool IsValid(this Tenant tenant)
-    {
-        return Validate(tenant).Count == 0;
-    }
+    public static bool IsValid(this Tenant tenant) => Validate(tenant).Count == 0;
 
     /// <summary>
     /// Ensures a Tenant instance is valid, throwing an exception if not.
