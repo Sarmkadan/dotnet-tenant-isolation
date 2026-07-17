@@ -3,7 +3,7 @@
 // =============================================================================
 // Author: Vladyslav Zaiets | https://sarmkadan.com
 // CTO & Software Architect
-// =====================================================================
+// ===================================================================
 
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -34,12 +34,7 @@ public static class RepositoryJsonExtensions
     public static string ToJson<TEntity>(this Repository<TEntity> value, bool indented = false) where TEntity : class
     {
         ArgumentNullException.ThrowIfNull(value);
-
-        var options = indented
-            ? new JsonSerializerOptions(_jsonOptions) { WriteIndented = true }
-            : _jsonOptions;
-
-        return JsonSerializer.Serialize(value, options);
+        return JsonSerializer.Serialize(value, indented ? new JsonSerializerOptions(_jsonOptions) { WriteIndented = true } : _jsonOptions);
     }
 
     /// <summary>
@@ -48,15 +43,12 @@ public static class RepositoryJsonExtensions
     /// <typeparam name="TEntity">The entity type.</typeparam>
     /// <param name="json">The JSON string to deserialize.</param>
     /// <returns>The deserialized repository instance, or null if the JSON is null or empty.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="json"/> is null.</exception>
     /// <exception cref="JsonException">Thrown when the JSON is malformed or cannot be deserialized.</exception>
     public static Repository<TEntity>? FromJson<TEntity>(string json) where TEntity : class
     {
-        if (string.IsNullOrWhiteSpace(json))
-        {
-            return null;
-        }
-
-        return JsonSerializer.Deserialize<Repository<TEntity>>(json, _jsonOptions);
+        ArgumentNullException.ThrowIfNull(json);
+        return string.IsNullOrWhiteSpace(json) ? null : JsonSerializer.Deserialize<Repository<TEntity>>(json, _jsonOptions);
     }
 
     /// <summary>
@@ -66,8 +58,11 @@ public static class RepositoryJsonExtensions
     /// <param name="json">The JSON string to deserialize.</param>
     /// <param name="value">Receives the deserialized repository instance if successful.</param>
     /// <returns>True if deserialization succeeded; otherwise, false.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="json"/> is null.</exception>
     public static bool TryFromJson<TEntity>(string json, out Repository<TEntity>? value) where TEntity : class
     {
+        ArgumentNullException.ThrowIfNull(json);
+
         value = null;
 
         if (string.IsNullOrWhiteSpace(json))
