@@ -11,8 +11,11 @@ using System.Text.Json.Serialization.Metadata;
 namespace TenantIsolation.Controllers;
 
 /// <summary>
-/// Provides System.Text.Json serialization/deserialization extensions for <see cref="TenantApiController"/>
+/// Provides extension methods for serializing and deserializing <see cref="TenantApiController"/> instances to and from JSON.
 /// </summary>
+/// <remarks>
+/// Uses System.Text.Json with camelCase property naming policy and web defaults.
+/// </remarks>
 public static class TenantApiControllerJsonExtensions
 {
     private static readonly JsonSerializerOptions _jsonOptions = new(JsonSerializerDefaults.Web)
@@ -44,7 +47,7 @@ public static class TenantApiControllerJsonExtensions
     /// Deserializes a JSON string to a <see cref="TenantApiController"/> instance.
     /// </summary>
     /// <param name="json">The JSON string to deserialize.</param>
-    /// <returns>The deserialized controller instance, or null if the JSON is invalid.</returns>
+    /// <returns>The deserialized controller instance if successful; otherwise, null.</returns>
     /// <exception cref="ArgumentException">Thrown when <paramref name="json"/> is null or empty.</exception>
     public static TenantApiController? FromJson(string json)
     {
@@ -64,7 +67,7 @@ public static class TenantApiControllerJsonExtensions
     /// Attempts to deserialize a JSON string to a <see cref="TenantApiController"/> instance.
     /// </summary>
     /// <param name="json">The JSON string to deserialize.</param>
-    /// <param name="value">Receives the deserialized controller instance if successful.</param>
+    /// <param name="value">Receives the deserialized controller instance if successful; otherwise, null.</param>
     /// <returns>True if deserialization succeeded; otherwise, false.</returns>
     /// <exception cref="ArgumentException">Thrown when <paramref name="json"/> is null or empty.</exception>
     public static bool TryFromJson(string json, out TenantApiController? value)
