@@ -722,6 +722,85 @@ public class AnalyticsValidationExample
 }
 ```
 
+## NotificationServiceTestsExtensions
+
+The `NotificationServiceTestsExtensions` class provides extension methods for testing the `NotificationService` class, enabling easy creation and management of test notifications for unit testing scenarios. It offers methods to create, send, and manage notifications with various configurations, making it simple to test notification-related functionality.
+
+**Key capabilities:**
+- Create and send test notifications with custom titles, messages, and recipients
+- Mark notifications as read for testing read/unread scenarios
+- Create multiple notifications in bulk for load testing
+- Create notifications with specific IDs for edge case testing
+- Send existing notifications for testing notification service behavior
+
+**Public members:**
+- `CreateAndSendTestNotificationAsync(NotificationServiceTests, string, string, string, bool)` - Creates and sends a notification with optional read status
+- `SendTestNotificationAsync(NotificationServiceTests, Notification)` - Sends an existing notification
+- `MarkTestNotificationAsReadAsync(NotificationServiceTests, string)` - Marks a notification as read
+- `CreateMultipleTestNotificationsAsync(NotificationServiceTests, int, string, string)` - Creates multiple notifications in bulk
+- `CreateTestNotificationWithId(NotificationServiceTests, string, string, string, string)` - Creates a notification with a specific ID
+
+**Usage example**
+
+```csharp
+using TenantIsolation.Models;
+using TenantIsolation.Services;
+using TenantIsolation.Tests;
+
+public class NotificationServiceTestsExample
+{
+    private readonly NotificationServiceTests _notificationServiceTests;
+    private readonly NotificationService _notificationService;
+
+    public NotificationServiceTestsExample()
+    {
+        // Setup test dependencies
+        _notificationServiceTests = new NotificationServiceTests();
+        _notificationService = new NotificationService(null!, null!); // Simplified for example
+    }
+
+    public async Task RunNotificationTests()
+    {
+        // Test creating and sending a notification
+        var notification = await _notificationServiceTests.CreateAndSendTestNotificationAsync(
+            title: "Welcome to the platform",
+            message: "Thank you for registering. Your account is ready to use.",
+            recipientUserId: "user-123",
+            isRead: false
+        );
+
+        Console.WriteLine($"Created notification: {notification.Title} (Id: {notification.Id})");
+
+        // Test marking notification as read
+        var markResult = await _notificationServiceTests.MarkTestNotificationAsReadAsync(notification.Id);
+        Console.WriteLine($"Marked as read: {markResult}");
+
+        // Test creating multiple notifications
+        var notifications = await _notificationServiceTests.CreateMultipleTestNotificationsAsync(
+            count: 5,
+            recipientUserId: "user-123",
+            prefix: "System Update"
+        );
+
+        Console.WriteLine($"Created {notifications.Count} notifications");
+
+        // Test creating a notification with specific ID
+        var specificNotification = _notificationServiceTests.CreateTestNotificationWithId(
+            notificationId: "test-notification-001",
+            title: "Test Notification",
+            message: "This is a test notification with specific ID",
+            recipientUserId: "user-456"
+        );
+
+        Console.WriteLine($"Created notification with specific ID: {specificNotification.Id}");
+
+        // Test sending an existing notification
+        var sentNotification = await _notificationServiceTests.SendTestNotificationAsync(specificNotification);
+        Console.WriteLine($"Sent notification: {sentNotification.Title}");
+    }
+}
+```
+
 ## TenantModelTestsValidation
 
 The `TenantModelTestsValidation` class provides comprehensive validation helpers for tenant model testing scenarios, ensuring that test data meets the required constraints before validation. It offers methods to validate tenant properties, check validity, and throw exceptions when validation fails across multiple realistic test scenarios.
