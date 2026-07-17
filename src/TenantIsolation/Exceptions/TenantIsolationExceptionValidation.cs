@@ -51,9 +51,10 @@ public static class TenantIsolationExceptionValidation
     /// </summary>
     /// <param name="value">The exception to check</param>
     /// <returns>True if valid; otherwise false</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="value"/> is null</exception>
     public static bool IsValid(this TenantIsolationException? value)
     {
-        return value?.Validate().Count == 0;
+        return value is not null && value.Validate().Count == 0;
     }
 
     /// <summary>
@@ -87,7 +88,7 @@ public static class TenantIsolationExceptionValidation
         var errors = new List<string>();
 
         // Base validation
-        errors.AddRange(((TenantIsolationException)value).Validate());
+        errors.AddRange(value.Validate());
 
         return errors.AsReadOnly();
     }
@@ -97,9 +98,10 @@ public static class TenantIsolationExceptionValidation
     /// </summary>
     /// <param name="value">The exception to check</param>
     /// <returns>True if valid; otherwise false</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="value"/> is null</exception>
     public static bool IsValid(this TenantNotResolvedException? value)
     {
-        return value?.Validate().Count == 0;
+        return value is not null && value.Validate().Count == 0;
     }
 
     /// <summary>
@@ -133,7 +135,7 @@ public static class TenantIsolationExceptionValidation
         var errors = new List<string>();
 
         // Base validation
-        errors.AddRange(((TenantIsolationException)value).Validate());
+        errors.AddRange(value.Validate());
 
         // Validate TenantId
         if (value.TenantId == Guid.Empty)
@@ -149,9 +151,10 @@ public static class TenantIsolationExceptionValidation
     /// </summary>
     /// <param name="value">The exception to check</param>
     /// <returns>True if valid; otherwise false</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="value"/> is null</exception>
     public static bool IsValid(this TenantNotActiveException? value)
     {
-        return value?.Validate().Count == 0;
+        return value is not null && value.Validate().Count == 0;
     }
 
     /// <summary>
@@ -185,7 +188,7 @@ public static class TenantIsolationExceptionValidation
         var errors = new List<string>();
 
         // Base validation
-        errors.AddRange(((TenantIsolationException)value).Validate());
+        errors.AddRange(value.Validate());
 
         return errors.AsReadOnly();
     }
@@ -195,9 +198,10 @@ public static class TenantIsolationExceptionValidation
     /// </summary>
     /// <param name="value">The exception to check</param>
     /// <returns>True if valid; otherwise false</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="value"/> is null</exception>
     public static bool IsValid(this TenantConfigurationException? value)
     {
-        return value?.Validate().Count == 0;
+        return value is not null && value.Validate().Count == 0;
     }
 
     /// <summary>
@@ -231,7 +235,7 @@ public static class TenantIsolationExceptionValidation
         var errors = new List<string>();
 
         // Base validation
-        errors.AddRange(((TenantIsolationException)value).Validate());
+        errors.AddRange(value.Validate());
 
         // Validate TenantId
         if (value.TenantId == Guid.Empty)
@@ -253,9 +257,10 @@ public static class TenantIsolationExceptionValidation
     /// </summary>
     /// <param name="value">The exception to check</param>
     /// <returns>True if valid; otherwise false</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="value"/> is null</exception>
     public static bool IsValid(this DataIsolationViolationException? value)
     {
-        return value?.Validate().Count == 0;
+        return value is not null && value.Validate().Count == 0;
     }
 
     /// <summary>
@@ -289,7 +294,7 @@ public static class TenantIsolationExceptionValidation
         var errors = new List<string>();
 
         // Base validation
-        errors.AddRange(((TenantIsolationException)value).Validate());
+        errors.AddRange(value.Validate());
 
         return errors.AsReadOnly();
     }
@@ -299,9 +304,10 @@ public static class TenantIsolationExceptionValidation
     /// </summary>
     /// <param name="value">The exception to check</param>
     /// <returns>True if valid; otherwise false</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="value"/> is null</exception>
     public static bool IsValid(this TenantDatabaseException? value)
     {
-        return value?.Validate().Count == 0;
+        return value is not null && value.Validate().Count == 0;
     }
 
     /// <summary>
