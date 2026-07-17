@@ -46,7 +46,8 @@ public static class DataIsolationServiceJsonExtensions
     /// </summary>
     /// <param name="json">The JSON string to deserialize.</param>
     /// <returns>The deserialized <see cref="DataIsolationService"/> instance, or <see langword="null"/> if JSON is empty.</returns>
-    /// <exception cref="JsonException">Thrown when the JSON is invalid or cannot be deserialized.</exception>
+    /// <exception cref="ArgumentException">Thrown when <paramref name="json"/> is null or empty.</exception>
+/// <exception cref="JsonException">Thrown when the JSON is invalid or cannot be deserialized.</exception>
     public static DataIsolationService? FromJson(string json)
     {
         ArgumentException.ThrowIfNullOrEmpty(json);
@@ -60,19 +61,32 @@ public static class DataIsolationServiceJsonExtensions
     /// <param name="json">The JSON string to deserialize.</param>
     /// <param name="value">Receives the deserialized instance if successful; otherwise, <see langword="null"/>.</param>
     /// <returns><see langword="true"/> if deserialization succeeded; otherwise, <see langword="false"/>.</returns>
-    public static bool TryFromJson(string json, out DataIsolationService? value)
-    {
-        ArgumentException.ThrowIfNullOrEmpty(json);
 
-        try
-        {
-            value = JsonSerializer.Deserialize<DataIsolationService>(json, _jsonOptions);
-            return true;
-        }
-        catch (JsonException)
-        {
-            value = null;
-            return false;
-        }
+/// <exception cref="ArgumentNullException">Thrown when <paramref name="json"/> is <see langword="null"/>.</exception>
+/// <exception cref="ArgumentException">Thrown when <paramref name="json"/> is empty.</exception>
+    public static bool TryFromJson(string json, out DataIsolationService? value)
+{
+    if (json is null)
+    {
+        value = null;
+        return false;
     }
+
+    if (json.Length == 0)
+    {
+        value = null;
+        return false;
+    }
+
+    try
+    {
+        value = JsonSerializer.Deserialize<DataIsolationService>(json, _jsonOptions);
+        return true;
+    }
+    catch (JsonException)
+    {
+        value = null;
+        return false;
+    }
+}
 }
