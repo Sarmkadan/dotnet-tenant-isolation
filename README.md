@@ -557,6 +557,171 @@ public class TenantModelTestsExample
 }
 ```
 
+## AnalyticsControllerValidation
+
+The `AnalyticsControllerValidation` class provides comprehensive validation helpers for the `AnalyticsController` return types, ensuring data integrity for health status, tenant activity metrics, usage statistics, and error metrics. It offers validation methods, status checks, and exception throwing for all analytics-related models.
+
+**Key capabilities:**
+- Validate health status models with component health checks
+- Validate tenant activity metrics including user counts, request rates, and storage usage
+- Validate usage statistics with response time percentiles and endpoint analytics
+- Validate error metrics with error rates and top error tracking
+- Support for all validation scenarios with detailed error messages
+
+**Public members:**
+- `HealthStatus` - Health status model with status, timestamp, and component health
+- `ComponentHealth` - Component health model with name, status, and response time
+- `TenantActivityMetrics` - Tenant activity metrics with tenant ID, user counts, and storage data
+- `UsageStatistics` - Usage statistics with request counts, response times, and endpoint analytics
+- `EndpointUsage` - Endpoint usage statistics with endpoint path and request metrics
+- `ErrorMetrics` - Error metrics with error rates and top error tracking
+- `ErrorDetail` - Error detail model with error type and occurrence data
+- Extension methods: `Validate()`, `IsValid()`, `EnsureValid()` for all model types
+
+**Usage example**
+
+```csharp
+using TenantIsolation.Controllers;
+
+public class AnalyticsValidationExample
+{
+    public static void ValidateAnalyticsModels()
+    {
+        // Example 1: Validate health status
+        var healthStatus = new AnalyticsControllerValidation.HealthStatus
+        {
+            Status = "Healthy",
+            Timestamp = DateTime.UtcNow,
+            Components = new Dictionary<string, AnalyticsControllerValidation.ComponentHealth>
+            {
+                { "Database", new AnalyticsControllerValidation.ComponentHealth
+                    {
+                        Name = "Database",
+                        Status = "Healthy",
+                        ResponseTimeMs = 45
+                    }
+                },
+                { "Cache", new AnalyticsControllerValidation.ComponentHealth
+                    {
+                        Name = "Cache",
+                        Status = "Healthy",
+                        ResponseTimeMs = 8
+                    }
+                }
+            }
+        };
+
+        // Validate the health status
+        var healthErrors = healthStatus.Validate();
+        if (healthErrors.Count > 0)
+        {
+            Console.WriteLine("Health status validation errors:");
+            foreach (var error in healthErrors)
+            {
+                Console.WriteLine($"- {error}");
+            }
+        }
+        else
+        {
+            Console.WriteLine("Health status is valid");
+        }
+
+        // Check if valid
+        bool isHealthValid = healthStatus.IsValid();
+        Console.WriteLine($"Health status valid: {isHealthValid}");
+
+        // Example 2: Validate tenant activity metrics
+        var tenantMetrics = new AnalyticsControllerValidation.TenantActivityMetrics
+        {
+            TenantId = Guid.NewGuid(),
+            ActiveUsers = 42,
+            RequestsPerHour = 1560,
+            DataProcessedGb = 12.5m,
+            StorageUsedGb = 85.3m,
+            LastActivityAt = DateTime.UtcNow.AddMinutes(-5),
+            Period = "24h"
+        };
+
+        var metricsErrors = tenantMetrics.Validate();
+        Console.WriteLine($"Tenant activity metrics validation has {metricsErrors.Count} errors");
+
+        // Example 3: Validate usage statistics
+        var usageStats = new AnalyticsControllerValidation.UsageStatistics
+        {
+            Period = "7d",
+            TotalRequests = 15840,
+            SuccessfulRequests = 15720,
+            FailedRequests = 120,
+            AverageResponseTimeMs = 145,
+            P95ResponseTimeMs = 450,
+            P99ResponseTimeMs = 850,
+            UniqueUsers = 89,
+            TopEndpoints = new List<AnalyticsControllerValidation.EndpointUsage>
+            {
+                new AnalyticsControllerValidation.EndpointUsage
+                {
+                    Endpoint = "/api/users",
+                    Requests = 8520,
+                    AverageResponseMs = 120
+                },
+                new AnalyticsControllerValidation.EndpointUsage
+                {
+                    Endpoint = "/api/products",
+                    Requests = 5210,
+                    AverageResponseMs = 180
+                }
+            }
+        };
+
+        var usageErrors = usageStats.Validate();
+        Console.WriteLine($"Usage statistics validation has {usageErrors.Count} errors");
+
+        // Example 4: Validate error metrics
+        var errorMetrics = new AnalyticsControllerValidation.ErrorMetrics
+        {
+            Period = "24h",
+            TotalErrors = 125,
+            ErrorRate = 0.0079m,
+            TopErrors = new List<AnalyticsControllerValidation.ErrorDetail>
+            {
+                new AnalyticsControllerValidation.ErrorDetail
+                {
+                    ErrorType = "TimeoutException",
+                    Count = 65,
+                    LastOccurred = DateTime.UtcNow.AddMinutes(-15)
+                },
+                new AnalyticsControllerValidation.ErrorDetail
+                {
+                    ErrorType = "NullReferenceException",
+                    Count = 42,
+                    LastOccurred = DateTime.UtcNow.AddMinutes(-30)
+                }
+            },
+            MostAffectedEndpoints = new List<string> { "/api/users", "/api/auth" }
+        };
+
+        var errorErrors = errorMetrics.Validate();
+        Console.WriteLine($"Error metrics validation has {errorErrors.Count} errors");
+
+        // Example 5: Ensure valid (throws if invalid)
+        try
+        {
+            var invalidHealth = new AnalyticsControllerValidation.HealthStatus
+            {
+                Status = "", // Invalid - empty status
+                Timestamp = DateTime.UtcNow,
+                Components = new Dictionary<string, AnalyticsControllerValidation.ComponentHealth>()
+            };
+            invalidHealth.EnsureValid();
+        }
+        catch (ArgumentException ex)
+        {
+            Console.WriteLine($"Validation failed as expected: {ex.Message}");
+        }
+    }
+}
+```
+
 ## TenantModelTestsValidation
 
 The `TenantModelTestsValidation` class provides comprehensive validation helpers for tenant model testing scenarios, ensuring that test data meets the required constraints before validation. It offers methods to validate tenant properties, check validity, and throw exceptions when validation fails across multiple realistic test scenarios.
