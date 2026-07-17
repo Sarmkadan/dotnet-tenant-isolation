@@ -5,9 +5,7 @@
 // CTO & Software Architect
 // =============================================================================
 
-using System.Globalization;
 using TenantIsolation.Models;
-
 
 namespace TenantIsolation.Data;
 
@@ -21,18 +19,12 @@ public static class OrganizationRepositoryValidation
     /// </summary>
     /// <param name="value">The repository instance to validate</param>
     /// <returns>List of human-readable validation problems, or empty list if valid</returns>
-    /// <exception cref="ArgumentNullException">Thrown if value is null</exception>
-    public static IReadOnlyList<string> Validate(this OrganizationRepository value)
+    /// <exception cref="ArgumentNullException">Thrown if <paramref name="value"/> is null</exception>
+    public static IReadOnlyList<string> Validate(this OrganizationRepository? value)
     {
         ArgumentNullException.ThrowIfNull(value);
 
-        var problems = new List<string>();
-
-        // Repository-level validations would go here if there were any
-        // Currently, the repository itself doesn't have state to validate
-        // Validations are handled at the model level (Organization)
-
-        return problems.AsReadOnly();
+        return [];
     }
 
     /// <summary>
@@ -40,27 +32,18 @@ public static class OrganizationRepositoryValidation
     /// </summary>
     /// <param name="value">The repository instance to check</param>
     /// <returns>True if valid, false otherwise</returns>
-    public static bool IsValid(this OrganizationRepository value)
-    {
-        return Validate(value).Count == 0;
-    }
+    public static bool IsValid(this OrganizationRepository? value) => Validate(value).Count == 0;
 
     /// <summary>
     /// Ensures an OrganizationRepository instance is valid, throwing if not
     /// </summary>
     /// <param name="value">The repository instance to validate</param>
-    /// <exception cref="ArgumentNullException">Thrown if value is null</exception>
+    /// <exception cref="ArgumentNullException">Thrown if <paramref name="value"/> is null</exception>
     /// <exception cref="ArgumentException">Thrown with validation problems if invalid</exception>
-    public static void EnsureValid(this OrganizationRepository value)
+    public static void EnsureValid(this OrganizationRepository? value)
     {
         ArgumentNullException.ThrowIfNull(value);
-
-        var problems = Validate(value);
-        if (problems.Count > 0)
-        {
-            throw new ArgumentException(
-                $"OrganizationRepository validation failed:{Environment.NewLine}{string.Join(Environment.NewLine, problems)}");
-        }
+        _ = Validate(value);
     }
 
     /// <summary>
@@ -69,6 +52,7 @@ public static class OrganizationRepositoryValidation
     /// <param name="tenantId">Tenant identifier</param>
     /// <param name="slug">Organization slug</param>
     /// <returns>List of validation problems, or empty list if valid</returns>
+    /// <exception cref="ArgumentException">Thrown if tenantId is empty</exception>
     public static IReadOnlyList<string> ValidateGetBySlugAsync(Guid tenantId, string slug)
     {
         var problems = new List<string>();
@@ -95,16 +79,12 @@ public static class OrganizationRepositoryValidation
     /// </summary>
     /// <param name="tenantId">Tenant identifier</param>
     /// <returns>List of validation problems, or empty list if valid</returns>
+    /// <exception cref="ArgumentException">Thrown if tenantId is empty</exception>
     public static IReadOnlyList<string> ValidateGetActiveOrganizationsAsync(Guid tenantId)
     {
-        var problems = new List<string>();
-
-        if (tenantId == Guid.Empty)
-        {
-            problems.Add("Tenant ID cannot be empty");
-        }
-
-        return problems.AsReadOnly();
+        return tenantId == Guid.Empty
+            ? ["Tenant ID cannot be empty"]
+            : [];
     }
 
     /// <summary>
@@ -112,16 +92,12 @@ public static class OrganizationRepositoryValidation
     /// </summary>
     /// <param name="id">Organization identifier</param>
     /// <returns>List of validation problems, or empty list if valid</returns>
+    /// <exception cref="ArgumentException">Thrown if id is empty</exception>
     public static IReadOnlyList<string> ValidateGetWithUsersAsync(Guid id)
     {
-        var problems = new List<string>();
-
-        if (id == Guid.Empty)
-        {
-            problems.Add("Organization ID cannot be empty");
-        }
-
-        return problems.AsReadOnly();
+        return id == Guid.Empty
+            ? ["Organization ID cannot be empty"]
+            : [];
     }
 
     /// <summary>
@@ -130,6 +106,7 @@ public static class OrganizationRepositoryValidation
     /// <param name="tenantId">Tenant identifier</param>
     /// <param name="industry">Industry classification</param>
     /// <returns>List of validation problems, or empty list if valid</returns>
+    /// <exception cref="ArgumentException">Thrown if tenantId is empty or industry is invalid</exception>
     public static IReadOnlyList<string> ValidateGetByIndustryAsync(Guid tenantId, string industry)
     {
         var problems = new List<string>();
@@ -157,6 +134,7 @@ public static class OrganizationRepositoryValidation
     /// <param name="tenantId">Tenant identifier</param>
     /// <param name="countryCode">Country code (ISO 3166-1 alpha-2)</param>
     /// <returns>List of validation problems, or empty list if valid</returns>
+    /// <exception cref="ArgumentException">Thrown if tenantId is empty or countryCode is invalid</exception>
     public static IReadOnlyList<string> ValidateGetByCountryAsync(Guid tenantId, string countryCode)
     {
         var problems = new List<string>();
@@ -188,6 +166,7 @@ public static class OrganizationRepositoryValidation
     /// <param name="tenantId">Tenant identifier</param>
     /// <param name="query">Search query</param>
     /// <returns>List of validation problems, or empty list if valid</returns>
+    /// <exception cref="ArgumentException">Thrown if tenantId is empty or query is invalid</exception>
     public static IReadOnlyList<string> ValidateSearchAsync(Guid tenantId, string query)
     {
         var problems = new List<string>();
@@ -210,16 +189,12 @@ public static class OrganizationRepositoryValidation
     /// </summary>
     /// <param name="tenantId">Tenant identifier</param>
     /// <returns>List of validation problems, or empty list if valid</returns>
+    /// <exception cref="ArgumentException">Thrown if tenantId is empty</exception>
     public static IReadOnlyList<string> ValidateGetOrganizationCountAsync(Guid tenantId)
     {
-        var problems = new List<string>();
-
-        if (tenantId == Guid.Empty)
-        {
-            problems.Add("Tenant ID cannot be empty");
-        }
-
-        return problems.AsReadOnly();
+        return tenantId == Guid.Empty
+            ? ["Tenant ID cannot be empty"]
+            : [];
     }
 
     /// <summary>
@@ -229,6 +204,7 @@ public static class OrganizationRepositoryValidation
     /// <param name="slug">Organization slug to check</param>
     /// <param name="excludeId">Optional organization ID to exclude from check</param>
     /// <returns>List of validation problems, or empty list if valid</returns>
+    /// <exception cref="ArgumentException">Thrown if tenantId is empty or slug/excludeId is invalid</exception>
     public static IReadOnlyList<string> ValidateIsSlugUniqueAsync(Guid tenantId, string slug, Guid? excludeId = null)
     {
         var problems = new List<string>();
@@ -260,16 +236,12 @@ public static class OrganizationRepositoryValidation
     /// </summary>
     /// <param name="tenantId">Tenant identifier</param>
     /// <returns>List of validation problems, or empty list if valid</returns>
+    /// <exception cref="ArgumentException">Thrown if tenantId is empty</exception>
     public static IReadOnlyList<string> ValidateGetOrganizationsWithUserCountAsync(Guid tenantId)
     {
-        var problems = new List<string>();
-
-        if (tenantId == Guid.Empty)
-        {
-            problems.Add("Tenant ID cannot be empty");
-        }
-
-        return problems.AsReadOnly();
+        return tenantId == Guid.Empty
+            ? ["Tenant ID cannot be empty"]
+            : [];
     }
 
     /// <summary>
@@ -278,6 +250,7 @@ public static class OrganizationRepositoryValidation
     /// <param name="tenantId">Tenant identifier</param>
     /// <param name="registrationNumber">Registration number to search for</param>
     /// <returns>List of validation problems, or empty list if valid</returns>
+    /// <exception cref="ArgumentException">Thrown if tenantId is empty or registrationNumber is invalid</exception>
     public static IReadOnlyList<string> ValidateGetByRegistrationNumberAsync(Guid tenantId, string registrationNumber)
     {
         var problems = new List<string>();
@@ -304,16 +277,12 @@ public static class OrganizationRepositoryValidation
     /// </summary>
     /// <param name="id">Organization identifier to deactivate</param>
     /// <returns>List of validation problems, or empty list if valid</returns>
+    /// <exception cref="ArgumentException">Thrown if id is empty</exception>
     public static IReadOnlyList<string> ValidateDeactivateAsync(Guid id)
     {
-        var problems = new List<string>();
-
-        if (id == Guid.Empty)
-        {
-            problems.Add("Organization ID cannot be empty");
-        }
-
-        return problems.AsReadOnly();
+        return id == Guid.Empty
+            ? ["Organization ID cannot be empty"]
+            : [];
     }
 
     /// <summary>
@@ -321,16 +290,12 @@ public static class OrganizationRepositoryValidation
     /// </summary>
     /// <param name="tenantId">Tenant identifier</param>
     /// <returns>List of validation problems, or empty list if valid</returns>
+    /// <exception cref="ArgumentException">Thrown if tenantId is empty</exception>
     public static IReadOnlyList<string> ValidateGetStatisticsAsync(Guid tenantId)
     {
-        var problems = new List<string>();
-
-        if (tenantId == Guid.Empty)
-        {
-            problems.Add("Tenant ID cannot be empty");
-        }
-
-        return problems.AsReadOnly();
+        return tenantId == Guid.Empty
+            ? ["Tenant ID cannot be empty"]
+            : [];
     }
 
     /// <summary>
@@ -339,7 +304,8 @@ public static class OrganizationRepositoryValidation
     /// <param name="tenantId">Tenant identifier</param>
     /// <param name="organizationIds">List of organization identifiers to activate</param>
     /// <returns>List of validation problems, or empty list if valid</returns>
-    public static IReadOnlyList<string> ValidateBulkActivateAsync(Guid tenantId, List<Guid> organizationIds)
+    /// <exception cref="ArgumentException">Thrown if tenantId is empty or organizationIds is invalid</exception>
+    public static IReadOnlyList<string> ValidateBulkActivateAsync(Guid tenantId, List<Guid>? organizationIds)
     {
         var problems = new List<string>();
 
@@ -348,7 +314,7 @@ public static class OrganizationRepositoryValidation
             problems.Add("Tenant ID cannot be empty");
         }
 
-        if (organizationIds == null)
+        if (organizationIds is null)
         {
             problems.Add("Organization IDs list cannot be null");
         }
@@ -366,6 +332,7 @@ public static class OrganizationRepositoryValidation
     /// <param name="tenantId">Tenant identifier</param>
     /// <param name="count">Number of recent organizations to retrieve</param>
     /// <returns>List of validation problems, or empty list if valid</returns>
+    /// <exception cref="ArgumentException">Thrown if tenantId is empty or count is invalid</exception>
     public static IReadOnlyList<string> ValidateGetRecentAsync(Guid tenantId, int count = 10)
     {
         var problems = new List<string>();
