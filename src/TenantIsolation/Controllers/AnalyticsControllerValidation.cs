@@ -434,8 +434,11 @@ public static class AnalyticsControllerValidation
     /// </summary>
     /// <param name="period">The period string to validate</param>
     /// <returns>True if valid period format, false otherwise</returns>
+    /// <exception cref="ArgumentNullException">Thrown when period is null</exception>
     private static bool IsValidTimePeriod(string period)
     {
+        ArgumentNullException.ThrowIfNull(period);
+
         if (string.IsNullOrWhiteSpace(period))
             return false;
 
@@ -457,12 +460,7 @@ public static class AnalyticsControllerValidation
 
         // Extract the numeric part and validate it's a positive number
         var numericPart = period.AsSpan(0, period.Length - 1);
-        if (numericPart.IsEmpty || !int.TryParse(numericPart, NumberStyles.Integer, CultureInfo.InvariantCulture, out var number) || number <= 0)
-        {
-            return false;
-        }
-
-        return true;
+        return !numericPart.IsEmpty && int.TryParse(numericPart, NumberStyles.Integer, CultureInfo.InvariantCulture, out var number) && number > 0;
     }
 
     /// <summary>
@@ -498,6 +496,7 @@ public static class AnalyticsControllerValidation
     /// </summary>
     /// <param name="value">The HealthStatus to validate</param>
     /// <exception cref="ArgumentException">Thrown when value is not valid</exception>
+    /// <exception cref="ArgumentNullException">Thrown when value is null</exception>
     public static void EnsureValid(this HealthStatus value)
     {
         ArgumentNullException.ThrowIfNull(value);
@@ -515,6 +514,7 @@ public static class AnalyticsControllerValidation
     /// </summary>
     /// <param name="value">The TenantActivityMetrics to validate</param>
     /// <exception cref="ArgumentException">Thrown when value is not valid</exception>
+    /// <exception cref="ArgumentNullException">Thrown when value is null</exception>
     public static void EnsureValid(this TenantActivityMetrics value)
     {
         ArgumentNullException.ThrowIfNull(value);
@@ -532,6 +532,7 @@ public static class AnalyticsControllerValidation
     /// </summary>
     /// <param name="value">The UsageStatistics to validate</param>
     /// <exception cref="ArgumentException">Thrown when value is not valid</exception>
+    /// <exception cref="ArgumentNullException">Thrown when value is null</exception>
     public static void EnsureValid(this UsageStatistics value)
     {
         ArgumentNullException.ThrowIfNull(value);
@@ -549,6 +550,7 @@ public static class AnalyticsControllerValidation
     /// </summary>
     /// <param name="value">The ErrorMetrics to validate</param>
     /// <exception cref="ArgumentException">Thrown when value is not valid</exception>
+    /// <exception cref="ArgumentNullException">Thrown when value is null</exception>
     public static void EnsureValid(this ErrorMetrics value)
     {
         ArgumentNullException.ThrowIfNull(value);
