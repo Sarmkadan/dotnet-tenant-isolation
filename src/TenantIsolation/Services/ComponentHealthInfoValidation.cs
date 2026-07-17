@@ -3,7 +3,7 @@
 // =============================================================================
 // Author: Vladyslav Zaiets | https://sarmkadan.com
 // CTO & Software Architect
-// =============================================================================
+// =====================================================================
 
 using System.Globalization;
 
@@ -26,10 +26,10 @@ public static class ComponentHealthInfoValidation
 
         var errors = new List<string>();
 
-        // Validate Name
-        if (string.IsNullOrEmpty(value.Name))
+        // Validate Name (must not be null, empty, or whitespace-only)
+        if (string.IsNullOrWhiteSpace(value.Name))
         {
-            errors.Add("Name cannot be null or empty.");
+            errors.Add("Name cannot be null, empty, or whitespace.");
         }
 
         // Validate Message (null is invalid, empty is acceptable)
@@ -58,6 +58,7 @@ public static class ComponentHealthInfoValidation
     /// </summary>
     /// <param name="value">The component health info to validate</param>
     /// <returns>True if valid; otherwise, false</returns>
+    /// <exception cref="ArgumentNullException">Thrown if <paramref name="value"/> is null</exception>
     public static bool IsValid(this ComponentHealthInfo value)
     {
         return value.Validate().Count == 0;
