@@ -20,7 +20,7 @@ public static class DataIsolationPolicyValidation
     /// </summary>
     /// <param name="value">The policy to validate</param>
     /// <returns>List of validation problems (empty if valid)</returns>
-    /// <exception cref="ArgumentNullException">Thrown if value is null</exception>
+    /// <exception cref="ArgumentNullException">Thrown if <paramref name="value"/> is null</exception>
     public static IReadOnlyList<string> Validate(this DataIsolationPolicy value)
     {
         ArgumentNullException.ThrowIfNull(value);
@@ -150,24 +150,18 @@ public static class DataIsolationPolicyValidation
     /// </summary>
     /// <param name="value">The policy to check</param>
     /// <returns>True if the policy is valid; otherwise, false</returns>
-    /// <exception cref="ArgumentNullException">Thrown if value is null</exception>
+    /// <exception cref="ArgumentNullException">Thrown if <paramref name="value"/> is null</exception>
     public static bool IsValid(this DataIsolationPolicy value)
     {
-        try
-        {
-            return value.Validate().Count == 0;
-        }
-        catch (ArgumentNullException)
-        {
-            return false;
-        }
+        ArgumentNullException.ThrowIfNull(value);
+        return value.Validate().Count == 0;
     }
 
     /// <summary>
     /// Ensures that a DataIsolationPolicy instance is valid, throwing an exception if not
     /// </summary>
     /// <param name="value">The policy to validate</param>
-    /// <exception cref="ArgumentNullException">Thrown if value is null</exception>
+    /// <exception cref="ArgumentNullException">Thrown if <paramref name="value"/> is null</exception>
     /// <exception cref="ArgumentException">Thrown if the policy is invalid, containing a list of problems</exception>
     public static void EnsureValid(this DataIsolationPolicy value)
     {
@@ -179,7 +173,7 @@ public static class DataIsolationPolicyValidation
             return;
         }
 
-        var message = string.Join("- ", errors);
+        var message = string.Join(Environment.NewLine + "- ", errors);
         throw new ArgumentException("DataIsolationPolicy validation failed:" + Environment.NewLine + "- " + message);
     }
 }
