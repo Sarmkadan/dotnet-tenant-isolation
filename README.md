@@ -557,6 +557,199 @@ public class TenantModelTestsExample
 }
 ```
 
+## TenantModelTestsValidation
+
+The `TenantModelTestsValidation` class provides comprehensive validation helpers for tenant model testing scenarios, ensuring that test data meets the required constraints before validation. It offers methods to validate tenant properties, check validity, and throw exceptions when validation fails across multiple realistic test scenarios.
+
+**Key capabilities:**
+- Validate tenant instances and their properties
+- Check tenant status and lifecycle operations
+- Validate configuration settings and feature flags
+- Support for all tenant model validation scenarios
+
+**Public members:**
+- `Validate(this Tenant)` - Validates tenant instance properties and returns validation errors
+- `IsValid(this Tenant)` - Determines whether the tenant is valid
+- `EnsureValid(this Tenant)` - Validates and throws if invalid
+- Extension methods for configuration and feature validation
+
+**Usage example**
+
+```csharp
+using FluentAssertions;
+using TenantIsolation.Models;
+using TenantIsolation.Constants;
+using TenantIsolation.Data;
+
+public class TenantModelTestsValidationExample
+{
+    private readonly TenantModelTestsValidation _validation;
+
+    public TenantModelTestsValidationExample()
+    {
+        _validation = new TenantModelTestsValidation();
+    }
+
+    public void RunValidationTests()
+    {
+        // Test tenant validation
+        var tenant = new Tenant
+        {
+            Id = Guid.NewGuid(),
+            Name = "Test Tenant",
+            Slug = "test-tenant",
+            Status = TenantStatus.Active,
+            IsDeleted = false,
+            SubscriptionExpiresAt = DateTime.UtcNow.AddDays(30)
+        };
+
+        // Validate tenant
+        var errors = tenant.Validate();
+        errors.Should().BeEmpty();
+        
+        // Check if valid
+        bool isValid = tenant.IsValid();
+        isValid.Should().BeTrue();
+
+        // Ensure valid (no exception)
+        tenant.EnsureValid();
+
+        // Test invalid tenant (missing required fields)
+        var invalidTenant = new Tenant
+        {
+            Id = Guid.Empty, // Invalid - empty ID
+            Name = "", // Invalid - empty name
+            Slug = new string('x', 101), // Invalid - too long
+            Status = TenantStatus.Active
+        };
+
+        // This will return validation errors
+        var invalidErrors = invalidTenant.Validate();
+        invalidErrors.Should().NotBeEmpty();
+        invalidErrors.Should().HaveCount(3);
+
+        // This will throw an ArgumentException
+        try
+        {
+            invalidTenant.EnsureValid();
+            Assert.Fail("Should have thrown exception");
+        }
+        catch (ArgumentException ex)
+        {
+            ex.Message.Should().Contain("empty");
+        }
+    }
+}
+```
+
+## OrganizationRepositoryValidation
+
+The `OrganizationRepositoryValidation` class provides validation helpers for the `OrganizationRepository` to ensure data integrity and parameter validation across all repository methods. It offers methods to validate repository instances, check validity, and validate parameters for all organization repository operations with appropriate constraints and error messages.
+
+**Key capabilities:**
+- Validate `OrganizationRepository` instances for null and basic integrity
+- Validate parameters for all repository methods with appropriate constraints
+- Return human-readable validation problems as `IReadOnlyList<string>`
+- Support validation for tenant-specific operations and organization management
+- Provide `IsValid()` and `EnsureValid()` convenience methods
+
+**Public members:**
+- `Validate(this OrganizationRepository?)` - Validates repository instance and returns validation problems
+- `IsValid(this OrganizationRepository?)` - Determines whether the repository instance is valid
+- `EnsureValid(this OrganizationRepository?)` - Validates and throws if invalid
+- `ValidateGetBySlugAsync(Guid, string)` - Validates parameters for GetBySlugAsync
+- `ValidateGetActiveOrganizationsAsync(Guid)` - Validates parameters for GetActiveOrganizationsAsync
+- `ValidateGetWithUsersAsync(Guid)` - Validates parameters for GetWithUsersAsync
+- `ValidateGetByIndustryAsync(Guid, string)` - Validates parameters for GetByIndustryAsync
+- `ValidateGetByCountryAsync(Guid, string)` - Validates parameters for GetByCountryAsync
+- `ValidateSearchAsync(Guid, string)` - Validates parameters for SearchAsync
+- `ValidateGetOrganizationCountAsync(Guid)` - Validates parameters for GetOrganizationCountAsync
+- `ValidateIsSlugUniqueAsync(Guid, string, Guid?)` - Validates parameters for IsSlugUniqueAsync
+- `ValidateGetOrganizationsWithUserCountAsync(Guid)` - Validates parameters for GetOrganizationsWithUserCountAsync
+- `ValidateGetByRegistrationNumberAsync(Guid, string)` - Validates parameters for GetByRegistrationNumberAsync
+- `ValidateDeactivateAsync(Guid)` - Validates parameters for DeactivateAsync
+- `ValidateGetStatisticsAsync(Guid)` - Validates parameters for GetStatisticsAsync
+- `ValidateBulkActivateAsync(Guid, List<Guid>?)` - Validates parameters for BulkActivateAsync
+- `ValidateGetRecentAsync(Guid, int)` - Validates parameters for GetRecentAsync
+
+**Usage example**
+
+```csharp
+using System;
+using TenantIsolation.Data;
+using TenantIsolation.Models;
+
+public class OrganizationValidationExample
+{
+    public static void ValidateOrganizationOperations()
+    {
+        // Example 1: Validate repository instance
+        var repository = new OrganizationRepository(null!); // Simplified for example
+        
+        // Validate repository
+        var repoErrors = repository.Validate();
+        Console.WriteLine($"Repository validation has {repoErrors.Count} errors");
+        
+        // Check if valid
+        bool isValid = repository.IsValid();
+        Console.WriteLine($"Repository is valid: {isValid}");
+        
+        // Ensure valid (throws if invalid)
+        repository.EnsureValid();
+
+        // Example 2: Validate GetBySlugAsync parameters
+        var tenantId = Guid.NewGuid();
+        var slug = "acme-corp";
+        
+        var slugErrors = OrganizationRepositoryValidation.ValidateGetBySlugAsync(tenantId, slug);
+        if (slugErrors.Count > 0)
+        {
+            Console.WriteLine("Validation errors:");
+            foreach (var error in slugErrors)
+            {
+                Console.WriteLine($"- {error}");
+            }
+        }
+        else
+        {
+            Console.WriteLine("GetBySlugAsync parameters are valid");
+        }
+
+        // Example 3: Validate GetByCountryAsync with ISO country code
+        var countryErrors = OrganizationRepositoryValidation.ValidateGetByCountryAsync(
+            tenantId, 
+            "US" // Valid ISO 3166-1 alpha-2 country code
+        );
+        Console.WriteLine($"Country validation has {countryErrors.Count} errors");
+        
+        // Example 4: Validate invalid parameters
+        var invalidTenantId = Guid.Empty;
+        var invalidSlug = "";
+        
+        var invalidErrors = OrganizationRepositoryValidation.ValidateGetBySlugAsync(
+            invalidTenantId, 
+            invalidSlug
+        );
+        Console.WriteLine($"Invalid parameters have {invalidErrors.Count} validation errors");
+
+        // Example 5: Validate bulk operations
+        var orgIds = new List<Guid> { Guid.NewGuid(), Guid.NewGuid() };
+        var bulkErrors = OrganizationRepositoryValidation.ValidateBulkActivateAsync(
+            tenantId,
+            orgIds
+        );
+        Console.WriteLine($"Bulk activate validation has {bulkErrors.Count} errors");
+
+        // Example 6: Validate GetRecentAsync with count parameter
+        var recentErrors = OrganizationRepositoryValidation.ValidateGetRecentAsync(
+            tenantId,
+            count: 25 // Valid count between 1 and 1000
+        );
+        Console.WriteLine($"GetRecentAsync validation has {recentErrors.Count} errors");
+    }
+}
+```
+
 ## TenantFeatureService
 
 The `TenantFeatureService` manages tenant-specific feature flags, enabling or disabling features, tracking usage, and enforcing rollout percentages. It provides methods to check feature availability, enable/disable features, set rollout percentages, record usage metrics, and retrieve feature statistics.
