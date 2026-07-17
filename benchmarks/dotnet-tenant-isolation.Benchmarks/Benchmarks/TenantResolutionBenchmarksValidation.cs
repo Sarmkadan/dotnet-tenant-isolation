@@ -27,27 +27,15 @@ public static class TenantResolutionBenchmarksValidation
 
         var problems = new List<string>();
 
-        // Validate that the instance has been properly initialized
-        // We can't access private fields, so we validate based on observable state
-
-        // The Setup() method must have been called for the benchmarks to work
-        // We can't directly check private fields, but we can check if the
-        // instance appears to be in a usable state by attempting to access
-        // the resolution service through its public interface
+        // Validate that Setup() was called by checking if the internal services are initialized
+        // Since we can't access private fields directly, we validate based on observable state
+        // The GetCurrentTenant() method will throw InvalidOperationException if services weren't initialized
         try
         {
-            // If Setup() was called, _resolutionService should be non-null
-            // We can't access it directly, but we can check if the instance
-            // is in a state where it would throw if used
-            var dummy = value.GetCurrentTenant();
-        }
-        catch (NullReferenceException)
-        {
-            problems.Add("Setup() was not called or failed - internal services are not initialized.");
+            value.GetCurrentTenant();
         }
         catch (InvalidOperationException)
         {
-            // Expected if Setup() wasn't called
             problems.Add("Setup() was not called or failed - internal services are not initialized.");
         }
         catch (Exception ex) when (ex is not ArgumentNullException and not ArgumentException)
@@ -64,6 +52,7 @@ public static class TenantResolutionBenchmarksValidation
     /// </summary>
     /// <param name="value">The benchmarks instance to check.</param>
     /// <returns><see langword="true"/> if valid; otherwise, <see langword="false"/>.</returns>
+    /// <exception cref="ArgumentNullException">Thrown if <paramref name="value"/> is null.</exception>
     public static bool IsValid(this TenantResolutionBenchmarks value)
     {
         return value.Validate().Count == 0;
