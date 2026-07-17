@@ -6,6 +6,7 @@
 // =====================================================================
 
 using System.Globalization;
+using System.Linq;
 
 namespace TenantIsolation.Utilities;
 
@@ -19,7 +20,7 @@ public static class TracingContextValidation
     /// </summary>
     /// <param name="value">The tracing context to validate</param>
     /// <returns>List of validation problems; empty list if context is valid</returns>
-    /// <exception cref="ArgumentNullException">Thrown if value is null</exception>
+    /// <exception cref="ArgumentNullException">Thrown if <paramref name="value"/> is null</exception>
     public static IReadOnlyList<string> Validate(this TracingContext value)
     {
         ArgumentNullException.ThrowIfNull(value);
@@ -125,16 +126,14 @@ public static class TracingContextValidation
     /// </summary>
     /// <param name="value">The tracing context to check</param>
     /// <returns>True if context is valid; false otherwise</returns>
-    public static bool IsValid(this TracingContext value)
-    {
-        return value.Validate().Count == 0;
-    }
+    /// <exception cref="ArgumentNullException">Thrown if <paramref name="value"/> is null</exception>
+    public static bool IsValid(this TracingContext value) => value.Validate().Count == 0;
 
     /// <summary>
     /// Ensures a tracing context is valid, throwing an exception if not
     /// </summary>
     /// <param name="value">The tracing context to validate</param>
-    /// <exception cref="ArgumentNullException">Thrown if value is null</exception>
+    /// <exception cref="ArgumentNullException">Thrown if <paramref name="value"/> is null</exception>
     /// <exception cref="ArgumentException">Thrown if context is invalid, listing all problems</exception>
     public static void EnsureValid(this TracingContext value)
     {
@@ -143,28 +142,28 @@ public static class TracingContextValidation
         var problems = value.Validate();
         if (problems.Count > 0)
         {
-            throw new ArgumentException(
-                string.Format(
-                    CultureInfo.InvariantCulture,
-                    "TracingContext is invalid:{0}- {1}",
-                    Environment.NewLine,
-                    string.Join($"{Environment.NewLine}- ", problems)));
+            var messageParts = new List<string> { "TracingContext is invalid:" };
+            messageParts.AddRange(problems.Select(p => $"- {p}"));
+            throw new ArgumentException(string.Join(Environment.NewLine, messageParts));
         }
     }
 
     /// <summary>
     /// Checks if a string contains only hexadecimal digits
     /// </summary>
-    private static bool IsHexDigit(this char c)
-    {
-        return (c >= '0' && c <= '9') ||
-               (c >= 'a' && c <= 'f') ||
-               (c >= 'A' && c <= 'F');
-    }
+    /// <param name="c">The character to check</param>
+    /// <returns>True if the character is a hexadecimal digit; otherwise false</returns>
+    private static bool IsHexDigit(this char c) =>
+        c is >= '0' and <= '9' or
+        >= 'a' and <= 'f' or
+        >= 'A' and <= 'F';
 
     /// <summary>
     /// Checks if a string is a valid GUID string format
     /// </summary>
+    /// <param name="input">The string to validate</param>
+    /// <returns>True if the string is a valid GUID format; otherwise false</returns>
+    /// <exception cref="ArgumentNullException">Thrown if <paramref name="input"/> is null</exception>
     private static bool IsValidGuidString(string input)
     {
         if (string.IsNullOrWhiteSpace(input))
