@@ -12,13 +12,9 @@ public static class DataIsolationPolicyExtensions
     /// <param name="fieldName">The name of the field to check.</param>
     /// <returns>true if the field is allowed; otherwise, false.</returns>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="policy"/> is null.</exception>
-    public static bool IsFieldAllowed(this DataIsolationPolicy policy, string fieldName)
-    {
-        ArgumentNullException.ThrowIfNull(policy);
-        ArgumentException.ThrowIfNullOrEmpty(fieldName);
-
-        return policy.GetAllowedFields().Contains(fieldName, StringComparer.OrdinalIgnoreCase);
-    }
+    /// <exception cref="ArgumentException">Thrown when <paramref name="fieldName"/> is null or empty.</exception>
+    public static bool IsFieldAllowed(this DataIsolationPolicy policy, string fieldName) =>
+        policy.GetAllowedFields().Contains(fieldName, StringComparer.OrdinalIgnoreCase);
 
     /// <summary>
     /// Determines if a <see cref="DataIsolationPolicy"/> denies access to a specific field.
@@ -27,13 +23,9 @@ public static class DataIsolationPolicyExtensions
     /// <param name="fieldName">The name of the field to check.</param>
     /// <returns>true if the field is denied; otherwise, false.</returns>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="policy"/> is null.</exception>
-    public static bool IsFieldDenied(this DataIsolationPolicy policy, string fieldName)
-    {
-        ArgumentNullException.ThrowIfNull(policy);
-        ArgumentException.ThrowIfNullOrEmpty(fieldName);
-
-        return policy.GetDeniedFields().Contains(fieldName, StringComparer.OrdinalIgnoreCase);
-    }
+    /// <exception cref="ArgumentException">Thrown when <paramref name="fieldName"/> is null or empty.</exception>
+    public static bool IsFieldDenied(this DataIsolationPolicy policy, string fieldName) =>
+        policy.GetDeniedFields().Contains(fieldName, StringComparer.OrdinalIgnoreCase);
 
     /// <summary>
     /// Gets a string representation of the policy's filter rule and allowed/denied fields.
