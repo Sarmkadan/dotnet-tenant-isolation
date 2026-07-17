@@ -1857,6 +1857,88 @@ public class CompaniesControllerExample
 }
 ```
 
+### CryptographyUtilityJsonExtensions
+
+Provides System.Text.Json serialization extensions for cryptographic operation results, enabling JSON serialization and deserialization of hashes, tokens, encrypted data, password hashes, and GUIDs. These extension methods use camelCase naming convention and handle null safety, making them ideal for API responses and storage scenarios.
+
+**Key capabilities:**
+- Serialize and deserialize cryptographic hashes
+- Serialize and deserialize secure tokens
+- Serialize and deserialize encrypted data (Base64 encoded)
+- Serialize and deserialize password hash and salt tuples
+- Serialize and deserialize GUIDs
+- Support both compact and indented JSON formatting
+- Built-in null safety and error handling
+
+**Public members:**
+- `ToJson(this string hash, bool indented = false)` - Serializes a cryptographic hash to JSON
+- `TryFromJson(string json, out string? hash)` - Attempts to deserialize a JSON string into a hash
+- `ToSecureTokenJson(this string token, bool indented = false)` - Serializes a secure token to JSON
+- `TryFromSecureTokenJson(string json, out string? token)` - Attempts to deserialize a JSON string into a token
+- `ToEncryptedDataJson(this string encryptedData, bool indented = false)` - Serializes encrypted data to JSON
+- `TryFromEncryptedDataJson(string json, out string? encryptedData)` - Attempts to deserialize a JSON string into encrypted data
+- `ToPasswordHashJson(this (string Hash, string Salt) passwordHash, bool indented = false)` - Serializes a password hash tuple to JSON
+- `TryFromPasswordHashJson(string json, out (string Hash, string Salt)? passwordHash)` - Attempts to deserialize a JSON string into a password hash tuple
+- `ToGuidJson(this Guid guid, bool indented = false)` - Serializes a GUID to JSON
+- `TryFromGuidJson(string json, out Guid guid)` - Attempts to deserialize a JSON string into a GUID
+
+**Usage example**
+
+```csharp
+using TenantIsolation.Utilities;
+
+public class CryptographyExample
+{
+    public static void Main(string[] args)
+    {
+        // Serialize a cryptographic hash
+        string hash = "sha256$5f4dcc3b5aa765d61d8327deb882cf99"
+            .ToJson();
+        Console.WriteLine($"Hash JSON: {hash}");
+
+        // Deserialize a hash
+        string hashJson = @"""sha256$5f4dcc3b5aa765d61d8327deb882cf99"""";
+        if (CryptographyUtilityJsonExtensions.TryFromJson(hashJson, out string? deserializedHash))
+        {
+            Console.WriteLine($"Deserialized hash: {deserializedHash}");
+        }
+
+        // Serialize a secure token
+        string token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ"
+            .ToSecureTokenJson();
+        Console.WriteLine($"Token JSON: {token}");
+
+        // Serialize encrypted data
+        string encryptedData = "SGVsbG8gV29ybGQh" // Base64 encoded "Hello World!"
+            .ToEncryptedDataJson();
+        Console.WriteLine($"Encrypted data JSON: {encryptedData}");
+
+        // Serialize a password hash tuple
+        var passwordHash = (Hash: "$2a$10$N9qo8uLOickgx2ZMRZoMy...", 
+                           Salt: "$2a$10$N9qo8uLOickgx2ZMRZoMy")
+            .ToPasswordHashJson();
+        Console.WriteLine($"Password hash JSON: {passwordHash}");
+
+        // Serialize a GUID
+        Guid tenantId = Guid.NewGuid();
+        string guidJson = tenantId.ToGuidJson();
+        Console.WriteLine($"GUID JSON: {guidJson}");
+
+        // Deserialize a GUID
+        string guidJsonInput = @"""3fa85f64-5717-4562-b3fc-2c963f66afa6""";
+        if (CryptographyUtilityJsonExtensions.TryFromGuidJson(guidJsonInput, out Guid deserializedGuid))
+        {
+            Console.WriteLine($"Deserialized GUID: {deserializedGuid}");
+        }
+
+        // Indented JSON for debugging
+        string indentedHash = "sha256$5f4dcc3b5aa765d61d8327deb882cf99"
+            .ToJson(indented: true);
+        Console.WriteLine($"Indented hash JSON:\n{indentedHash}");
+    }
+}
+```
+
 ### TenantApiController
 REST API endpoints for tenant management. The `TenantApiController` provides CRUD operations and lifecycle management for tenants in a multi-tenant application, including tenant creation, retrieval, activation, suspension, and deletion. It integrates with the `TenantService` to perform tenant operations and uses the `ITenantResolutionService` to access the current tenant context.
 
