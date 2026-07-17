@@ -12,7 +12,7 @@ public static class WebhookControllerValidation
     /// </summary>
     /// <param name="value">The WebhookController instance to validate</param>
     /// <returns>List of human-readable validation problems; empty if valid</returns>
-    /// <exception cref="ArgumentNullException">Thrown if value is null</exception>
+    /// <exception cref="ArgumentNullException">Thrown if <paramref name="value"/> is null</exception>
     public static IReadOnlyList<string> Validate(this WebhookController value)
     {
         ArgumentNullException.ThrowIfNull(value);
@@ -68,17 +68,16 @@ public static class WebhookControllerValidation
     /// </summary>
     /// <param name="value">The WebhookController instance to check</param>
     /// <returns>True if valid; false otherwise</returns>
+    /// <exception cref="ArgumentNullException">Thrown if <paramref name="value"/> is null</exception>
     public static bool IsValid(this WebhookController value)
-    {
-        return value.Validate().Count == 0;
-    }
+        => value.Validate().Count == 0;
 
     /// <summary>
-    /// Ensures a WebhookController instance is valid, throwing ArgumentException if not
+    /// Ensures a WebhookController instance is valid, throwing <see cref="ArgumentException"/> if not
     /// </summary>
     /// <param name="value">The WebhookController instance to validate</param>
-    /// <exception cref="ArgumentNullException">Thrown if value is null</exception>
-    /// <exception cref="ArgumentException">Thrown if value has validation problems</exception>
+    /// <exception cref="ArgumentNullException">Thrown if <paramref name="value"/> is null</exception>
+    /// <exception cref="ArgumentException">Thrown if <paramref name="value"/> has validation problems</exception>
     public static void EnsureValid(this WebhookController value)
     {
         ArgumentNullException.ThrowIfNull(value);
@@ -88,7 +87,8 @@ public static class WebhookControllerValidation
         if (problems.Count > 0)
         {
             throw new ArgumentException(
-                $"WebhookController validation failed:{Environment.NewLine}- {string.Join($"{Environment.NewLine}- ", problems)}");
+                $"WebhookController validation failed:{Environment.NewLine}- {string.Join($"{Environment.NewLine}- ", problems)}",
+                nameof(value));
         }
     }
 }
