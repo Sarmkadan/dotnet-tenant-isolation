@@ -1236,6 +1236,81 @@ public class TenantResolutionServiceTestsExample
 }
 ```
 
+## TenantCleanupWorker
+
+The `TenantCleanupWorker` is a background service that periodically cleans up soft-deleted tenant records and orphaned data to prevent database bloat. It permanently deletes soft-deleted tenants after they exceed the configured retention period, cleans up orphaned user records without valid tenants, and rebuilds database statistics for optimal performance.
+
+**Key capabilities:**
+- Configurable retention period for soft-deleted records (default: 30 days)
+- Configurable check interval for cleanup operations (default: daily)
+- Automatic cleanup of orphaned user records
+- Database statistics optimization after cleanup
+- Graceful shutdown handling
+
+**Public members:**
+- `CheckInterval` - Gets or sets the interval at which cleanup checks are performed
+- `RetentionPeriod` - Gets or sets the retention period for soft-deleted records before permanent deletion
+- `TenantCleanupWorker(IServiceProvider, ILogger<TenantCleanupWorker>)` - Constructor
+- `StopAsync(CancellationToken)` - Stops the background service
+- `Dispose()` - Disposes the worker
+- `AddTenantCleanupWorker(IHostBuilder, TimeSpan, TimeSpan)` - Extension method for configuring with custom interval and retention
+- `AddTenantCleanupWorker(IHostBuilder, TimeSpan)` - Extension method for configuring with custom retention only
+- `GetRetentionPeriod(TenantCleanupWorker)` - Gets the current retention period
+- `GetCheckInterval(TenantCleanupWorker)` - Gets the current check interval
+
+**Usage example**
+
+```csharp
+using Microsoft.Extensions.Hosting;
+using TenantIsolation.BackgroundTasks;
+
+public class Program
+{
+    public static async Task Main(string[] args)
+    {
+        var builder = Host.CreateDefaultBuilder(args);
+        
+        // Configure tenant cleanup worker with custom settings
+        builder.AddTenantCleanupWorker(
+            checkInterval: TimeSpan.FromHours(12),  // Run every 12 hours
+            retentionPeriod: TimeSpan.FromDays(14)  // Keep soft-deleted for 14 days
+        );
+        
+        await builder.RunConsoleAsync();
+    }
+}
+```
+
+```csharp
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
+using TenantIsolation.BackgroundTasks;
+
+public class TenantCleanupExample
+{
+    public static void ConfigureServices(IServiceCollection services)
+    {
+        // Add tenant cleanup worker with default settings (1 day interval, 30 day retention)
+        services.AddHostedService<TenantCleanupWorker>();
+        
+        // Or configure it explicitly
+        services.AddHostedService<TenantCleanupWorker>(provider =>
+        {
+            var logger = provider.GetRequiredService<ILogger<TenantCleanupWorker>>();
+            return new TenantCleanupWorker(provider, logger)
+            {
+                CheckInterval = TimeSpan.FromHours(6),
+                RetentionPeriod = TimeSpan.FromDays(7)
+            };
+        });
+    }
+    
+    public static IHostBuilder CreateHostBuilder(string[] args) =>
+        Host.CreateDefaultBuilder(args)
+            .ConfigureServices(ConfigureServices);
+}
+```
+
 ## Services
 
 ### TenantResolutionService
