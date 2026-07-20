@@ -279,6 +279,105 @@ public class FeaturesController : ControllerBase
             return BadRequest(new { error = ex.Message });
         }
     }
+
+    /// <summary>
+    /// Bulk set feature state for multiple tenants
+    /// </summary>
+    [HttpPost("bulk")]
+    public async Task<IActionResult> BulkSetFeatureState([FromBody] BulkFeatureToggleRequest request)
+    {
+        try
+        {
+            if (request?.TenantIds == null || !request.TenantIds.Any())
+                return BadRequest(new { error = "At least one tenant ID is required" });
+
+            if (string.IsNullOrWhiteSpace(request.FeatureKey))
+                return BadRequest(new { error = "Feature key is required" });
+
+            if (request.Percentage < 0 || request.Percentage > 100)
+                return BadRequest(new { error = "Rollout percentage must be between 0 and 100" });
+
+            var results = await _featureService.SetBulkRolloutPercentageAsync(
+                request.TenantIds,
+                request.FeatureKey,
+                request.Percentage,
+                request.Enabled);
+
+            return Ok(new
+            {
+                success = true,
+                featureKey = request.FeatureKey,
+                results = results
+            });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error in bulk feature toggle");
+            return BadRequest(new { error = ex.Message });
+        }
+    }
+
+    /// <summary>
+    /// Bulk get feature status for multiple tenants
+    /// </summary>
+    [HttpPost("bulk/status")]
+    public async Task<IActionResult> BulkGetFeatureStatus([FromBody] BulkFeatureStatusRequest request)
+    {
+        try
+        {
+            if (request?.TenantIds == null || !request.TenantIds.Any())
+                return BadRequest(new { error = "At least one tenant ID is required" });
+
+            if (string.IsNullOrWhiteSpace(request.FeatureKey))
+                return BadRequest(new { error = "Feature key is required" });
+
+            var results = await _featureService.GetBulkFeatureStatusAsync(
+                request.TenantIds,
+                request.FeatureKey);
+
+            return Ok(new
+            {
+                featureKey = request.FeatureKey,
+                results = results
+            });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error in bulk feature status check");
+            return BadRequest(new { error = ex.Message });
+        }
+    }
+
+    /// <summary>
+    /// Bulk get feature details for multiple tenants
+    /// </summary>
+    [HttpPost("bulk/features")]
+    public async Task<IActionResult> BulkGetFeatures([FromBody] BulkFeatureRequest request)
+    {
+        try
+        {
+            if (request?.TenantIds == null || !request.TenantIds.Any())
+                return BadRequest(new { error = "At least one tenant ID is required" });
+
+            if (string.IsNullOrWhiteSpace(request.FeatureKey))
+                return BadRequest(new { error = "Feature key is required" });
+
+            var results = await _featureService.GetBulkFeaturesAsync(
+                request.TenantIds,
+                request.FeatureKey);
+
+            return Ok(new
+            {
+                featureKey = request.FeatureKey,
+                results = results
+            });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error in bulk feature retrieval");
+            return BadRequest(new { error = ex.Message });
+        }
+    }
 }
 
 /// <summary>
@@ -295,4 +394,33 @@ public class SetRolloutRequest
 public class RecordUsageRequest
 {
     public long Amount { get; set; } = 1;
+}
+
+/// <summary>
+/// Request for bulk feature toggle operation
+/// </summary>
+public class BulkFeatureToggleRequest
+{
+    public List<Guid> TenantIds { get; set; } = new();
+    public string FeatureKey { get; set; } = string.Empty;
+    public int Percentage { get; set; } = 100;
+    public bool Enabled { get; set; } = true;
+}
+
+/// <summary>
+/// Request for bulk feature status check
+/// </summary>
+public class BulkFeatureStatusRequest
+{
+    public List<Guid> TenantIds { get; set; } = new();
+    public string FeatureKey { get; set; } = string.Empty;
+}
+
+/// <summary>
+/// Request for bulk feature retrieval
+/// </summary>
+public class BulkFeatureRequest
+{
+    public List<Guid> TenantIds { get; set; } = new();
+    public string FeatureKey { get; set; } = string.Empty;
 }
