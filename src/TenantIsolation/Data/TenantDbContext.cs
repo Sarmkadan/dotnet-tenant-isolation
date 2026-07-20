@@ -40,6 +40,7 @@ public class TenantDbContext : DbContext
     public DbSet<User> Users { get; set; }
     public DbSet<DataIsolationPolicy> DataIsolationPolicies { get; set; }
     public DbSet<TenantFeature> TenantFeatures { get; set; }
+public DbSet<TenantUsageRecord> TenantUsageRecords { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -159,6 +160,21 @@ public class TenantDbContext : DbContext
                 .HasForeignKey(e => e.TenantId)
                 .OnDelete(DeleteBehavior.Cascade);
         });
+
+// Configure TenantUsageRecord entity
+modelBuilder.Entity<TenantUsageRecord>(entity =>
+{
+    entity.HasKey(e => e.Id);
+    entity.HasIndex(e => new { e.TenantId, e.MetricKey }).IsUnique();
+    entity.HasIndex(e => e.TenantId);
+    entity.HasIndex(e => e.PeriodStart);
+    entity.Property(e => e.MetricKey).IsRequired().HasMaxLength(100);
+    entity.Property(e => e.Period).HasConversion<string>();
+    entity.HasOne(e => e.Tenant)
+        .WithMany()
+        .HasForeignKey(e => e.TenantId)
+        .OnDelete(DeleteBehavior.Cascade);
+});
 
         // Configure global query filters for soft deletes
         modelBuilder.Entity<Tenant>().HasQueryFilter(e => !e.IsDeleted);

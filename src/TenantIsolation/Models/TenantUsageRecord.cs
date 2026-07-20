@@ -6,6 +6,7 @@
 // =============================================================================
 
 using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
 
 namespace TenantIsolation.Models;
 
@@ -38,6 +39,10 @@ public class TenantUsageRecord
     /// <summary>Owning tenant identifier</summary>
     [Required]
     public Guid TenantId { get; set; }
+
+/// <summary>Navigation property to the owning tenant</summary>
+[ForeignKey(nameof(TenantId))]
+public Tenant? Tenant { get; set; }
 
     /// <summary>Metric name, e.g. "api_calls", "storage_gb", "active_users"</summary>
     [Required]

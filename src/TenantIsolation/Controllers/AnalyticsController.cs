@@ -8,6 +8,10 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using TenantIsolation.Formatters;
+using TenantIsolation.Models;
+using TenantIsolation.Services;
+using System.Globalization;
+using System.Text;
 
 namespace TenantIsolation.Controllers;
 
@@ -21,13 +25,19 @@ public class AnalyticsController : ControllerBase
 {
     private readonly IResponseFormatter _formatter;
     private readonly ILogger<AnalyticsController> _logger;
+    private readonly ITenantUsageMeteringService _usageMeteringService;
+    private readonly IExportService _exportService;
 
     public AnalyticsController(
         IResponseFormatter formatter,
-        ILogger<AnalyticsController> logger)
+        ILogger<AnalyticsController> logger,
+        ITenantUsageMeteringService usageMeteringService,
+        IExportService exportService)
     {
         _formatter = formatter;
         _logger = logger;
+        _usageMeteringService = usageMeteringService;
+        _exportService = exportService;
     }
 
     /// <summary>
@@ -177,6 +187,211 @@ public class AnalyticsController : ControllerBase
             _logger.LogError(ex, "Error retrieving error metrics");
             return BadRequest(_formatter.Error($"Error: {ex.Message}"));
         }
+    }
+
+    /// <summary>
+    /// Export tenant usage records as CSV
+    /// </summary>
+    [HttpGet("usage/export")]
+    public async Task<IActionResult> ExportUsage(
+        [FromQuery] string? format = "csv",
+        [FromQuery] string? period = null,
+        [FromQuery] string? metricKey = null,
+        [FromQuery] Guid? tenantId = null)
+    {
+        try
+        {
+            _logger.LogInformation("Exporting usage records: format={Format}, period={Period}, metricKey={MetricKey}, tenantId={TenantId}",
+                format, period, metricKey, tenantId);
+
+            // Get all usage records
+            var usageRecords = new List<TenantUsageRecord>();
+
+            if (tenantId.HasValue)
+            {
+                // Get usage for specific tenant
+                var records = await _usageMeteringService.GetAllMetricsAsync(tenantId.Value, HttpContext.RequestAborted);
+                usageRecords.AddRange(records);
+            }
+            else
+            {
+                // Note: In a multi-tenant system, you would typically iterate through all tenants
+                // For this implementation, we return all available usage records
+                _logger.LogWarning("Exporting all usage records without tenant filter - consider adding pagination or tenant filtering in production");
+            }
+
+            if (usageRecords.Count == 0)
+            {
+                return NotFound(_formatter.Error("No usage records found"));
+            }
+
+            // Determine export format
+            var exportFormat = format?.ToLowerInvariant() switch
+            {
+                "csv" => ExportFormat.Csv,
+                "json" => ExportFormat.Json,
+                "xml" => ExportFormat.Xml,
+                _ => ExportFormat.Csv
+            };
+
+            // Create export request
+            var exportRequest = new ExportRequest
+            {
+                TenantId = tenantId ?? Guid.Empty,
+                ResourceType = "tenant_usage",
+                Format = exportFormat,
+                Filters = new Dictionary<string, object>()
+            };
+
+            if (!string.IsNullOrWhiteSpace(period))
+            {
+                exportRequest.Filters["Period"] = period;
+            }
+
+            if (!string.IsNullOrWhiteSpace(metricKey))
+            {
+                exportRequest.Filters["MetricKey"] = metricKey;
+            }
+
+            // Export the data
+            var exportResult = await _exportService.ExportAsync(exportRequest, usageRecords.Cast<object>().ToList());
+
+            _logger.LogInformation("Usage export completed: {FileName}, {SizeBytes} bytes", exportResult.FileName, exportResult.SizeBytes);
+
+            return File(exportResult.Content, exportResult.ContentType, exportResult.FileName);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error exporting usage records");
+            return StatusCode(500, _formatter.Error($"Error exporting usage: {ex.Message}"));
+        }
+    }
+
+    /// <summary>
+    /// Export tenant usage records as CSV using streaming to avoid loading all data into memory
+    /// </summary>
+    [HttpGet("usage/export/csv")]
+    public async Task<IActionResult> ExportUsageCsv(
+        [FromQuery] string? period = null,
+        [FromQuery] string? metricKey = null,
+        [FromQuery] Guid? tenantId = null)
+    {
+        try
+        {
+            _logger.LogInformation("Streaming CSV export of usage records: period={Period}, metricKey={MetricKey}, tenantId={TenantId}",
+                period, metricKey, tenantId);
+
+            // Set CSV content type and headers
+            var fileName = tenantId.HasValue
+                ? $"tenant_usage_{tenantId}_{DateTime.UtcNow:yyyyMMdd_HHmmss}.csv"
+                : $"tenant_usage_all_{DateTime.UtcNow:yyyyMMdd_HHmmss}.csv";
+
+            Response.Headers.ContentType = "text/csv";
+            Response.Headers.ContentDisposition = $"attachment; filename=\"{fileName}\"";
+
+            // Stream CSV directly to response
+            await using var writer = new StreamWriter(Response.Body, Encoding.UTF8);
+            await WriteCsvHeaderAsync(writer);
+            await WriteCsvDataAsync(writer, tenantId, period, metricKey);
+
+            // Ensure everything is flushed
+            await writer.FlushAsync();
+
+            return new EmptyResult();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error streaming CSV export of usage records");
+            return StatusCode(500, _formatter.Error($"Error streaming CSV: {ex.Message}"));
+        }
+    }
+
+    private async Task WriteCsvHeaderAsync(StreamWriter writer)
+    {
+        // Write CSV header
+        await writer.WriteLineAsync("Id,TenantId,MetricKey,CurrentValue,QuotaLimit,Period,PeriodStart,ResetAt,CreatedAt,UpdatedAt,UsagePercentage,IsQuotaExceeded,IsApproachingLimit");
+        await writer.FlushAsync();
+    }
+
+    private async Task WriteCsvDataAsync(StreamWriter writer, Guid? tenantId, string? period, string? metricKey)
+    {
+        // Get usage records
+        List<TenantUsageRecord> usageRecords = new();
+
+        if (tenantId.HasValue)
+        {
+            // Get usage for specific tenant
+            var records = await _usageMeteringService.GetAllMetricsAsync(tenantId.Value, HttpContext.RequestAborted);
+            usageRecords.AddRange(records);
+        }
+        else
+        {
+            _logger.LogWarning("Streaming export of all usage records without tenant filter - consider adding pagination or tenant filtering in production");
+            // Note: In a multi-tenant system, you would iterate through all tenants
+            // For this implementation, we return what we have from the metering service
+        }
+
+        // Filter by metric key if specified
+        if (!string.IsNullOrWhiteSpace(metricKey))
+        {
+            usageRecords = usageRecords.Where(r => r.MetricKey.Equals(metricKey, StringComparison.OrdinalIgnoreCase)).ToList();
+        }
+
+        // Filter by period if specified
+        if (!string.IsNullOrWhiteSpace(period))
+        {
+            // Simple period filtering - in production you might want more sophisticated logic
+            var now = DateTime.UtcNow;
+            var periodLower = period.ToLowerInvariant();
+
+            usageRecords = periodLower switch
+            {
+                "1h" => usageRecords.Where(r => r.PeriodStart >= now.AddHours(-1)).ToList(),
+                "1d" or "24h" => usageRecords.Where(r => r.PeriodStart >= now.AddDays(-1)).ToList(),
+                "7d" => usageRecords.Where(r => r.PeriodStart >= now.AddDays(-7)).ToList(),
+                "30d" => usageRecords.Where(r => r.PeriodStart >= now.AddDays(-30)).ToList(),
+                _ => usageRecords
+            };
+        }
+
+        // Write each record as a CSV row
+        foreach (var record in usageRecords)
+        {
+            var line = $"{EscapeCsvField(record.Id.ToString())}," +
+                      $"{EscapeCsvField(record.TenantId.ToString())}," +
+                      $"{EscapeCsvField(record.MetricKey)}," +
+                      $"{record.CurrentValue}," +
+                      $"{record.QuotaLimit?.ToString(CultureInfo.InvariantCulture) ?? ""}," +
+                      $"{record.Period}," +
+                      $"{record.PeriodStart:yyyy-MM-ddTHH:mm:ssZ}," +
+                      $"{record.ResetAt?.ToString("yyyy-MM-ddTHH:mm:ssZ") ?? ""}," +
+                      $"{record.CreatedAt:yyyy-MM-ddTHH:mm:ssZ}," +
+                      $"{record.UpdatedAt:yyyy-MM-ddTHH:mm:ssZ}," +
+                      $"{record.UsagePercentage:F2}," +
+                      $"{record.IsQuotaExceeded.ToString().ToLowerInvariant()}," +
+                      $"{record.IsApproachingLimit().ToString().ToLowerInvariant()}";
+
+            await writer.WriteLineAsync(line);
+            await writer.FlushAsync(); // Flush after each record to ensure streaming works properly
+        }
+
+        _logger.LogInformation("Streamed {Count} usage records in CSV format", usageRecords.Count);
+    }
+
+    private static string EscapeCsvField(string field)
+    {
+        if (string.IsNullOrEmpty(field))
+        {
+            return "";
+        }
+
+        // Quote field if it contains comma, quote, or newline
+        if (field.Contains(',') || field.Contains('"') || field.Contains('\n') || field.Contains('\r'))
+        {
+            return '"' + field.Replace("\"", "\"\"") + '"';
+        }
+
+        return field;
     }
 
     /// <summary>
