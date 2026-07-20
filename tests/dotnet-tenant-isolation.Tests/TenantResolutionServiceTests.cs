@@ -4,8 +4,10 @@ using FluentAssertions;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using Moq;
 using System.Security.Claims;
+using TenantIsolation.Configuration;
 using TenantIsolation.Constants;
 using TenantIsolation.Exceptions;
 using TenantIsolation.Models;
@@ -37,6 +39,11 @@ public class TenantResolutionServiceTests
     private readonly Mock<ILogger<TenantResolutionService>> _mockLogger;
 
     /// <summary>
+    /// Mock of <see cref="IOptions{TenantResolutionOptions}"/> used to provide options for testing.
+    /// </summary>
+    private readonly Mock<IOptions<TenantResolutionOptions>> _mockOptions;
+
+    /// <summary>
     /// System under test - instance of <see cref="TenantResolutionService"/> being tested.
     /// </summary>
     private readonly TenantResolutionService _sut;
@@ -50,8 +57,18 @@ public class TenantResolutionServiceTests
         _mockHttpContextAccessor = new Mock<IHttpContextAccessor>();
         _mockTenantStore = new Mock<IDynamicTenantStore>(MockBehavior.Strict);
         _mockLogger = new Mock<ILogger<TenantResolutionService>>();
+        _mockOptions = new Mock<IOptions<TenantResolutionOptions>>();
+        _mockOptions.Setup(x => x.Value).Returns(new TenantResolutionOptions
+        {
+            ResolutionStrategies = new List<TenantResolutionStrategy> { TenantResolutionStrategy.Header },
+            ThrowOnResolutionFailure = false
+        });
 
-        _sut = new TenantResolutionService(_mockHttpContextAccessor.Object, _mockTenantStore.Object, _mockLogger.Object);
+        _sut = new TenantResolutionService(
+            _mockHttpContextAccessor.Object,
+            _mockTenantStore.Object,
+            _mockLogger.Object,
+            _mockOptions.Object);
     }
 
     /// <summary>

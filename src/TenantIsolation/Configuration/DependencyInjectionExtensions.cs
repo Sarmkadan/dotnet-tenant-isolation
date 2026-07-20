@@ -9,6 +9,8 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Options;
+using TenantIsolation.Configuration;
+using TenantIsolation.Constants;
 using TenantIsolation.Data;
 using TenantIsolation.Middleware;
 using TenantIsolation.Services;
@@ -77,6 +79,24 @@ public static class DependencyInjectionExtensions
         services.AddSingleton(options);
         services.AddSingleton<IOptions<TenantIsolationOptions>>(Options.Create(options));
 
+
+    // Register TenantResolutionOptions with default configuration
+    services.Configure<TenantResolutionOptions>(resolutionOptions =>
+    {
+        // Use the same default strategy order as specified in TenantResolutionOptions.CreateDefault()
+        resolutionOptions.ResolutionStrategies = new List<TenantResolutionStrategy>
+        {
+            TenantResolutionStrategy.Header,
+            TenantResolutionStrategy.Subdomain,
+            TenantResolutionStrategy.QueryString,
+            TenantResolutionStrategy.Route,
+            TenantResolutionStrategy.Claims,
+            TenantResolutionStrategy.Default
+        };
+        resolutionOptions.DefaultTenantId = null;
+        resolutionOptions.DefaultTenantSlug = null;
+        resolutionOptions.ThrowOnResolutionFailure = true;
+    });
         return services;
     }
 

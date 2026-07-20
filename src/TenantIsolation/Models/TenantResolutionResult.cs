@@ -5,10 +5,10 @@
 // CTO & Software Architect
 // =====================================================================
 
+using System.Diagnostics.CodeAnalysis;
 using TenantIsolation.Constants;
-using TenantIsolation.Models;
 
-namespace TenantIsolation.Services;
+namespace TenantIsolation.Models;
 
 /// <summary>
 /// Represents the result of tenant resolution including the resolved tenant
@@ -19,12 +19,14 @@ public class TenantResolutionResult
     /// <summary>
     /// The resolved tenant. Will be null if resolution failed.
     /// </summary>
+    [NotNullIfNotNull(nameof(Tenant))]
     public Tenant? Tenant { get; }
 
     /// <summary>
     /// The strategy that successfully resolved the tenant.
     /// Will be null if resolution failed.
     /// </summary>
+    [NotNullIfNotNull(nameof(Tenant))]
     public TenantResolutionStrategy? ResolvedStrategy { get; }
 
     /// <summary>
@@ -61,47 +63,4 @@ public class TenantResolutionResult
     /// Implicit conversion from Tenant for backward compatibility.
     /// </summary>
     public static implicit operator Tenant?(TenantResolutionResult result) => result.Tenant;
-}
-
-/// <summary>
-/// Resolves the current tenant from the ambient request context.
-/// Abstracted as an interface so hosts can plug in a custom resolution
-/// scheme and consumers (middleware, DbContext factory, controllers)
-/// can be unit tested without spinning up the full strategy chain.
-/// </summary>
-public interface ITenantResolutionService
-{
-    /// <summary>
-    /// Resolve the tenant for the current request, trying all configured strategies.
-    /// </summary>
-    /// <returns>The resolved tenant</returns>
-    /// <exception cref="TenantNotResolvedException">Thrown if tenant cannot be resolved and ThrowOnResolutionFailure is true</exception>
-    Task<Tenant> ResolveTenantAsync();
-
-    /// <summary>
-    /// Resolve the tenant for the current request with strategy information.
-    /// </summary>
-    /// <returns>Resolution result containing tenant and strategy used</returns>
-    Task<TenantResolutionResult> ResolveTenantWithStrategyAsync();
-
-    /// <summary>
-    /// Get the tenant already resolved for the current request, or null if none.
-    /// </summary>
-    Tenant? GetCurrentTenant();
-
-    /// <summary>
-    /// Get the id of the tenant resolved for the current request, or null.
-    /// </summary>
-    Guid? GetCurrentTenantId();
-
-    /// <summary>
-    /// Whether a tenant has been resolved for the current request.
-    /// </summary>
-    bool HasTenant();
-
-    /// <summary>
-    /// Get the strategy that was used to resolve the current tenant.
-    /// Returns null if no tenant has been resolved yet.
-    /// </summary>
-    TenantResolutionStrategy? GetResolvedStrategy();
 }
