@@ -79,6 +79,16 @@ public interface IAuditLogger
     /// Clear old logs (retention policy)
     /// </summary>
     Task ClearOldLogsAsync(int retentionDays = 90);
+
+    /// <summary>
+    /// Query audit logs with filters
+    /// </summary>
+    /// <param name="tenantId">Tenant ID to filter by</param>
+    /// <param name="from">Start date (inclusive)</param>
+    /// <param name="to">End date (inclusive)</param>
+    /// <param name="maxResults">Maximum number of results to return</param>
+    /// <returns>Matching audit entries ordered by timestamp (newest first)</returns>
+    Task<IEnumerable<AuditLogEntry>> Query(Guid tenantId, DateTime from, DateTime to, int maxResults = 100);
 }
 
 /// <summary>
@@ -89,11 +99,15 @@ public class AuditLogger : IAuditLogger
 {
     private readonly ConcurrentDictionary<string, AuditLogEntry> _logs;
     private readonly ILogger<AuditLogger> _logger;
+    private readonly LinkedList<AuditLogEntry> _ringBuffer;
+    private readonly object _ringBufferLock = new object();
+    private const int MaxRingBufferSize = 1000;
 
     public AuditLogger(ILogger<AuditLogger> logger)
     {
         _logs = new ConcurrentDictionary<string, AuditLogEntry>();
         _logger = logger;
+        _ringBuffer = new LinkedList<AuditLogEntry>();
     }
 
     public async Task LogAsync(AuditLogEntry entry)
@@ -107,6 +121,16 @@ public class AuditLogger : IAuditLogger
         _logger.LogInformation(
             "[AUDIT] {Action} {Resource} {ResourceId} by {UserId} for tenant {TenantId}. Success: {Success}",
             entry.Action, entry.Resource, entry.ResourceId, entry.UserId, entry.TenantId, entry.Success);
+
+        // Add to ring buffer for Query method
+        lock (_ringBufferLock)
+        {
+            _ringBuffer.AddFirst(entry);
+            if (_ringBuffer.Count > MaxRingBufferSize)
+            {
+                _ringBuffer.RemoveLast();
+            }
+        }
 
         await Task.CompletedTask;
     }
@@ -167,6 +191,46 @@ public class AuditLogger : IAuditLogger
 
         _logger.LogInformation("Cleared {Count} old audit logs", removedCount);
         await Task.CompletedTask;
+    }
+
+    public async Task<IEnumerable<AuditLogEntry>> Query(Guid tenantId, DateTime from, DateTime to, int maxResults = 100)
+    {
+        if (maxResults <= 0)
+            maxResults = 100;
+
+        // Query from ring buffer first (most recent entries)
+        List<AuditLogEntry> results = new List<AuditLogEntry>();
+
+        lock (_ringBufferLock)
+        {
+            foreach (var entry in _ringBuffer)
+            {
+                if (entry.TenantId == tenantId &&
+                    entry.Timestamp >= from &&
+                    entry.Timestamp <= to)
+                {
+                    results.Add(entry);
+                    if (results.Count >= maxResults)
+                        break;
+                }
+            }
+        }
+
+        // If we need more results or ring buffer is empty, query from main storage
+        if (results.Count < maxResults)
+        {
+            var additionalResults = _logs.Values
+                .Where(l => l.TenantId == tenantId &&
+                           l.Timestamp >= from &&
+                           l.Timestamp <= to)
+                .OrderByDescending(l => l.Timestamp)
+                .Take(maxResults - results.Count)
+                .ToList();
+
+            results.AddRange(additionalResults);
+        }
+
+        return await Task.FromResult(results.OrderByDescending(e => e.Timestamp));
     }
 }
 
