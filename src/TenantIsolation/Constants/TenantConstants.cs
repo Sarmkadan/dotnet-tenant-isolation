@@ -3,7 +3,7 @@
 // =============================================================================
 // Author: Vladyslav Zaiets | https://sarmkadan.com
 // CTO & Software Architect
-// =============================================================================
+// =====================================================================
 
 namespace TenantIsolation.Constants;
 
@@ -31,6 +31,11 @@ public static class TenantConstants
     /// HTTP context item key for tenant configuration
     /// </summary>
     public const string TenantConfigContextKey = "tenant:config";
+
+    /// <summary>
+    /// HTTP context item key for resolved strategy
+    /// </summary>
+    public const string ResolvedStrategyContextKey = "tenant:resolved_strategy";
 
     /// <summary>
     /// Route parameter name for tenant identifier
@@ -77,6 +82,43 @@ public enum TenantIsolationStrategy
     /// Hybrid: Combination of strategies
     /// </summary>
     Hybrid = 4
+}
+
+/// <summary>
+/// Tenant resolution strategies for resolving tenant from HTTP request.
+/// Ordered by priority: first successful strategy wins.
+/// </summary>
+public enum TenantResolutionStrategy
+{
+    /// <summary>
+    /// Resolve tenant from HTTP header (X-Tenant-Id or X-Tenant-Slug)
+    /// </summary>
+    Header = 1,
+
+    /// <summary>
+    /// Resolve tenant from query string (?tenantId=... or ?tenantSlug=...)
+    /// </summary>
+    QueryString = 2,
+
+    /// <summary>
+    /// Resolve tenant from subdomain (tenant.example.com)
+    /// </summary>
+    Subdomain = 3,
+
+    /// <summary>
+    /// Resolve tenant from route parameter ({tenantId} or {slug} in route)
+    /// </summary>
+    Route = 4,
+
+    /// <summary>
+    /// Resolve tenant from user claims (tenant_id or tenant_slug claims)
+    /// </summary>
+    Claims = 5,
+
+    /// <summary>
+    /// Use default tenant (fallback when no other strategy succeeds)
+    /// </summary>
+    Default = 6
 }
 
 /// <summary>
