@@ -336,4 +336,202 @@ public class TenantFeatureService
 
         return (true, null);
     }
+
+    /// <summary>
+    /// Set feature rollout percentage for multiple tenants
+    /// </summary>
+    public async Task<Dictionary<Guid, bool>> SetBulkRolloutPercentageAsync(
+        IEnumerable<Guid> tenantIds,
+        string featureKey,
+        int percentage,
+        bool enableFeature = true)
+    {
+        if (percentage < 0 || percentage > 100)
+            throw new TenantIsolationException("Rollout percentage must be between 0 and 100");
+
+        var results = new Dictionary<Guid, bool>();
+
+        foreach (var tenantId in tenantIds)
+        {
+            try
+            {
+                var feature = await GetFeatureAsync(tenantId, featureKey);
+
+                if (feature == null)
+                {
+                    if (enableFeature)
+                    {
+                        feature = new TenantFeature
+                        {
+                            Id = Guid.NewGuid(),
+                            TenantId = tenantId,
+                            FeatureKey = featureKey,
+                            IsEnabled = true,
+                            RolloutPercentage = percentage
+                        };
+
+                        await _context.TenantFeatures.AddAsync(feature);
+                        results[tenantId] = true;
+                    }
+                    else
+                    {
+                        results[tenantId] = false;
+                    }
+                }
+                else
+                {
+                    feature.IsEnabled = enableFeature;
+                    feature.RolloutPercentage = percentage;
+                    feature.UpdatedAt = DateTime.UtcNow;
+                    _context.TenantFeatures.Update(feature);
+                    results[tenantId] = true;
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error setting bulk rollout for tenant {TenantId} feature {FeatureKey}", tenantId, featureKey);
+                results[tenantId] = false;
+            }
+        }
+
+        if (results.Values.Any(r => r))
+            await _context.SaveChangesAsync();
+
+        InvalidateCacheBulk(tenantIds, featureKey);
+
+        _logger.LogInformation("Bulk rollout set for feature {FeatureKey} across {Count} tenants", featureKey, tenantIds.Count());
+
+        return results;
+    }
+
+    /// <summary>
+    /// Enable/disable feature for multiple tenants
+    /// </summary>
+    public async Task<Dictionary<Guid, bool>> SetBulkFeatureStateAsync(
+        IEnumerable<Guid> tenantIds,
+        string featureKey,
+        bool isEnabled)
+    {
+        var results = new Dictionary<Guid, bool>();
+
+        foreach (var tenantId in tenantIds)
+        {
+            try
+            {
+                var feature = await GetFeatureAsync(tenantId, featureKey);
+
+                if (feature == null)
+                {
+                    if (isEnabled)
+                    {
+                        feature = new TenantFeature
+                        {
+                            Id = Guid.NewGuid(),
+                            TenantId = tenantId,
+                            FeatureKey = featureKey,
+                            IsEnabled = true,
+                            RolloutPercentage = 100
+                        };
+
+                        await _context.TenantFeatures.AddAsync(feature);
+                        results[tenantId] = true;
+                    }
+                    else
+                    {
+                        results[tenantId] = false;
+                    }
+                }
+                else
+                {
+                    feature.IsEnabled = isEnabled;
+                    feature.UpdatedAt = DateTime.UtcNow;
+                    _context.TenantFeatures.Update(feature);
+                    results[tenantId] = true;
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error setting bulk feature state for tenant {TenantId} feature {FeatureKey}", tenantId, featureKey);
+                results[tenantId] = false;
+            }
+        }
+
+        if (results.Values.Any(r => r))
+            await _context.SaveChangesAsync();
+
+        InvalidateCacheBulk(tenantIds, featureKey);
+
+        _logger.LogInformation("Bulk feature state set to {IsEnabled} for feature {FeatureKey} across {Count} tenants", isEnabled, featureKey, tenantIds.Count());
+
+        return results;
+    }
+
+    /// <summary>
+    /// Get feature status for multiple tenants
+    /// </summary>
+    public async Task<Dictionary<Guid, bool>> GetBulkFeatureStatusAsync(
+        IEnumerable<Guid> tenantIds,
+        string featureKey)
+    {
+        var results = new Dictionary<Guid, bool>();
+
+        foreach (var tenantId in tenantIds)
+        {
+            try
+            {
+                var isEnabled = await IsFeatureEnabledAsync(tenantId, featureKey);
+                results[tenantId] = isEnabled;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting bulk feature status for tenant {TenantId} feature {FeatureKey}", tenantId, featureKey);
+                results[tenantId] = false;
+            }
+        }
+
+        return results;
+    }
+
+    /// <summary>
+    /// Get features for multiple tenants
+    /// </summary>
+    public async Task<Dictionary<Guid, TenantFeature?>> GetBulkFeaturesAsync(
+        IEnumerable<Guid> tenantIds,
+        string featureKey)
+    {
+        var results = new Dictionary<Guid, TenantFeature?>();
+
+        foreach (var tenantId in tenantIds)
+        {
+            try
+            {
+                var feature = await GetFeatureAsync(tenantId, featureKey);
+                results[tenantId] = feature;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting bulk features for tenant {TenantId} feature {FeatureKey}", tenantId, featureKey);
+                results[tenantId] = null;
+            }
+        }
+
+        return results;
+    }
+
+    /// <summary>
+    /// Invalidate cache for multiple tenants
+    /// </summary>
+    private void InvalidateCacheBulk(IEnumerable<Guid> tenantIds, string featureKey)
+    {
+        foreach (var tenantId in tenantIds)
+        {
+            _cache.Remove($"feature_{tenantId}_{featureKey}");
+        }
+
+        foreach (var tenantId in tenantIds)
+        {
+            _cache.Remove($"features_enabled_{tenantId}");
+            _cache.Remove($"features_all_{tenantId}");
+        }
+    }
 }
