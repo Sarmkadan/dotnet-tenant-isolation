@@ -3,9 +3,10 @@
 // =============================================================================
 // Author: Vladyslav Zaiets | https://sarmkadan.com
 // CTO & Software Architect
-// =============================================================================
+// =====================================================================
 
 using Microsoft.AspNetCore.Mvc;
+using TenantIsolation.Models;
 using TenantIsolation.Services;
 
 namespace TenantIsolation.Controllers;
@@ -19,15 +20,18 @@ public class TenantApiController : ControllerBase
 {
     private readonly TenantService _tenantService;
     private readonly ITenantResolutionService _resolutionService;
+    private readonly ITenantUsageMeteringService _usageMeteringService;
     private readonly ILogger<TenantApiController> _logger;
 
     public TenantApiController(
         TenantService tenantService,
         ITenantResolutionService resolutionService,
+        ITenantUsageMeteringService usageMeteringService,
         ILogger<TenantApiController> logger)
     {
         _tenantService = tenantService;
         _resolutionService = resolutionService;
+        _usageMeteringService = usageMeteringService;
         _logger = logger;
     }
 
@@ -241,6 +245,61 @@ public class TenantApiController : ControllerBase
             return BadRequest(new { error = ex.Message });
         }
     }
+
+    /// <summary>
+    /// Get quota status for a tenant
+    /// </summary>
+    [HttpGet("{id:guid}/quota")]
+    public async Task<IActionResult> GetTenantQuota(Guid id, [FromQuery] string metric)
+    {
+        // Add input validation for metric
+        if (string.IsNullOrWhiteSpace(metric) || metric.Length > 100)
+        {
+            return BadRequest(new { error = "Invalid metric parameter" });
+        }
+
+        try
+        {
+            var isWithinQuota = await _usageMeteringService.IsWithinQuotaAsync(id, metric);
+
+            // Get quota limit from configuration
+            var quotaCheckResult = await _usageMeteringService.CheckQuotaAsync(id, metric);
+
+            var response = new TenantQuotaStatusResponse
+            {
+                TenantId = id,
+                Metric = metric,
+                IsWithinQuota = isWithinQuota,
+                CurrentUsage = quotaCheckResult.CurrentUsage,
+                QuotaLimit = quotaCheckResult.QuotaLimit,
+                IsAllowed = quotaCheckResult.IsAllowed,
+                IsExceeded = quotaCheckResult.IsExceeded,
+                UsagePercentage = quotaCheckResult.UsagePercentage
+            };
+
+            return Ok(response);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error getting quota status for tenant {TenantId} metric {Metric}", id, metric);
+            return BadRequest(new { error = ex.Message });
+        }
+    }
+}
+
+/// <summary>
+/// Response model for tenant quota status
+/// </summary>
+public class TenantQuotaStatusResponse
+{
+    public Guid TenantId { get; set; }
+    public string Metric { get; set; } = null!;
+    public bool IsWithinQuota { get; set; }
+    public long CurrentUsage { get; set; }
+    public long? QuotaLimit { get; set; }
+    public bool IsAllowed { get; set; }
+    public bool IsExceeded { get; set; }
+    public double UsagePercentage { get; set; }
 }
 
 /// <summary>
