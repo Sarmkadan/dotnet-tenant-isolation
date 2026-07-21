@@ -3,12 +3,13 @@
 // =============================================================================
 // Author: Vladyslav Zaiets | https://sarmkadan.com
 // CTO & Software Architect
-// =============================================================================
+// =====================================================================
 
 using System.Collections.Concurrent;
 using Microsoft.Extensions.Logging;
 using TenantIsolation.Exceptions;
 using TenantIsolation.Models;
+using TenantIsolation.Services;
 
 namespace TenantIsolation.Services;
 
@@ -24,6 +25,9 @@ public interface ITenantUsageMeteringService
     Task<TenantUsageRecord?> GetUsageAsync(Guid tenantId, string metricKey, CancellationToken cancellationToken = default);
 
     /// <summary>Check whether the tenant is within their allowed quota for <paramref name="metricKey"/>.</summary>
+    Task<bool> IsWithinQuotaAsync(Guid tenantId, string metricKey, CancellationToken cancellationToken = default);
+
+    /// <summary>Check whether the tenant is within their allowed quota for <paramref name="metricKey"/> against limits stored on TenantConfiguration.</summary>
     Task<QuotaCheckResult> CheckQuotaAsync(Guid tenantId, string metricKey, CancellationToken cancellationToken = default);
 
     /// <summary>Enforce the quota, throwing <see cref="TenantIsolationException"/> when the limit is exceeded.</summary>
@@ -40,7 +44,7 @@ public interface ITenantUsageMeteringService
 }
 
 /// <summary>
-/// In-process implementation of <see cref="ITenantUsageMeteringService"/> backed by a
+/// In-process implementation of <see cref="TenantUsageMeteringService"/> backed by a
 /// thread-safe in-memory store. Suitable for single-node deployments; replace with a
 /// distributed cache or database-backed implementation for multi-node scenarios.
 /// </summary>
@@ -48,11 +52,13 @@ public sealed class TenantUsageMeteringService : ITenantUsageMeteringService
 {
     private readonly ConcurrentDictionary<string, TenantUsageRecord> _store = new();
     private readonly ILogger<TenantUsageMeteringService> _logger;
+    private readonly ConfigurationService _configurationService;
 
     /// <summary>Initialises a new instance of <see cref="TenantUsageMeteringService"/>.</summary>
-    public TenantUsageMeteringService(ILogger<TenantUsageMeteringService> logger)
+    public TenantUsageMeteringService(ILogger<TenantUsageMeteringService> logger, ConfigurationService configurationService)
     {
         _logger = logger;
+        _configurationService = configurationService;
     }
 
     /// <inheritdoc/>
@@ -80,7 +86,8 @@ public sealed class TenantUsageMeteringService : ITenantUsageMeteringService
                 existing.CurrentValue += amount;
                 existing.UpdatedAt = DateTime.UtcNow;
                 return existing;
-            });
+            }
+        );
 
         _logger.LogInformation(
             "Usage recorded: tenant={TenantId} metric={MetricKey} delta={Amount} total={Total}",
@@ -108,15 +115,45 @@ public sealed class TenantUsageMeteringService : ITenantUsageMeteringService
     }
 
     /// <inheritdoc/>
+    public async Task<bool> IsWithinQuotaAsync(Guid tenantId, string metricKey, CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+
+        // Get quota limit from TenantConfiguration
+        var quotaLimit = await GetQuotaLimitFromConfigurationAsync(tenantId, metricKey, cancellationToken).ConfigureAwait(false);
+
+        // If no quota is configured, tenant is always within quota
+        if (!quotaLimit.HasValue)
+            return true;
+
+        // Get current usage
+        var usageRecord = await GetUsageAsync(tenantId, metricKey, cancellationToken).ConfigureAwait(false);
+        var currentUsage = usageRecord?.CurrentValue ?? 0;
+
+        // Check if within quota
+        return currentUsage < quotaLimit.Value;
+    }
+
+    /// <inheritdoc/>
     public Task<QuotaCheckResult> CheckQuotaAsync(
         Guid tenantId, string metricKey, CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();
-        _store.TryGetValue(StoreKey(tenantId, metricKey), out var record);
 
-        QuotaCheckResult result = record is { IsQuotaExceeded: true }
-            ? QuotaCheckResult.Deny(metricKey, record.CurrentValue, record.QuotaLimit!.Value)
-            : QuotaCheckResult.Allow(metricKey, record?.CurrentValue ?? 0, record?.QuotaLimit);
+        // Get quota limit from TenantConfiguration
+        var quotaLimitTask = GetQuotaLimitFromConfigurationAsync(tenantId, metricKey, cancellationToken);
+
+        // Get current usage
+        var usageTask = GetUsageAsync(tenantId, metricKey, cancellationToken);
+
+        Task.WaitAll(quotaLimitTask, usageTask);
+        var quotaLimit = quotaLimitTask.Result;
+        var usageRecord = usageTask.Result;
+        var currentUsage = usageRecord?.CurrentValue ?? 0;
+
+        QuotaCheckResult result = quotaLimit.HasValue && currentUsage >= quotaLimit.Value
+            ? QuotaCheckResult.Deny(metricKey, currentUsage, quotaLimit.Value)
+            : QuotaCheckResult.Allow(metricKey, currentUsage, quotaLimit);
 
         return Task.FromResult(result);
     }
@@ -129,7 +166,7 @@ public sealed class TenantUsageMeteringService : ITenantUsageMeteringService
         if (!result.IsAllowed)
             throw new TenantIsolationException(result.ViolationMessage!, "QUOTA_EXCEEDED",
                 new Dictionary<string, object?> { ["TenantId"] = tenantId, ["MetricKey"] = metricKey,
-                    ["CurrentUsage"] = result.CurrentUsage, ["QuotaLimit"] = result.QuotaLimit });
+                ["CurrentUsage"] = result.CurrentUsage, ["QuotaLimit"] = result.QuotaLimit });
     }
 
     /// <inheritdoc/>
@@ -180,6 +217,29 @@ public sealed class TenantUsageMeteringService : ITenantUsageMeteringService
             "Quota configured: tenant={TenantId} metric={MetricKey} limit={Limit}",
             tenantId, metricKey, quotaLimit.HasValue ? quotaLimit.Value.ToString("N0") : "unlimited");
         return Task.CompletedTask;
+    }
+
+    private async Task<long?> GetQuotaLimitFromConfigurationAsync(Guid tenantId, string metricKey, CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+
+        try
+        {
+            // Try to get quota limit from TenantConfiguration
+            var config = await _configurationService.GetConfigurationAsync(tenantId, $"quota:{metricKey}").ConfigureAwait(false);
+
+            if (config != null && long.TryParse(config.Value, out var limit))
+            {
+                return limit;
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to read quota configuration for tenant {TenantId} metric {MetricKey}",
+                tenantId, metricKey);
+        }
+
+        return null;
     }
 
     private static string StoreKey(Guid tenantId, string metricKey) =>
