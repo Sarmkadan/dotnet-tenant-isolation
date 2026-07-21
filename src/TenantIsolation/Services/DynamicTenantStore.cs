@@ -23,7 +23,7 @@ public class DynamicTenantStore : IDynamicTenantStore, IDisposable
 {
     private readonly TenantRepository _tenantRepository;
     private readonly ILogger<DynamicTenantStore> _logger;
-    private ConcurrentDictionary<Guid, Tenant> _tenantCache = new();
+    private volatile ConcurrentDictionary<Guid, Tenant> _tenantCache = new();
     private Timer? _reloadTimer;
     private readonly TenantIsolationOptions _options;
     private readonly object _lock = new object();
@@ -89,7 +89,8 @@ public class DynamicTenantStore : IDynamicTenantStore, IDisposable
         {
             _logger.LogDebug("Loading tenants from database...");
             var tenants = await _tenantRepository.GetActiveTenantAsync();
-            _tenantCache = new ConcurrentDictionary<Guid, Tenant>(tenants.ToDictionary(t => t.Id));
+            var newCache = new ConcurrentDictionary<Guid, Tenant>(tenants.ToDictionary(t => t.Id));
+            _tenantCache = newCache;
             _logger.LogInformation("Successfully loaded {Count} tenants.", tenants.Count);
         }
         catch (Exception ex)
@@ -121,13 +122,16 @@ public class DynamicTenantStore : IDynamicTenantStore, IDisposable
             var oldTenantIds = _tenantCache.Keys.ToHashSet();
             var newTenantIds = latestTenantMap.Keys.ToHashSet();
 
+            // Build new cache snapshot atomically
+            var removedTenants = new List<Tenant>();
+            var addedOrUpdatedTenants = new List<Tenant>();
+
             // Find removed tenants
             foreach (var removedTenantId in oldTenantIds.Except(newTenantIds))
             {
-                if (_tenantCache.TryRemove(removedTenantId, out var removedTenant))
+                if (_tenantCache.TryGetValue(removedTenantId, out var removedTenant))
                 {
-                    _logger.LogInformation("Tenant {TenantId} ('{TenantSlug}') removed from dynamic store.", removedTenant.Id, removedTenant.Slug);
-                    OnTenantRemoved?.Invoke(this, new TenantEventArgs { Tenant = removedTenant });
+                    removedTenants.Add(removedTenant);
                 }
             }
 
@@ -136,10 +140,39 @@ public class DynamicTenantStore : IDynamicTenantStore, IDisposable
             {
                 if (!_tenantCache.TryGetValue(latestTenant.Id, out var existingTenant) || !TenantsEqual(existingTenant, latestTenant))
                 {
-                    _tenantCache.AddOrUpdate(latestTenant.Id, latestTenant, (_, _) => latestTenant);
-                    _logger.LogInformation("Tenant {TenantId} ('{TenantSlug}') added or updated in dynamic store.", latestTenant.Id, latestTenant.Slug);
-                    OnTenantRegistered?.Invoke(this, new TenantEventArgs { Tenant = latestTenant });
+                    addedOrUpdatedTenants.Add(latestTenant);
                 }
+            }
+
+            // Build new cache completely before swapping
+            var newCache = new ConcurrentDictionary<Guid, Tenant>(_tenantCache);
+
+            // Apply removals to new cache
+            foreach (var removedTenant in removedTenants)
+            {
+                newCache.TryRemove(removedTenant.Id, out _);
+            }
+
+            // Apply additions/updates to new cache
+            foreach (var tenant in addedOrUpdatedTenants)
+            {
+                newCache.AddOrUpdate(tenant.Id, tenant, (_, _) => tenant);
+            }
+
+            // Atomically swap the cache reference
+            _tenantCache = newCache;
+
+            // Raise events after the swap is complete
+            foreach (var removedTenant in removedTenants)
+            {
+                _logger.LogInformation("Tenant {TenantId} ('{TenantSlug}') removed from dynamic store.", removedTenant.Id, removedTenant.Slug);
+                OnTenantRemoved?.Invoke(this, new TenantEventArgs { Tenant = removedTenant });
+            }
+
+            foreach (var addedTenant in addedOrUpdatedTenants)
+            {
+                _logger.LogInformation("Tenant {TenantId} ('{TenantSlug}') added or updated in dynamic store.", addedTenant.Id, addedTenant.Slug);
+                OnTenantRegistered?.Invoke(this, new TenantEventArgs { Tenant = addedTenant });
             }
 
             _logger.LogDebug("DynamicTenantStore reload completed. Current active tenants: {Count}", _tenantCache.Count);
