@@ -21,8 +21,8 @@ public class TenantResolutionOptions
     /// </summary>
     public List<TenantResolutionStrategy> ResolutionStrategies { get; set; } =
     [
-        TenantResolutionStrategy.Header,
         TenantResolutionStrategy.Subdomain,
+        TenantResolutionStrategy.Header,
         TenantResolutionStrategy.QueryString,
         TenantResolutionStrategy.Route,
         TenantResolutionStrategy.Claims,
@@ -87,8 +87,8 @@ public class TenantResolutionOptions
         {
             ResolutionStrategies = new List<TenantResolutionStrategy>
             {
-                TenantResolutionStrategy.Header,
                 TenantResolutionStrategy.Subdomain,
+                TenantResolutionStrategy.Header,
                 TenantResolutionStrategy.QueryString,
                 TenantResolutionStrategy.Route,
                 TenantResolutionStrategy.Claims,
