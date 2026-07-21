@@ -90,7 +90,8 @@ public class DynamicTenantStore : IDynamicTenantStore, IDisposable
             _logger.LogDebug("Loading tenants from database...");
             var tenants = await _tenantRepository.GetActiveTenantAsync();
             var newCache = new ConcurrentDictionary<Guid, Tenant>(tenants.ToDictionary(t => t.Id));
-            _tenantCache = newCache;
+        // Atomically swap the cache reference using Interlocked.Exchange
+        Interlocked.Exchange(ref _tenantCache, newCache);
             _logger.LogInformation("Successfully loaded {Count} tenants.", tenants.Count);
         }
         catch (Exception ex)
@@ -122,14 +123,20 @@ public class DynamicTenantStore : IDynamicTenantStore, IDisposable
             var oldTenantIds = _tenantCache.Keys.ToHashSet();
             var newTenantIds = latestTenantMap.Keys.ToHashSet();
 
-            // Build new cache snapshot atomically
+            // Build new tenant map completely before any modifications to avoid exposing readers to inconsistent state
+        var newCache = new ConcurrentDictionary<Guid, Tenant>(latestTenantMap);
+
+        // Atomically swap the cache reference using Interlocked.Exchange for proper memory barriers
+        var oldCache = Interlocked.Exchange(ref _tenantCache, newCache);
+
+        // Determine which tenants were actually removed or added/updated for event notifications
             var removedTenants = new List<Tenant>();
             var addedOrUpdatedTenants = new List<Tenant>();
 
             // Find removed tenants
             foreach (var removedTenantId in oldTenantIds.Except(newTenantIds))
             {
-                if (_tenantCache.TryGetValue(removedTenantId, out var removedTenant))
+                if (oldCache.TryGetValue(removedTenantId, out var removedTenant))
                 {
                     removedTenants.Add(removedTenant);
                 }
@@ -138,29 +145,13 @@ public class DynamicTenantStore : IDynamicTenantStore, IDisposable
             // Find new or updated tenants
             foreach (var latestTenant in latestTenants)
             {
-                if (!_tenantCache.TryGetValue(latestTenant.Id, out var existingTenant) || !TenantsEqual(existingTenant, latestTenant))
+                if (!oldCache.TryGetValue(latestTenant.Id, out var existingTenant) || !TenantsEqual(existingTenant, latestTenant))
                 {
                     addedOrUpdatedTenants.Add(latestTenant);
                 }
             }
 
-            // Build new cache completely before swapping
-            var newCache = new ConcurrentDictionary<Guid, Tenant>(_tenantCache);
-
-            // Apply removals to new cache
-            foreach (var removedTenant in removedTenants)
-            {
-                newCache.TryRemove(removedTenant.Id, out _);
-            }
-
-            // Apply additions/updates to new cache
-            foreach (var tenant in addedOrUpdatedTenants)
-            {
-                newCache.AddOrUpdate(tenant.Id, tenant, (_, _) => tenant);
-            }
-
-            // Atomically swap the cache reference
-            _tenantCache = newCache;
+    
 
             // Raise events after the swap is complete
             foreach (var removedTenant in removedTenants)
