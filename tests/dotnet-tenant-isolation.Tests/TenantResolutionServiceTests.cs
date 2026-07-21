@@ -26,27 +26,27 @@ public class TenantResolutionServiceTests
     /// <summary>
     /// Mock of <see cref="IHttpContextAccessor"/> used to provide HTTP context for testing.
     /// </summary>
-    private readonly Mock<IHttpContextAccessor> _mockHttpContextAccessor;
+    private Mock<IHttpContextAccessor> _mockHttpContextAccessor;
 
     /// <summary>
     /// Mock of <see cref="IDynamicTenantStore"/> used to simulate tenant data access.
     /// </summary>
-    private readonly Mock<IDynamicTenantStore> _mockTenantStore;
+    private Mock<IDynamicTenantStore> _mockTenantStore;
 
     /// <summary>
     /// Mock of <see cref="ILogger{TenantResolutionService}"/> used to verify logging behavior.
     /// </summary>
-    private readonly Mock<ILogger<TenantResolutionService>> _mockLogger;
+    private Mock<ILogger<TenantResolutionService>> _mockLogger;
 
     /// <summary>
     /// Mock of <see cref="IOptions{TenantResolutionOptions}"/> used to provide options for testing.
     /// </summary>
-    private readonly Mock<IOptions<TenantResolutionOptions>> _mockOptions;
+    private Mock<IOptions<TenantResolutionOptions>> _mockOptions;
 
     /// <summary>
     /// System under test - instance of <see cref="TenantResolutionService"/> being tested.
     /// </summary>
-    private readonly TenantResolutionService _sut;
+    private TenantResolutionService _sut;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="TenantResolutionServiceTests"/> class.
@@ -62,6 +62,23 @@ public class TenantResolutionServiceTests
         {
             ResolutionStrategies = new List<TenantResolutionStrategy> { TenantResolutionStrategy.Header },
             ThrowOnResolutionFailure = false
+        });
+
+        _sut = new TenantResolutionService(
+            _mockHttpContextAccessor.Object,
+            _mockTenantStore.Object,
+            _mockLogger.Object,
+            _mockOptions.Object);
+    }
+
+    private void SetupServiceWithStrategies(List<TenantResolutionStrategy> strategies, bool throwOnFailure = false, Guid? defaultTenantId = null, string defaultTenantSlug = null)
+    {
+        _mockOptions.Setup(x => x.Value).Returns(new TenantResolutionOptions
+        {
+            ResolutionStrategies = strategies,
+            ThrowOnResolutionFailure = throwOnFailure,
+            DefaultTenantId = defaultTenantId,
+            DefaultTenantSlug = defaultTenantSlug
         });
 
         _sut = new TenantResolutionService(
@@ -479,6 +496,215 @@ public class TenantResolutionServiceTests
         firstCall.Should().Be(secondCall);
         // Verify store was only called once (second call should use cache)
         _mockTenantStore.Verify(s => s.GetTenantByIdAsync(It.IsAny<Guid>()), Times.Once);
+    }
+
+    #endregion
+
+    #region ResolveTenantAsync - Query String Resolution Tests
+
+    /// <summary>
+    /// Tests that tenant is correctly resolved from query string tenantId parameter.
+    /// </summary>
+    [Fact]
+    public async Task ResolveTenantAsync_WithValidTenantIdQueryString_ResolvesFromQueryString()
+    {
+        // Arrange
+        var tenantId = Guid.NewGuid();
+        var tenant = new Tenant { Id = tenantId, Status = TenantStatus.Active };
+        var httpContext = CreateHttpContext();
+        httpContext.Request.Query = new QueryCollection(new Dictionary<string, Microsoft.Extensions.Primitives.StringValues> { { "tenantId", tenantId.ToString() } });
+
+        _mockTenantStore.Setup(s => s.GetTenantByIdAsync(tenantId))
+            .ReturnsAsync(tenant);
+
+        // Setup service with QueryString strategy
+        SetupServiceWithStrategies(new List<TenantResolutionStrategy> { TenantResolutionStrategy.QueryString });
+
+        // Act
+        var result = await _sut.ResolveTenantAsync();
+
+        // Assert
+        result.Should().Be(tenant);
+        result.Id.Should().Be(tenantId);
+        _mockTenantStore.Verify(s => s.GetTenantByIdAsync(tenantId), Times.Once);
+    }
+
+    /// <summary>
+    /// Tests that tenant is correctly resolved from query string tenantSlug parameter.
+    /// </summary>
+    [Fact]
+    public async Task ResolveTenantAsync_WithValidTenantSlugQueryString_ResolvesFromQueryString()
+    {
+        // Arrange
+        const string slug = "test-tenant";
+        var tenant = new Tenant { Id = Guid.NewGuid(), Slug = slug, Status = TenantStatus.Active };
+        var httpContext = CreateHttpContext();
+        httpContext.Request.Query = new QueryCollection(new Dictionary<string, Microsoft.Extensions.Primitives.StringValues> { { "tenantSlug", slug } });
+
+        var tenants = new List<Tenant> { tenant };
+        _mockTenantStore.Setup(s => s.GetAllActiveTenantsAsync())
+            .ReturnsAsync(tenants);
+
+        // Setup service with QueryString strategy
+        SetupServiceWithStrategies(new List<TenantResolutionStrategy> { TenantResolutionStrategy.QueryString });
+
+        // Act
+        var result = await _sut.ResolveTenantAsync();
+
+        // Assert
+        result.Should().Be(tenant);
+    }
+
+    #endregion
+
+    #region ResolveTenantAsync - Default Strategy Tests
+
+    /// <summary>
+    /// Tests that tenant is correctly resolved from default tenant configuration.
+    /// </summary>
+    [Fact]
+    public async Task ResolveTenantAsync_WithDefaultTenantConfiguration_ResolvesFromDefault()
+    {
+        // Arrange
+        var defaultTenantId = Guid.NewGuid();
+        var tenant = new Tenant { Id = defaultTenantId, Status = TenantStatus.Active };
+        var options = new TenantResolutionOptions
+        {
+            ResolutionStrategies = new List<TenantResolutionStrategy> { TenantResolutionStrategy.Default },
+            DefaultTenantId = defaultTenantId,
+            ThrowOnResolutionFailure = false
+        };
+
+        _mockTenantStore.Setup(s => s.GetTenantByIdAsync(defaultTenantId))
+            .ReturnsAsync(tenant);
+
+        // Setup service with Default strategy
+        SetupServiceWithStrategies(new List<TenantResolutionStrategy> { TenantResolutionStrategy.Default }, false, defaultTenantId);
+
+        // Act
+        var result = await _sut.ResolveTenantAsync();
+
+        // Assert
+        result.Should().Be(tenant);
+        result.Id.Should().Be(defaultTenantId);
+        _mockTenantStore.Verify(s => s.GetTenantByIdAsync(defaultTenantId), Times.Once);
+    }
+
+    #endregion
+
+    #region ResolveTenantAsync - Unknown Tenant Tests
+
+    /// <summary>
+    /// Tests that resolution fails when tenant is not found in the store.
+    /// </summary>
+    [Fact]
+    public async Task ResolveTenantAsync_WithUnknownTenantId_ThrowsTenantNotResolvedException()
+    {
+        // Arrange
+        var unknownTenantId = Guid.NewGuid();
+        var httpContext = CreateHttpContext();
+        httpContext.Request.Headers[TenantConstants.TenantIdHeader] = unknownTenantId.ToString();
+
+        _mockTenantStore.Setup(s => s.GetTenantByIdAsync(unknownTenantId))
+            .ReturnsAsync((Tenant?)null);
+
+        // Setup service with Header strategy
+        SetupServiceWithStrategies(new List<TenantResolutionStrategy> { TenantResolutionStrategy.Header });
+
+        // Act & Assert
+        await Assert.ThrowsAsync<TenantNotResolvedException>(() => _sut.ResolveTenantAsync());
+    }
+
+    /// <summary>
+    /// Tests that resolution fails when tenant slug is not found in the store.
+    /// </summary>
+    [Fact]
+    public async Task ResolveTenantAsync_WithUnknownTenantSlug_ThrowsTenantNotResolvedException()
+    {
+        // Arrange
+        const string unknownSlug = "unknown-tenant";
+        var httpContext = CreateHttpContext();
+        httpContext.Request.Headers[TenantConstants.TenantSlugHeader] = unknownSlug;
+
+        var tenants = new List<Tenant>();
+        _mockTenantStore.Setup(s => s.GetAllActiveTenantsAsync())
+            .ReturnsAsync(tenants);
+
+        // Setup service with Header strategy
+        SetupServiceWithStrategies(new List<TenantResolutionStrategy> { TenantResolutionStrategy.Header });
+
+        // Act & Assert
+        await Assert.ThrowsAsync<TenantNotResolvedException>(() => _sut.ResolveTenantAsync());
+    }
+
+    #endregion
+
+    #region ResolveTenantAsync - Disabled Tenant Tests
+
+    /// <summary>
+    /// Tests that resolution fails when tenant is disabled (Inactive status).
+    /// </summary>
+    [Fact]
+    public async Task ResolveTenantAsync_WithDisabledTenant_ThrowsTenantNotActiveException()
+    {
+        // Arrange
+        var tenantId = Guid.NewGuid();
+        var tenant = new Tenant { Id = tenantId, Status = TenantStatus.Inactive };
+        var httpContext = CreateHttpContext();
+        httpContext.Request.Headers[TenantConstants.TenantIdHeader] = tenantId.ToString();
+
+        _mockTenantStore.Setup(s => s.GetTenantByIdAsync(tenantId))
+            .ReturnsAsync(tenant);
+
+        // Update options to use Header strategy with ThrowOnResolutionFailure=true
+        _mockOptions.Setup(x => x.Value).Returns(new TenantResolutionOptions
+        {
+            ResolutionStrategies = new List<TenantResolutionStrategy> { TenantResolutionStrategy.Header },
+            ThrowOnResolutionFailure = true
+        });
+
+        // Recreate service with updated options
+        _sut = new TenantResolutionService(
+            _mockHttpContextAccessor.Object,
+            _mockTenantStore.Object,
+            _mockLogger.Object,
+            _mockOptions.Object);
+
+        // Act & Assert
+        await Assert.ThrowsAsync<TenantNotActiveException>(() => _sut.ResolveTenantAsync());
+    }
+
+    /// <summary>
+    /// Tests that resolution fails when tenant is archived.
+    /// </summary>
+    [Fact]
+    public async Task ResolveTenantAsync_WithArchivedTenant_ThrowsTenantNotActiveException()
+    {
+        // Arrange
+        var tenantId = Guid.NewGuid();
+        var tenant = new Tenant { Id = tenantId, Status = TenantStatus.Archived };
+        var httpContext = CreateHttpContext();
+        httpContext.Request.Headers[TenantConstants.TenantIdHeader] = tenantId.ToString();
+
+        _mockTenantStore.Setup(s => s.GetTenantByIdAsync(tenantId))
+            .ReturnsAsync(tenant);
+
+        // Update options to use Header strategy with ThrowOnResolutionFailure=true
+        _mockOptions.Setup(x => x.Value).Returns(new TenantResolutionOptions
+        {
+            ResolutionStrategies = new List<TenantResolutionStrategy> { TenantResolutionStrategy.Header },
+            ThrowOnResolutionFailure = true
+        });
+
+        // Recreate service with updated options
+        _sut = new TenantResolutionService(
+            _mockHttpContextAccessor.Object,
+            _mockTenantStore.Object,
+            _mockLogger.Object,
+            _mockOptions.Object);
+
+        // Act & Assert
+        await Assert.ThrowsAsync<TenantNotActiveException>(() => _sut.ResolveTenantAsync());
     }
 
     #endregion
