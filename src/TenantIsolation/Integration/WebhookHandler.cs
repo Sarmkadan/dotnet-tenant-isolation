@@ -239,7 +239,7 @@ public class WebhookHandler : IWebhookHandler
 
                 // Add webhook signature header if available
                 if (!string.IsNullOrEmpty(payload.Signature))
-                    content.Headers.Add("X-Webhook-Signature", payload.Signature);
+                    content.Headers.Add("X-Signature", payload.Signature);
 
                 var response = await client.PostAsync(webhook.Url, content);
 
