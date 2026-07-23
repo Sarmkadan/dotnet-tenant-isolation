@@ -183,6 +183,7 @@ public static class EventBusExtensions
 {
     /// <summary>
     /// Register event bus and event publisher in DI container
+    /// Uses the default EventPublisher implementation
     /// </summary>
     public static IServiceCollection AddEventBus(this IServiceCollection services)
     {
