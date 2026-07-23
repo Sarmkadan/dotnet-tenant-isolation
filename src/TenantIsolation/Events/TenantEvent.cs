@@ -8,8 +8,42 @@
 namespace TenantIsolation.Events;
 
 /// <summary>
+/// Marker interface for high-frequency telemetry events that may need sampling
+/// when published to webhooks or other high-volume consumers
+/// </summary>
+public interface IHighFrequencyEvent
+{
+    // Marker interface - no members required
+}
+
+/// <summary>
 /// Base class for all domain events in the tenant isolation system
 /// Implements pub-sub pattern for cross-service communication
+///
+/// <para>Event Hierarchy:</para>
+/// <list type="bullet">
+/// <item><see cref="TenantCreatedEvent"/> - Tenant creation event</item>
+/// <item><see cref="TenantActivatedEvent"/> - Tenant activation event</item>
+/// <item><see cref="TenantSuspendedEvent"/> - Tenant suspension event (hard suspension)</item>
+/// <item><see cref="TenantDeactivatedEvent"/> - Tenant deactivation event (soft deactivation)</item>
+/// <item><see cref="TenantReactivatedEvent"/> - Tenant reactivation event</item>
+/// <item><see cref="TenantDeletedEvent"/> - Tenant deletion event</item>
+/// <item><see cref="TenantConfigurationChangedEvent"/> - Configuration change event</item>
+/// <item><see cref="UserAddedToTenantEvent"/> - User addition event</item>
+/// <item><see cref="DataIsolationPolicyChangedEvent"/> - Data isolation policy change event</item>
+/// <item><see cref="FeatureToggledEvent"/> - Feature flag toggle event</item>
+/// <item><see cref="TenantResourceAccessedEvent"/> - High-frequency resource access event (implements <see cref="IHighFrequencyEvent"/>)</item>
+/// <item><see cref="TenantSubscriptionUpdatedEvent"/> - Subscription update event</item>
+/// </list>
+///
+/// <para>State Machine Pattern:</para>
+/// <code>Created → Activated → (Suspended|Deactivated) → Reactivated → Deleted</code>
+///
+/// Where:
+/// <list type="bullet">
+/// <item><see cref="TenantSuspendedEvent"/> - Permanent suspension (e.g., billing issues)</item>
+/// <item><see cref="TenantDeactivatedEvent"/> - Soft deactivation (temporary pause)</item>
+/// </list>
 /// </summary>
 public abstract class TenantEvent
 {
@@ -93,6 +127,50 @@ public class TenantSuspendedEvent : TenantEvent
 }
 
 /// <summary>
+/// Event when tenant is deactivated (soft-deleted/suspended from active use)
+/// Completes the state machine: Created → Activated → Deactivated → Reactivated → Deleted
+/// </summary>
+public class TenantDeactivatedEvent : TenantEvent
+{
+    /// <summary>
+    /// Reason for deactivation
+    /// </summary>
+    public string? DeactivationReason { get; set; }
+
+    /// <summary>
+    /// When the tenant was deactivated
+    /// </summary>
+    public DateTime DeactivatedAt { get; set; }
+
+    public TenantDeactivatedEvent()
+    {
+        Source = nameof(TenantDeactivatedEvent);
+    }
+}
+
+/// <summary>
+/// Event when tenant is reactivated after being deactivated
+/// Completes the state machine: Created → Activated → Deactivated → Reactivated → Deleted
+/// </summary>
+public class TenantReactivatedEvent : TenantEvent
+{
+    /// <summary>
+    /// Reason for reactivation
+    /// </summary>
+    public string? ReactivationReason { get; set; }
+
+    /// <summary>
+    /// When the tenant was reactivated
+    /// </summary>
+    public DateTime ReactivatedAt { get; set; }
+
+    public TenantReactivatedEvent()
+    {
+        Source = nameof(TenantReactivatedEvent);
+    }
+}
+
+/// <summary>
 /// Event when tenant is deleted
 /// </summary>
 public class TenantDeletedEvent : TenantEvent
@@ -169,8 +247,9 @@ public class FeatureToggledEvent : TenantEvent
 
 /// <summary>
 /// Event for tenant resource access
+/// Implements IHighFrequencyEvent for telemetry sampling
 /// </summary>
-public class TenantResourceAccessedEvent : TenantEvent
+public class TenantResourceAccessedEvent : TenantEvent, IHighFrequencyEvent
 {
     public string ResourceType { get; set; } = string.Empty;
     public string ResourceId { get; set; } = string.Empty;
