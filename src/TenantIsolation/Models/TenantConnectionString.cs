@@ -7,6 +7,8 @@
 
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
+using System.Data.Common;
+using System.Text.Json.Serialization;
 
 namespace TenantIsolation.Models;
 
@@ -38,7 +40,8 @@ public class TenantConnectionString
     /// Connection string (should be encrypted in storage)
     /// </summary>
     [Required]
-    public string ConnectionString { get; set; } = null!;
+    [JsonIgnore]
+        public string ConnectionString { get; set; } = null!;
 
     /// <summary>
     /// Friendly name for this connection
@@ -203,5 +206,99 @@ public class TenantConnectionString
         LastTestedAt = DateTime.UtcNow;
         LastTestResult = false;
         IsActive = false;
+    }
+
+    /// <summary>
+    /// Returns a string representation that redacts sensitive connection string details
+    /// </summary>
+    /// <returns>A redacted string representation of the connection string</returns>
+    public override string ToString()
+    {
+        if (string.IsNullOrEmpty(ConnectionString))
+        {
+            return "[ConnectionString: null]";
+        }
+
+        try
+        {
+            var builder = new DbConnectionStringBuilder
+            {
+                ConnectionString = ConnectionString
+            };
+
+            // Redact sensitive values
+            if (builder.ContainsKey("Password"))
+            {
+                builder["Password"] = "***REDACTED***";
+            }
+
+            if (builder.ContainsKey("User Id"))
+            {
+                builder["User Id"] = "***REDACTED***";
+            }
+
+            if (builder.ContainsKey("UserID"))
+            {
+                builder["UserID"] = "***REDACTED***";
+            }
+
+            if (builder.ContainsKey("PWD"))
+            {
+                builder["PWD"] = "***REDACTED***";
+            }
+
+            return $"TenantConnectionString {{ Id={Id}, TenantId={TenantId}, DatabaseType={DatabaseType}, ConnectionString={builder.ConnectionString}, Name={Name ?? "null"}, IsPrimary={IsPrimary}, IsActive={IsActive} }}";
+        }
+        catch
+        {
+            return $"TenantConnectionString {{ Id={Id}, TenantId={TenantId}, DatabaseType={DatabaseType}, ConnectionString=[Invalid], Name={Name ?? "null"}, IsPrimary={IsPrimary}, IsActive={IsActive} }}";
+        }
+    }
+
+    /// <summary>
+    /// Gets a redacted version of the connection string for display/logging purposes
+    /// </summary>
+    /// <returns>A redacted connection string</returns>
+    public string GetRedactedConnectionString()
+    {
+        if (string.IsNullOrEmpty(ConnectionString))
+        {
+            return string.Empty;
+        }
+
+        try
+        {
+            var builder = new DbConnectionStringBuilder
+            {
+                ConnectionString = ConnectionString
+            };
+
+            // Redact sensitive values
+            if (builder.ContainsKey("Password"))
+            {
+                builder["Password"] = "***REDACTED***";
+            }
+
+            if (builder.ContainsKey("User Id"))
+            {
+                builder["User Id"] = "***REDACTED***";
+            }
+
+            if (builder.ContainsKey("UserID"))
+            {
+                builder["UserID"] = "***REDACTED***";
+            }
+
+            if (builder.ContainsKey("PWD"))
+            {
+                builder["PWD"] = "***REDACTED***";
+            }
+
+            return builder.ConnectionString;
+        }
+        catch
+        {
+            return "[Invalid Connection String]";
+        }
     }
 }
