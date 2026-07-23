@@ -40,10 +40,19 @@ public class TenantCleanupWorker : BackgroundService
     /// </summary>
     public TimeSpan RetentionPeriod { get; set; } = DefaultRetentionPeriod;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="TenantCleanupWorker"/> class
+    /// </summary>
+    /// <param name="serviceProvider">The service provider for creating scoped services</param>
+    /// <param name="logger">The logger for recording operational information</param>
+    /// <exception cref="ArgumentNullException">Thrown if serviceProvider or logger is null</exception>
     public TenantCleanupWorker(
         IServiceProvider serviceProvider,
         ILogger<TenantCleanupWorker> logger)
     {
+        ArgumentNullException.ThrowIfNull(serviceProvider);
+        ArgumentNullException.ThrowIfNull(logger);
+
         _serviceProvider = serviceProvider;
         _logger = logger;
         _timer = new PeriodicTimer(CheckInterval);
@@ -57,7 +66,19 @@ public class TenantCleanupWorker : BackgroundService
         {
             while (await _timer.WaitForNextTickAsync(stoppingToken))
             {
-                await PerformCleanupAsync(stoppingToken);
+                try
+                {
+                    await PerformCleanupAsync(stoppingToken);
+                }
+                catch (OperationCanceledException)
+                {
+                    _logger.LogDebug("Tenant cleanup operation cancelled");
+                    throw;
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Unhandled exception in tenant cleanup iteration - continuing to next cycle");
+                }
             }
         }
         catch (OperationCanceledException)
@@ -67,89 +88,100 @@ public class TenantCleanupWorker : BackgroundService
     }
 
     /// <summary>
-    /// Perform cleanup operations
+    /// Perform cleanup operations including:
+    /// <list type="bullet">
+    /// <item>Hard deleting soft-deleted tenants older than retention period</item>
+    /// <item>Cleaning up orphaned users without valid tenants</item>
+    /// <item>Rebuilding database statistics</item>
+    /// </list>
     /// </summary>
+    /// <param name="cancellationToken">Cancellation token to monitor for cancellation requests</param>
+    /// <returns>Task representing the cleanup operation</returns>
+    /// <exception cref="ArgumentNullException">Thrown if cancellationToken is null</exception>
     private async Task PerformCleanupAsync(CancellationToken cancellationToken)
     {
+        ArgumentNullException.ThrowIfNull(cancellationToken);
+
+        using var scope = _serviceProvider.CreateScope();
+        var dbContext = scope.ServiceProvider.GetRequiredService<TenantDbContext>();
+
+        _logger.LogInformation("Starting tenant cleanup operation");
+
+        var cutoffDate = DateTime.UtcNow.Subtract(RetentionPeriod);
+        var deletedCount = 0;
+
+        // Hard delete soft-deleted tenants older than retention period
         try
         {
-            using var scope = _serviceProvider.CreateScope();
-            var dbContext = scope.ServiceProvider.GetRequiredService<TenantDbContext>();
+            var tenantsToDelete = await dbContext.Tenants
+                .Where(t => t.IsDeleted && t.UpdatedAt < cutoffDate)
+                .ToListAsync(cancellationToken);
 
-            _logger.LogInformation("Starting tenant cleanup operation");
-
-            var cutoffDate = DateTime.UtcNow.Subtract(RetentionPeriod);
-            var deletedCount = 0;
-
-            // Hard delete soft-deleted tenants older than retention period
-            try
+            if (tenantsToDelete.Any())
             {
-                var tenantsToDelete = await dbContext.Tenants
-                    .Where(t => t.IsDeleted && t.UpdatedAt < cutoffDate)
-                    .ToListAsync(cancellationToken);
+                dbContext.Tenants.RemoveRange(tenantsToDelete);
+                deletedCount = await dbContext.SaveChangesAsync(cancellationToken);
 
-                if (tenantsToDelete.Any())
-                {
-                    dbContext.Tenants.RemoveRange(tenantsToDelete);
-                    deletedCount = await dbContext.SaveChangesAsync(cancellationToken);
-
-                    _logger.LogInformation("Permanently deleted {Count} old tenant records", deletedCount);
-                }
+                _logger.LogInformation("Permanently deleted {Count} old tenant records", deletedCount);
             }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error deleting expired tenant records");
-            }
-
-            // Clean up orphaned users without valid tenants
-            try
-            {
-                var orphanedUsersQuery = @"
-                    DELETE FROM [User] u
-                    WHERE NOT EXISTS (
-                        SELECT 1 FROM [Tenant] t WHERE t.Id = u.TenantId
-                    )
-                    AND u.UpdatedAt < @CutoffDate
-                ";
-
-                var orphanedUserCount = await dbContext.Database
-                    .ExecuteSqlRawAsync(orphanedUsersQuery,
-                        new Microsoft.Data.SqlClient.SqlParameter("@CutoffDate", cutoffDate),
-                        cancellationToken);
-
-                if (orphanedUserCount > 0)
-                {
-                    _logger.LogInformation("Cleaned up {Count} orphaned user records", orphanedUserCount);
-                }
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error cleaning up orphaned users");
-            }
-
-            // Rebuild statistics
-            try
-            {
-                await RebuildStatisticsAsync(dbContext, cancellationToken);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error rebuilding statistics");
-            }
-
-            _logger.LogInformation("Tenant cleanup completed");
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error in tenant cleanup operation");
+            _logger.LogError(ex, "Error deleting expired tenant records");
         }
+
+        // Clean up orphaned users without valid tenants
+        try
+        {
+            var orphanedUsersQuery = @"
+            DELETE FROM [User] u
+            WHERE NOT EXISTS (
+                SELECT 1 FROM [Tenant] t WHERE t.Id = u.TenantId
+            )
+            AND u.UpdatedAt < @CutoffDate
+            ";
+
+            var orphanedUserCount = await dbContext.Database
+                .ExecuteSqlRawAsync(orphanedUsersQuery,
+                new Microsoft.Data.SqlClient.SqlParameter("@CutoffDate", cutoffDate),
+                cancellationToken);
+
+            if (orphanedUserCount > 0)
+            {
+                _logger.LogInformation("Cleaned up {Count} orphaned user records", orphanedUserCount);
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error cleaning up orphaned users");
+        }
+
+        // Rebuild statistics
+        try
+        {
+            await RebuildStatisticsAsync(dbContext, cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error rebuilding statistics");
+        }
+
+        _logger.LogInformation("Tenant cleanup completed");
     }
 
     /// <summary>
-    /// Rebuild database statistics after cleanup
+    /// Rebuilds database statistics after cleanup to maintain query performance.
+    /// This operation may not be supported by all database providers.
     /// </summary>
+    /// <param name="dbContext">The database context to use for statistics update</param>
+    /// <param name="cancellationToken">Cancellation token to monitor for cancellation requests</param>
+    /// <returns>Task representing the statistics rebuild operation</returns>
+    /// <exception cref="ArgumentNullException">Thrown if dbContext or cancellationToken is null</exception>
     private async Task RebuildStatisticsAsync(TenantDbContext dbContext, CancellationToken cancellationToken)
     {
+        ArgumentNullException.ThrowIfNull(dbContext);
+        ArgumentNullException.ThrowIfNull(cancellationToken);
+
         _logger.LogDebug("Rebuilding database statistics");
 
         try
@@ -220,7 +252,7 @@ public static class TenantCleanupWorkerExtensions
     }
 
     /// <summary>
-    /// Configures the tenant cleanup worker with custom retention period but default interval
+    /// Configures the tenant cleanup worker with custom retention period but default interval (1 day)
     /// </summary>
     /// <param name="builder">The host builder</param>
     /// <param name="retentionPeriod">How long to keep soft-deleted records before permanent deletion</param>
