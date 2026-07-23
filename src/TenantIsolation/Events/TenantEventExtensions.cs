@@ -50,6 +50,30 @@ namespace TenantIsolation.Events
         public static bool IsTenantSuspendedEvent(this TenantEvent @event) => @event is TenantSuspendedEvent;
 
         /// <summary>
+        /// Determines whether the specified <see cref="TenantEvent"/> is of type <see cref="TenantDeactivatedEvent"/>.
+        /// </summary>
+        /// <param name="event">The <see cref="TenantEvent"/> to check.</param>
+        /// <returns>
+        /// <see langword="true"/> if <paramref name="event"/> is a <see cref="TenantDeactivatedEvent"/>; otherwise, <see langword="false"/>.
+        /// </returns>
+        /// <exception cref="ArgumentNullException">
+        /// Thrown when <paramref name="event"/> is <see langword="null"/>.
+        /// </exception>
+        public static bool IsTenantDeactivatedEvent(this TenantEvent @event) => @event is TenantDeactivatedEvent;
+
+        /// <summary>
+        /// Determines whether the specified <see cref="TenantEvent"/> is of type <see cref="TenantReactivatedEvent"/>.
+        /// </summary>
+        /// <param name="event">The <see cref="TenantEvent"/> to check.</param>
+        /// <returns>
+        /// <see langword="true"/> if <paramref name="event"/> is a <see cref="TenantReactivatedEvent"/>; otherwise, <see langword="false"/>.
+        /// </returns>
+        /// <exception cref="ArgumentNullException">
+        /// Thrown when <paramref name="event"/> is <see langword="null"/>.
+        /// </exception>
+        public static bool IsTenantReactivatedEvent(this TenantEvent @event) => @event is TenantReactivatedEvent;
+
+        /// <summary>
         /// Determines whether the specified <see cref="TenantEvent"/> is of type <see cref="TenantDeletedEvent"/>.
         /// </summary>
         /// <param name="event">The <see cref="TenantEvent"/> to check.</param>
