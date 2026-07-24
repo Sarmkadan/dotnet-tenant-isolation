@@ -468,4 +468,76 @@ public class DataIsolationPolicyValidationTests
         errors.Should().Contain(e => e.Contains("EntityType is required"));
         errors.Should().Contain(e => e.Contains("PolicyType must be a valid DataIsolationPolicyType value"));
     }
+
+    [Fact]
+    public void Validate_WithStrictPolicyAndAllowedCrossTenantAccess_ReturnsError()
+    {
+        // Arrange
+        var policy = CreateValidPolicy();
+        policy.PolicyType = DataIsolationPolicyType.Strict;
+        policy.AllowedCrossTenantAccess = Guid.NewGuid().ToString();
+
+        // Act
+        var errors = policy.Validate();
+
+        // Assert
+        errors.Should().ContainSingle(e => e.Contains("PolicyType is Strict but AllowedCrossTenantAccess is populated"));
+    }
+
+    [Fact]
+    public void Validate_WithPolicyTransition_IdenticalOldAndNewPolicy_IsValid()
+    {
+        // Arrange - Create a valid policy
+        var policy = CreateValidPolicy();
+
+        // Act
+        var isValid = policy.IsValid();
+
+        // Assert - A policy with identical old and new values should be valid
+        isValid.Should().BeTrue();
+    }
+
+    [Fact]
+    public void ValidateStructured_WithStrictPolicyAndAllowedCrossTenantAccess_ReturnsConflictingIsolationModeError()
+    {
+        // Arrange
+        var policy = CreateValidPolicy();
+        policy.PolicyType = DataIsolationPolicyType.Strict;
+        policy.AllowedCrossTenantAccess = Guid.NewGuid().ToString();
+
+        // Act
+        var result = policy.ValidateStructured();
+
+        // Assert
+        result.IsValid.Should().BeFalse();
+        result.Errors.Should().ContainSingle(e => e.Code == PolicyErrorCode.ConflictingIsolationMode);
+    }
+
+    [Fact]
+    public void Validate_WithEmptyAllowedFieldsList_ReturnsNoError()
+    {
+        // Arrange
+        var policy = CreateValidPolicy();
+        policy.AllowedFields = "";
+
+        // Act
+        var errors = policy.Validate();
+
+        // Assert
+        errors.Should().BeEmpty();
+    }
+
+    [Fact]
+    public void Validate_WithEmptyDeniedFieldsList_ReturnsNoError()
+    {
+        // Arrange
+        var policy = CreateValidPolicy();
+        policy.DeniedFields = "";
+
+        // Act
+        var errors = policy.Validate();
+
+        // Assert
+        errors.Should().BeEmpty();
+    }
 }
