@@ -138,12 +138,14 @@ public interface IEventSubscriptionRegistry
     /// <summary>
     /// Get all registered handlers for event type
     /// </summary>
-    IEnumerable<EventHandlerInfo> GetHandlers<TEvent>() where TEvent : TenantEvent;
+    /// <param name="tenantId">Optional tenant ID to filter by. If null or empty, returns all handlers regardless of tenant.</param>
+    IEnumerable<EventHandlerInfo> GetHandlers<TEvent>(Guid? tenantId = null) where TEvent : TenantEvent;
 
     /// <summary>
     /// Get all registered handlers
     /// </summary>
-    IEnumerable<EventHandlerInfo> GetAllHandlers();
+    /// <param name="tenantId">Optional tenant ID to filter by. If null or empty, returns all handlers regardless of tenant.</param>
+    IEnumerable<EventHandlerInfo> GetAllHandlers(Guid? tenantId = null);
 }
 
 /// <summary>
@@ -162,6 +164,11 @@ public class EventHandlerInfo
     public string HandlerName { get; set; } = string.Empty;
 
     /// <summary>
+    /// Tenant ID that registered this handler (empty if not tenant-scoped)
+    /// </summary>
+    public Guid TenantId { get; set; }
+
+    /// <summary>
     /// When the handler was registered
     /// </summary>
     public DateTime RegisteredAt { get; set; }
@@ -170,6 +177,34 @@ public class EventHandlerInfo
     /// Handler method signature hash for matching
     /// </summary>
     public string HandlerSignature { get; set; } = string.Empty;
+}
+
+/// <summary>
+/// Base class for tenant-scoped event handlers
+/// </summary>
+/// <typeparam name="TEvent">Event type</typeparam>
+public abstract class TenantEventHandler<TEvent> where TEvent : TenantEvent
+{
+    /// <summary>
+    /// Tenant ID that this handler is scoped to
+    /// </summary>
+    public Guid TenantId { get; }
+
+    /// <summary>
+    /// Initializes a new tenant-scoped event handler
+    /// </summary>
+    /// <param name="tenantId">Tenant ID</param>
+    protected TenantEventHandler(Guid tenantId)
+    {
+        TenantId = tenantId;
+    }
+
+    /// <summary>
+    /// Handle the event
+    /// </summary>
+    /// <param name="@event">Event to handle</param>
+    /// <returns>Task</returns>
+    public abstract Task HandleAsync(TEvent @event);
 }
 
 /// <summary>
@@ -214,6 +249,10 @@ public sealed class SubscriptionToken : IDisposable
 /// </summary>
 public class EventSubscriptionRegistry : IEventSubscriptionRegistry
 {
+    // Maximum number of handlers allowed per event type to prevent unbounded fan-out DoS
+    // Each tenant can register up to this many handlers for a single event type
+    private const int MaxHandlersPerEventType = 100;
+
     private readonly ConcurrentDictionary<Type, ImmutableList<EventHandlerInfo>> _handlers = new();
 
     /// <summary>
@@ -222,6 +261,7 @@ public class EventSubscriptionRegistry : IEventSubscriptionRegistry
     /// <param name="handler">Event handler to register</param>
     /// <param name="handlerName">Optional name for the handler</param>
     /// <returns>Subscription token that automatically unsubscribes when disposed</returns>
+    /// <exception cref="InvalidOperationException">Thrown when the maximum number of handlers per event type has been reached</exception>
     public IDisposable Subscribe<TEvent>(Func<TEvent, Task> handler, string? handlerName = null)
         where TEvent : TenantEvent
     {
@@ -233,8 +273,24 @@ public class EventSubscriptionRegistry : IEventSubscriptionRegistry
             EventType = eventType.Name,
             HandlerName = handlerName ?? handler.Method.Name,
             HandlerSignature = "Func",
-            RegisteredAt = DateTime.UtcNow
+            RegisteredAt = DateTime.UtcNow,
+            TenantId = handler.Target switch
+            {
+                // Extract tenant ID from handler's target if it's a tenant-scoped handler
+                TenantEventHandler<TEvent> tenantHandler => tenantHandler.TenantId,
+                _ => Guid.Empty
+            }
         };
+
+        // Check if we've reached the maximum number of handlers per event type
+        var currentHandlers = _handlers.GetOrAdd(eventType, static _ => ImmutableList<EventHandlerInfo>.Empty);
+        if (currentHandlers.Count >= MaxHandlersPerEventType)
+        {
+            throw new InvalidOperationException(
+                $"Cannot register handler for event type '{eventType.Name}'. " +
+                $"Maximum of {MaxHandlersPerEventType} handlers per event type has been reached. " +
+                "This limit prevents unbounded fan-out DoS attacks.");
+        }
 
         _handlers.AddOrUpdate(
             eventType,
@@ -251,6 +307,7 @@ public class EventSubscriptionRegistry : IEventSubscriptionRegistry
     /// <param name="handler">Event handler to register</param>
     /// <param name="handlerName">Optional name for the handler</param>
     /// <returns>Subscription token that automatically unsubscribes when disposed</returns>
+    /// <exception cref="InvalidOperationException">Thrown when the maximum number of handlers per event type has been reached</exception>
     public IDisposable Subscribe<TEvent>(Action<TEvent> handler, string? handlerName = null)
         where TEvent : TenantEvent
     {
@@ -262,8 +319,24 @@ public class EventSubscriptionRegistry : IEventSubscriptionRegistry
             EventType = eventType.Name,
             HandlerName = handlerName ?? handler.Method.Name,
             HandlerSignature = "Action",
-            RegisteredAt = DateTime.UtcNow
+            RegisteredAt = DateTime.UtcNow,
+            TenantId = handler.Target switch
+            {
+                // Extract tenant ID from handler's target if it's a tenant-scoped handler
+                TenantEventHandler<TEvent> tenantHandler => tenantHandler.TenantId,
+                _ => Guid.Empty
+            }
         };
+
+        // Check if we've reached the maximum number of handlers per event type
+        var currentHandlers = _handlers.GetOrAdd(eventType, static _ => ImmutableList<EventHandlerInfo>.Empty);
+        if (currentHandlers.Count >= MaxHandlersPerEventType)
+        {
+            throw new InvalidOperationException(
+                $"Cannot register handler for event type '{eventType.Name}'. " +
+                $"Maximum of {MaxHandlersPerEventType} handlers per event type has been reached. " +
+                "This limit prevents unbounded fan-out DoS attacks.");
+        }
 
         _handlers.AddOrUpdate(
             eventType,
@@ -326,22 +399,26 @@ public class EventSubscriptionRegistry : IEventSubscriptionRegistry
         return true;
     }
 
-    /// <summary>
-    /// Get all registered handlers for event type
-    /// </summary>
-    public IEnumerable<EventHandlerInfo> GetHandlers<TEvent>() where TEvent : TenantEvent
-    {
-        var eventType = typeof(TEvent);
-        return _handlers.GetOrAdd(eventType, static _ => ImmutableList<EventHandlerInfo>.Empty)
-            .Where(h => string.Equals(h.EventType, eventType.Name, StringComparison.Ordinal));
-    }
 
     /// <summary>
-    /// Get all registered handlers
+    /// Get registered handlers for event type, optionally filtered by tenant
     /// </summary>
-    public IEnumerable<EventHandlerInfo> GetAllHandlers()
+    /// <typeparam name="TEvent">Event type</typeparam>
+    /// <param name="tenantId">Optional tenant ID to filter by. If null or empty, returns all handlers regardless of tenant.</param>
+    /// <returns>Filtered list of handlers</returns>
+    public IEnumerable<EventHandlerInfo> GetHandlers<TEvent>(Guid? tenantId = null) where TEvent : TenantEvent
     {
-        return _handlers.Values.SelectMany(h => h);
+        var eventType = typeof(TEvent);
+        var handlers = _handlers.GetOrAdd(eventType, static _ => ImmutableList<EventHandlerInfo>.Empty);
+
+        if (!tenantId.HasValue)
+        {
+            // Return all handlers if no tenant filter specified
+            return handlers.Where(h => string.Equals(h.EventType, eventType.Name, StringComparison.Ordinal));
+        }
+
+        // Filter by tenant ID if specified
+        return handlers.Where(h => string.Equals(h.EventType, eventType.Name, StringComparison.Ordinal) && h.TenantId == tenantId.Value);
     }
 
     /// <summary>
@@ -350,5 +427,22 @@ public class EventSubscriptionRegistry : IEventSubscriptionRegistry
     public void Clear()
     {
         _handlers.Clear();
+    }
+
+    /// <summary>
+    /// Get all registered handlers
+    /// </summary>
+    /// <param name="tenantId">Optional tenant ID to filter by. If null or empty, returns all handlers regardless of tenant.</param>
+    /// <returns>Filtered list of all handlers</returns>
+    public IEnumerable<EventHandlerInfo> GetAllHandlers(Guid? tenantId = null)
+    {
+        if (!tenantId.HasValue)
+        {
+            // Return all handlers if no tenant filter specified
+            return _handlers.Values.SelectMany(h => h);
+        }
+
+        // Filter by tenant ID if specified
+        return _handlers.Values.SelectMany(h => h).Where(h => h.TenantId == tenantId.Value);
     }
 }
