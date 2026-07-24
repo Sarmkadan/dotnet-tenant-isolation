@@ -5,6 +5,7 @@
 // CTO & Software Architect
 // ===================================================================
 
+using System;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
@@ -46,11 +47,15 @@ public static class TenantConnectionStringJsonExtensions
     /// </summary>
     /// <param name="json">The JSON string to deserialize</param>
     /// <returns>The deserialized connection string, or null if the JSON is null or empty</returns>
-    /// <exception cref="ArgumentNullException">Thrown when <paramref name="json"/> is null or whitespace</exception>
+    /// <exception cref="ArgumentException">Thrown when <paramref name="json"/> is null, empty, or whitespace</exception>
     /// <exception cref="JsonException">Thrown when the JSON is invalid or cannot be deserialized</exception>
     public static TenantConnectionString? FromJson(string json)
     {
-        ArgumentException.ThrowIfNullOrEmpty(json);
+        // Updated to treat whitespace as invalid input, matching the documentation.
+        if (string.IsNullOrWhiteSpace(json))
+        {
+            throw new ArgumentException("JSON cannot be null, empty, or whitespace.", nameof(json));
+        }
 
         return JsonSerializer.Deserialize<TenantConnectionString>(json, _jsonSerializerOptions);
     }
