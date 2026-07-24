@@ -83,6 +83,15 @@ public static class ServiceRegistrationExtensions
             services.AddEventBus();
         }
 
+        // Register the data isolation policy validator and its startup guardrail.
+        // The guardrail depends on the event bus to re-validate on policy changes, so it
+        // only makes sense to register when the event bus itself is enabled.
+        services.AddScoped<IDataIsolationPolicyValidator, DataIsolationPolicyValidator>();
+        if (options.EnableEventBus)
+        {
+            services.AddHostedService<DataIsolationPolicyStartupValidator>();
+        }
+
         // Register formatters
         services.AddResponseFormatter();
 
