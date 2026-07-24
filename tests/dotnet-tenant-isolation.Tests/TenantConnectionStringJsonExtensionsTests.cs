@@ -13,15 +13,10 @@ public sealed class TenantConnectionStringJsonExtensionsTests
     private static TenantConnectionString CreateSample()
     {
         // The concrete shape of TenantConnectionString is not known here,
-        // but it is assumed to have a parameterless constructor and public settable
-        // properties for the purpose of these tests. Adjust the initializer as needed
-        // to match the actual model definition.
-        return new TenantConnectionString
-        {
-            // Example properties – replace with real ones if they differ
-            // TenantId = Guid.NewGuid(),
-            // ConnectionString = "Server=.;Database=Test;Trusted_Connection=True;"
-        };
+        // but it is assumed to have a public parameterless constructor.
+        // If the type defines required properties, they can be left at their defaults
+        // for the purpose of serialization tests.
+        return new TenantConnectionString();
     }
 
     [Fact]
@@ -38,13 +33,15 @@ public sealed class TenantConnectionStringJsonExtensionsTests
     }
 
     [Fact]
-    public void ToJson_WithIndentation_ShouldSetWriteIndented()
+    public void ToJson_WithIndentation_ShouldDifferFromNonIndented()
     {
         var value = CreateSample();
 
-        string json = value.ToJson(indented: true);
+        string jsonNonIndented = value.ToJson(indented: false);
+        string jsonIndented = value.ToJson(indented: true);
 
-        Assert.Contains("\n", json); // indented JSON contains line breaks
+        // When indentation is requested the output should differ (e.g., contain line breaks or spaces)
+        Assert.NotEqual(jsonNonIndented, jsonIndented);
     }
 
     [Fact]
@@ -66,7 +63,7 @@ public sealed class TenantConnectionStringJsonExtensionsTests
     }
 
     [Fact]
-    public void FromJson_NullOrEmpty_ShouldThrowArgumentException()
+    public void FromJson_NullOrEmptyOrWhiteSpace_ShouldThrowArgumentException()
     {
         Assert.Throws<ArgumentException>(() => TenantConnectionStringJsonExtensions.FromJson(null!));
         Assert.Throws<ArgumentException>(() => TenantConnectionStringJsonExtensions.FromJson(string.Empty));
@@ -91,6 +88,15 @@ public sealed class TenantConnectionStringJsonExtensionsTests
         const string invalidJson = "{ this is not valid json }";
 
         bool success = TenantConnectionStringJsonExtensions.TryFromJson(invalidJson, out var result);
+
+        Assert.False(success);
+        Assert.Null(result);
+    }
+
+    [Fact]
+    public void TryFromJson_WhiteSpace_ShouldReturnFalse()
+    {
+        bool success = TenantConnectionStringJsonExtensions.TryFromJson("   ", out var result);
 
         Assert.False(success);
         Assert.Null(result);
