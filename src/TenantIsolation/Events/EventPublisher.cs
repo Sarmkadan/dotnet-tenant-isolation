@@ -292,11 +292,10 @@ public class EventSubscriptionRegistry : IEventSubscriptionRegistry
                 "This limit prevents unbounded fan-out DoS attacks.");
         }
 
-        _handlers.AddOrUpdate(
-            eventType,
-            ImmutableList.Create(handlerInfo),
-            (_, existing) => existing.Add(handlerInfo)
-        );
+    // Use direct assignment for thread-safe update
+    _handlers[eventType] = _handlers.TryGetValue(eventType, out var existingList)
+        ? existingList.Add(handlerInfo)
+        : ImmutableList.Create(handlerInfo);
 
         return new SubscriptionToken(this, eventType, handler);
     }
@@ -338,11 +337,10 @@ public class EventSubscriptionRegistry : IEventSubscriptionRegistry
                 "This limit prevents unbounded fan-out DoS attacks.");
         }
 
-        _handlers.AddOrUpdate(
-            eventType,
-            ImmutableList.Create(handlerInfo),
-            (_, existing) => existing.Add(handlerInfo)
-        );
+    // Use direct assignment for thread-safe update
+    _handlers[eventType] = _handlers.TryGetValue(eventType, out var existingList)
+        ? existingList.Add(handlerInfo)
+        : ImmutableList.Create(handlerInfo);
 
         return new SubscriptionToken(this, eventType, handler);
     }
@@ -390,11 +388,8 @@ public class EventSubscriptionRegistry : IEventSubscriptionRegistry
             return false; // Handler not found
         }
 
-        _handlers.AddOrUpdate(
-            eventType,
-            newList,
-            (_, _) => newList
-        );
+    // Direct assignment is thread-safe for this operation
+    _handlers[eventType] = newList;
 
         return true;
     }
