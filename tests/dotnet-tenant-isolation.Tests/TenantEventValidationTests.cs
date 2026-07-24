@@ -685,4 +685,76 @@ public class TenantEventValidationTests
         resourceAccessedEvent.Source.Should().NotBeEmpty();
         subscriptionUpdatedEvent.Source.Should().NotBeEmpty();
     }
+
+    [Fact]
+    public void DataIsolationPolicyChangedEvent_OldPolicy_WithInvalidPolicyJson_ThrowsArgumentException()
+    {
+        // Arrange
+        var policyChangedEvent = new DataIsolationPolicyChangedEvent();
+        var invalidPolicyJson = "{\"EntityType\":\"\"}"; // Empty EntityType should fail validation
+
+        // Act & Assert
+        var exception = Assert.Throws<ArgumentException>(() => policyChangedEvent.OldPolicy = invalidPolicyJson);
+        exception.Message.Should().Contain("EntityType is required");
+    }
+
+    [Fact]
+    public void DataIsolationPolicyChangedEvent_NewPolicy_WithInvalidPolicyJson_ThrowsArgumentException()
+    {
+        // Arrange
+        var policyChangedEvent = new DataIsolationPolicyChangedEvent();
+        var invalidPolicyJson = "{\"Id\":\"00000000-0000-0000-0000-000000000000\",\"TenantId\":\"00000000-0000-0000-0000-000000000000\",\"EntityType\":\"\"}"; // Empty EntityType should fail validation
+
+        // Act & Assert
+        var exception = Assert.Throws<ArgumentException>(() => policyChangedEvent.NewPolicy = invalidPolicyJson);
+        exception.Message.Should().Contain("EntityType is required");
+    }
+
+    [Fact]
+    public void DataIsolationPolicyChangedEvent_OldPolicy_WithNull_ThrowsArgumentNullException()
+    {
+        // Arrange
+        var policyChangedEvent = new DataIsolationPolicyChangedEvent();
+
+        // Act & Assert
+        Assert.Throws<ArgumentNullException>(() => policyChangedEvent.OldPolicy = null!);
+    }
+
+    [Fact]
+    public void DataIsolationPolicyChangedEvent_NewPolicy_WithNull_ThrowsArgumentNullException()
+    {
+        // Arrange
+        var policyChangedEvent = new DataIsolationPolicyChangedEvent();
+
+        // Act & Assert
+        Assert.Throws<ArgumentNullException>(() => policyChangedEvent.NewPolicy = null!);
+    }
+
+    [Fact]
+    public void DataIsolationPolicyChangedEvent_OldPolicy_WithValidPolicyJson_DoesNotThrow()
+    {
+        // Arrange
+        var policyChangedEvent = new DataIsolationPolicyChangedEvent();
+        var validPolicyJson = "{\"Id\":\"00000000-0000-0000-0000-000000000000\",\"TenantId\":\"00000000-0000-0000-0000-000000000000\",\"EntityType\":\"Order\",\"PolicyType\":0,\"Priority\":100,\"CreatedAt\":\"2024-01-01T00:00:00Z\",\"UpdatedAt\":\"2024-01-01T00:00:00Z\"}";
+
+        // Act
+        policyChangedEvent.OldPolicy = validPolicyJson;
+
+        // Assert - no exception thrown
+        policyChangedEvent.OldPolicy.Should().Be(validPolicyJson);
+    }
+
+    [Fact]
+    public void DataIsolationPolicyChangedEvent_NewPolicy_WithValidPolicyJson_DoesNotThrow()
+    {
+        // Arrange
+        var policyChangedEvent = new DataIsolationPolicyChangedEvent();
+        var validPolicyJson = "{\"Id\":\"11111111-1111-1111-1111-111111111111\",\"TenantId\":\"11111111-1111-1111-1111-111111111111\",\"EntityType\":\"Customer\",\"PolicyType\":1,\"Priority\":100,\"CreatedAt\":\"2024-01-01T00:00:00Z\",\"UpdatedAt\":\"2024-01-01T00:00:00Z\"}";
+
+        // Act
+        policyChangedEvent.NewPolicy = validPolicyJson;
+
+        // Assert - no exception thrown
+        policyChangedEvent.NewPolicy.Should().Be(validPolicyJson);
+    }
 }
