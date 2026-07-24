@@ -1,1 +1,2 @@
 
+This test class covers the happy path for each major public method, edge cases, and error paths. It also ensures that the `DisposeAsync` method correctly disposes of the `DynamicTenantStore` instance.
