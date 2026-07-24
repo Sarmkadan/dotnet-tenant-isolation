@@ -6,6 +6,7 @@
 // =============================================================================
 
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 namespace TenantIsolation.Events;
 
@@ -13,6 +14,80 @@ namespace TenantIsolation.Events;
 /// Event handler delegate
 /// </summary>
 public delegate Task EventHandlerDelegate<in TEvent>(TEvent @event) where TEvent : TenantEvent;
+
+/// <summary>
+/// Configuration options controlling per-handler retry and backoff behavior for <see cref="EventBus"/>
+/// </summary>
+public sealed class PublisherResilienceOptions
+{
+    /// <summary>
+    /// Maximum number of retry attempts performed for a handler after its initial failed invocation
+    /// Defaults to 3
+    /// </summary>
+    public int MaxRetries { get; set; } = 3;
+
+    /// <summary>
+    /// Base delay used to compute exponential backoff between retry attempts
+    /// The delay before attempt N is <c>BaseDelay * 2^(N-1)</c>
+    /// Defaults to 200 milliseconds
+    /// </summary>
+    public TimeSpan BaseDelay { get; set; } = TimeSpan.FromMilliseconds(200);
+}
+
+/// <summary>
+/// Sink that receives events whose handler exhausted all configured retry attempts
+/// </summary>
+public interface IDeadLetterSink
+{
+    /// <summary>
+    /// Handle an event whose delivery to a specific handler permanently failed
+    /// </summary>
+    /// <param name="event">The event that could not be delivered</param>
+    /// <param name="handlerName">Name of the handler that failed to process the event</param>
+    /// <param name="exception">The last exception thrown by the handler</param>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="event"/>, <paramref name="handlerName"/>, or <paramref name="exception"/> is null</exception>
+    Task HandleAsync<TEvent>(TEvent @event, string handlerName, Exception exception) where TEvent : TenantEvent;
+}
+
+/// <summary>
+/// Default dead-letter sink implementation that logs the failure
+/// Suitable as a fallback when no dedicated dead-letter storage is configured
+/// </summary>
+public sealed class LoggingDeadLetterSink : IDeadLetterSink
+{
+    private readonly ILogger<LoggingDeadLetterSink> _logger;
+
+    /// <summary>
+    /// Initializes a new instance of <see cref="LoggingDeadLetterSink"/>
+    /// </summary>
+    /// <param name="logger">Logger used to record dead-lettered events</param>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="logger"/> is null</exception>
+    public LoggingDeadLetterSink(ILogger<LoggingDeadLetterSink> logger)
+    {
+        ArgumentNullException.ThrowIfNull(logger);
+        _logger = logger;
+    }
+
+    /// <summary>
+    /// Logs the event, handler name, and terminal exception at error level
+    /// </summary>
+    /// <param name="event">The event that could not be delivered</param>
+    /// <param name="handlerName">Name of the handler that failed to process the event</param>
+    /// <param name="exception">The last exception thrown by the handler</param>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="event"/>, <paramref name="handlerName"/>, or <paramref name="exception"/> is null</exception>
+    public Task HandleAsync<TEvent>(TEvent @event, string handlerName, Exception exception) where TEvent : TenantEvent
+    {
+        ArgumentNullException.ThrowIfNull(@event);
+        ArgumentException.ThrowIfNullOrEmpty(handlerName);
+        ArgumentNullException.ThrowIfNull(exception);
+
+        _logger.LogError(exception,
+            "Dead-lettered event {EventType} (ID: {EventId}) for tenant {TenantId} after exhausting retries for handler {HandlerName}",
+            typeof(TEvent).Name, @event.EventId, @event.TenantId, handlerName);
+
+        return Task.CompletedTask;
+    }
+}
 
 /// <summary>
 /// Event bus interface for pub-sub communication
@@ -49,10 +124,54 @@ public class EventBus : IEventBus
     private readonly Dictionary<Type, List<Delegate>> _subscribers = new();
     private readonly ILogger<EventBus> _logger;
     private readonly object _lockObject = new();
+    private readonly PublisherResilienceOptions _resilienceOptions;
+    private readonly IDeadLetterSink _deadLetterSink;
 
-    public EventBus(ILogger<EventBus> logger)
+    /// <summary>
+    /// Initializes a new instance of <see cref="EventBus"/>
+    /// </summary>
+    /// <param name="logger">Logger used to record subscription and publishing activity</param>
+    /// <param name="resilienceOptions">
+    /// Optional retry/backoff configuration. When null, default <see cref="PublisherResilienceOptions"/> values are used
+    /// </param>
+    /// <param name="deadLetterSink">
+    /// Optional sink invoked once a handler exhausts its retries. When null, a <see cref="LoggingDeadLetterSink"/> backed by <paramref name="logger"/>'s logger factory is not available,
+    /// so a minimal internal fallback that logs through <paramref name="logger"/> is used instead
+    /// </param>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="logger"/> is null</exception>
+    public EventBus(
+        ILogger<EventBus> logger,
+        IOptions<PublisherResilienceOptions>? resilienceOptions = null,
+        IDeadLetterSink? deadLetterSink = null)
     {
+        ArgumentNullException.ThrowIfNull(logger);
         _logger = logger;
+        _resilienceOptions = resilienceOptions?.Value ?? new PublisherResilienceOptions();
+        _deadLetterSink = deadLetterSink ?? new FallbackDeadLetterSink(_logger);
+    }
+
+    /// <summary>
+    /// Minimal dead-letter sink used when no <see cref="IDeadLetterSink"/> is registered in DI,
+    /// so retry exhaustion is never silently swallowed
+    /// </summary>
+    private sealed class FallbackDeadLetterSink : IDeadLetterSink
+    {
+        private readonly ILogger _logger;
+
+        public FallbackDeadLetterSink(ILogger logger) => _logger = logger;
+
+        public Task HandleAsync<TEvent>(TEvent @event, string handlerName, Exception exception) where TEvent : TenantEvent
+        {
+            ArgumentNullException.ThrowIfNull(@event);
+            ArgumentException.ThrowIfNullOrEmpty(handlerName);
+            ArgumentNullException.ThrowIfNull(exception);
+
+            _logger.LogError(exception,
+                "Dead-lettered event {EventType} (ID: {EventId}) for tenant {TenantId} after exhausting retries for handler {HandlerName}",
+                typeof(TEvent).Name, @event.EventId, @event.TenantId, handlerName);
+
+            return Task.CompletedTask;
+        }
     }
 
     /// <summary>
@@ -123,31 +242,58 @@ public class EventBus : IEventBus
         _logger.LogInformation("Publishing {EventType} (ID: {EventId}) to {HandlerCount} subscribers",
             eventType.Name, @event.EventId, handlers.Count);
 
-        var exceptions = new List<Exception>();
-
+        // Dispatch to each handler independently so a failing handler (even after
+        // exhausting its retries) never prevents delivery to the remaining handlers
         foreach (var handler in handlers)
+        {
+            if (handler is Func<TEvent, Task> typedHandler)
+            {
+                await DispatchWithRetryAsync(typedHandler, @event);
+            }
+        }
+    }
+
+    /// <summary>
+    /// Invokes a single handler for an event, retrying on failure with exponential backoff.
+    /// If all attempts fail, the event is forwarded to the configured <see cref="IDeadLetterSink"/>
+    /// instead of propagating the exception, keeping handler failures isolated
+    /// </summary>
+    private async Task DispatchWithRetryAsync<TEvent>(Func<TEvent, Task> handler, TEvent @event)
+        where TEvent : TenantEvent
+    {
+        var handlerName = handler.Method.Name;
+        var maxRetries = Math.Max(0, _resilienceOptions.MaxRetries);
+        var attempt = 0;
+
+        while (true)
         {
             try
             {
-                if (handler is Func<TEvent, Task> typedHandler)
-                {
-                    await typedHandler(@event);
-                }
+                await handler(@event);
+                return;
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error in event handler for {EventType}",
-                    eventType.Name);
-                exceptions.Add(ex);
-            }
-        }
+                if (attempt >= maxRetries)
+                {
+                    _logger.LogError(ex,
+                        "Handler {HandlerName} for {EventType} (ID: {EventId}) failed after {AttemptCount} attempt(s); dead-lettering",
+                        handlerName, typeof(TEvent).Name, @event.EventId, attempt + 1);
 
-        // If there were exceptions, throw aggregate exception
-        if (exceptions.Count > 0)
-        {
-            throw new AggregateException(
-                $"One or more handlers failed when processing {eventType.Name}",
-                exceptions);
+                    await _deadLetterSink.HandleAsync(@event, handlerName, ex);
+                    return;
+                }
+
+                var delay = TimeSpan.FromMilliseconds(
+                    _resilienceOptions.BaseDelay.TotalMilliseconds * Math.Pow(2, attempt));
+
+                _logger.LogWarning(ex,
+                    "Handler {HandlerName} for {EventType} (ID: {EventId}) failed on attempt {Attempt}; retrying in {DelayMs}ms",
+                    handlerName, typeof(TEvent).Name, @event.EventId, attempt + 1, delay.TotalMilliseconds);
+
+                attempt++;
+                await Task.Delay(delay);
+            }
         }
     }
 
@@ -187,6 +333,9 @@ public static class EventBusExtensions
     /// </summary>
     public static IServiceCollection AddEventBus(this IServiceCollection services)
     {
+        ArgumentNullException.ThrowIfNull(services);
+
+        services.AddSingleton<IDeadLetterSink, LoggingDeadLetterSink>();
         services.AddSingleton<IEventBus, EventBus>();
         services.AddScoped<IEventPublisher, EventPublisher>();
         return services;
