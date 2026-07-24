@@ -88,10 +88,88 @@ public abstract class TenantEvent
 /// </summary>
 public class TenantCreatedEvent : TenantEvent
 {
-    public string TenantName { get; set; } = string.Empty;
-    public string TenantSlug { get; set; } = string.Empty;
-    public string AdminEmail { get; set; } = string.Empty;
-    public string IsolationStrategy { get; set; } = string.Empty;
+    private const int MaxStringLength = 255;
+
+    private string _tenantName = string.Empty;
+    private string _tenantSlug = string.Empty;
+    private string _adminEmail = string.Empty;
+    private string _isolationStrategy = string.Empty;
+
+    /// <summary>
+    /// Tenant name
+    /// </summary>
+    /// <exception cref="ArgumentNullException">Thrown when value is null.</exception>
+    /// <exception cref="ArgumentException">Thrown when value is empty or exceeds maximum length.</exception>
+    public string TenantName
+    {
+        get => _tenantName;
+        set
+        {
+            ArgumentException.ThrowIfNullOrEmpty(value, nameof(value));
+            if (value.Length > MaxStringLength)
+            {
+                throw new ArgumentException($"Tenant name cannot exceed {MaxStringLength} characters.", nameof(value));
+            }
+            _tenantName = value;
+        }
+    }
+
+    /// <summary>
+    /// Tenant slug identifier
+    /// </summary>
+    /// <exception cref="ArgumentNullException">Thrown when value is null.</exception>
+    /// <exception cref="ArgumentException">Thrown when value is empty or exceeds maximum length.</exception>
+    public string TenantSlug
+    {
+        get => _tenantSlug;
+        set
+        {
+            ArgumentException.ThrowIfNullOrEmpty(value, nameof(value));
+            if (value.Length > MaxStringLength)
+            {
+                throw new ArgumentException($"Tenant slug cannot exceed {MaxStringLength} characters.", nameof(value));
+            }
+            _tenantSlug = value;
+        }
+    }
+
+    /// <summary>
+    /// Administrator email address
+    /// </summary>
+    /// <exception cref="ArgumentNullException">Thrown when value is null.</exception>
+    /// <exception cref="ArgumentException">Thrown when value is empty or exceeds maximum length.</exception>
+    public string AdminEmail
+    {
+        get => _adminEmail;
+        set
+        {
+            ArgumentException.ThrowIfNullOrEmpty(value, nameof(value));
+            if (value.Length > MaxStringLength)
+            {
+                throw new ArgumentException($"Admin email cannot exceed {MaxStringLength} characters.", nameof(value));
+            }
+            _adminEmail = value;
+        }
+    }
+
+    /// <summary>
+    /// Isolation strategy identifier
+    /// </summary>
+    /// <exception cref="ArgumentNullException">Thrown when value is null.</exception>
+    /// <exception cref="ArgumentException">Thrown when value is empty or exceeds maximum length.</exception>
+    public string IsolationStrategy
+    {
+        get => _isolationStrategy;
+        set
+        {
+            ArgumentException.ThrowIfNullOrEmpty(value, nameof(value));
+            if (value.Length > MaxStringLength)
+            {
+                throw new ArgumentException($"Isolation strategy cannot exceed {MaxStringLength} characters.", nameof(value));
+            }
+            _isolationStrategy = value;
+        }
+    }
 
     public TenantCreatedEvent()
     {
@@ -117,7 +195,25 @@ public class TenantActivatedEvent : TenantEvent
 /// </summary>
 public class TenantSuspendedEvent : TenantEvent
 {
-    public string? SuspensionReason { get; set; }
+    private string? _suspensionReason;
+
+    /// <summary>
+    /// Reason for suspension
+    /// </summary>
+    /// <exception cref="ArgumentException">Thrown when value exceeds maximum length.</exception>
+    public string? SuspensionReason
+    {
+        get => _suspensionReason;
+        set
+        {
+            if (value?.Length > 255)
+            {
+                throw new ArgumentException("Suspension reason cannot exceed 255 characters.", nameof(value));
+            }
+            _suspensionReason = value;
+        }
+    }
+
     public DateTime SuspendedAt { get; set; }
 
     public TenantSuspendedEvent()
@@ -132,10 +228,24 @@ public class TenantSuspendedEvent : TenantEvent
 /// </summary>
 public class TenantDeactivatedEvent : TenantEvent
 {
+    private string? _deactivationReason;
+
     /// <summary>
     /// Reason for deactivation
     /// </summary>
-    public string? DeactivationReason { get; set; }
+    /// <exception cref="ArgumentException">Thrown when value exceeds maximum length.</exception>
+    public string? DeactivationReason
+    {
+        get => _deactivationReason;
+        set
+        {
+            if (value?.Length > 255)
+            {
+                throw new ArgumentException("Deactivation reason cannot exceed 255 characters.", nameof(value));
+            }
+            _deactivationReason = value;
+        }
+    }
 
     /// <summary>
     /// When the tenant was deactivated
@@ -154,10 +264,24 @@ public class TenantDeactivatedEvent : TenantEvent
 /// </summary>
 public class TenantReactivatedEvent : TenantEvent
 {
+    private string? _reactivationReason;
+
     /// <summary>
     /// Reason for reactivation
     /// </summary>
-    public string? ReactivationReason { get; set; }
+    /// <exception cref="ArgumentException">Thrown when value exceeds maximum length.</exception>
+    public string? ReactivationReason
+    {
+        get => _reactivationReason;
+        set
+        {
+            if (value?.Length > 255)
+            {
+                throw new ArgumentException("Reactivation reason cannot exceed 255 characters.", nameof(value));
+            }
+            _reactivationReason = value;
+        }
+    }
 
     /// <summary>
     /// When the tenant was reactivated
@@ -175,7 +299,25 @@ public class TenantReactivatedEvent : TenantEvent
 /// </summary>
 public class TenantDeletedEvent : TenantEvent
 {
-    public string? DeletionReason { get; set; }
+    private string? _deletionReason;
+
+    /// <summary>
+    /// Reason for deletion
+    /// </summary>
+    /// <exception cref="ArgumentException">Thrown when value exceeds maximum length.</exception>
+    public string? DeletionReason
+    {
+        get => _deletionReason;
+        set
+        {
+            if (value?.Length > 255)
+            {
+                throw new ArgumentException("Deletion reason cannot exceed 255 characters.", nameof(value));
+            }
+            _deletionReason = value;
+        }
+    }
+
     public DateTime DeletedAt { get; set; }
 
     public TenantDeletedEvent()
@@ -189,12 +331,39 @@ public class TenantDeletedEvent : TenantEvent
 /// </summary>
 public class TenantConfigurationChangedEvent : TenantEvent
 {
-    public Dictionary<string, object> ChangedProperties { get; set; } = new();
+    private const int MaxStringLength = 255;
+    private Dictionary<string, object> _changedProperties = new();
+
+    /// <summary>
+    /// Changed properties dictionary
+    /// </summary>
+    /// <exception cref="ArgumentNullException">Thrown when value is null.</exception>
+    /// <exception cref="ArgumentException">Thrown when dictionary contains keys exceeding maximum length.</exception>
+    public Dictionary<string, object> ChangedProperties
+    {
+        get => _changedProperties;
+        set
+        {
+            ArgumentNullException.ThrowIfNull(value, nameof(value));
+
+            foreach (var key in value.Keys)
+            {
+                if (key.Length > MaxStringLength)
+                {
+                    throw new ArgumentException($"Configuration key '{key}' cannot exceed {MaxStringLength} characters.", nameof(value));
+                }
+            }
+
+            _changedProperties = value;
+        }
+    }
+
     public DateTime ChangedAt { get; set; }
 
     public TenantConfigurationChangedEvent()
     {
         Source = nameof(TenantConfigurationChangedEvent);
+        ChangedProperties = new Dictionary<string, object>();
     }
 }
 
@@ -203,9 +372,69 @@ public class TenantConfigurationChangedEvent : TenantEvent
 /// </summary>
 public class UserAddedToTenantEvent : TenantEvent
 {
-    public string NewUserId { get; set; } = string.Empty;
-    public string UserEmail { get; set; } = string.Empty;
-    public string Role { get; set; } = string.Empty;
+    private const int MaxStringLength = 255;
+
+    private string _newUserId = string.Empty;
+    private string _userEmail = string.Empty;
+    private string _role = string.Empty;
+
+    /// <summary>
+    /// New user identifier
+    /// </summary>
+    /// <exception cref="ArgumentNullException">Thrown when value is null.</exception>
+    /// <exception cref="ArgumentException">Thrown when value is empty or exceeds maximum length.</exception>
+    public string NewUserId
+    {
+        get => _newUserId;
+        set
+        {
+            ArgumentException.ThrowIfNullOrEmpty(value, nameof(value));
+            if (value.Length > MaxStringLength)
+            {
+                throw new ArgumentException($"User ID cannot exceed {MaxStringLength} characters.", nameof(value));
+            }
+            _newUserId = value;
+        }
+    }
+
+    /// <summary>
+    /// User email address
+    /// </summary>
+    /// <exception cref="ArgumentNullException">Thrown when value is null.</exception>
+    /// <exception cref="ArgumentException">Thrown when value is empty or exceeds maximum length.</exception>
+    public string UserEmail
+    {
+        get => _userEmail;
+        set
+        {
+            ArgumentException.ThrowIfNullOrEmpty(value, nameof(value));
+            if (value.Length > MaxStringLength)
+            {
+                throw new ArgumentException($"User email cannot exceed {MaxStringLength} characters.", nameof(value));
+            }
+            _userEmail = value;
+        }
+    }
+
+    /// <summary>
+    /// User role
+    /// </summary>
+    /// <exception cref="ArgumentNullException">Thrown when value is null.</exception>
+    /// <exception cref="ArgumentException">Thrown when value is empty or exceeds maximum length.</exception>
+    public string Role
+    {
+        get => _role;
+        set
+        {
+            ArgumentException.ThrowIfNullOrEmpty(value, nameof(value));
+            if (value.Length > MaxStringLength)
+            {
+                throw new ArgumentException($"Role cannot exceed {MaxStringLength} characters.", nameof(value));
+            }
+            _role = value;
+        }
+    }
+
     public DateTime AddedAt { get; set; }
 
     public UserAddedToTenantEvent()
@@ -219,9 +448,67 @@ public class UserAddedToTenantEvent : TenantEvent
 /// </summary>
 public class DataIsolationPolicyChangedEvent : TenantEvent
 {
-    public string PolicyType { get; set; } = string.Empty;
-    public string OldPolicy { get; set; } = string.Empty;
-    public string NewPolicy { get; set; } = string.Empty;
+    private const int MaxStringLength = 255;
+
+    private string _policyType = string.Empty;
+    private string _oldPolicy = string.Empty;
+    private string _newPolicy = string.Empty;
+
+    /// <summary>
+    /// Policy type identifier
+    /// </summary>
+    /// <exception cref="ArgumentNullException">Thrown when value is null.</exception>
+    /// <exception cref="ArgumentException">Thrown when value is empty or exceeds maximum length.</exception>
+    public string PolicyType
+    {
+        get => _policyType;
+        set
+        {
+            ArgumentException.ThrowIfNullOrEmpty(value, nameof(value));
+            if (value.Length > MaxStringLength)
+            {
+                throw new ArgumentException($"Policy type cannot exceed {MaxStringLength} characters.", nameof(value));
+            }
+            _policyType = value;
+        }
+    }
+
+    /// <summary>
+    /// Old policy value
+    /// </summary>
+    /// <exception cref="ArgumentNullException">Thrown when value is null.</exception>
+    /// <exception cref="ArgumentException">Thrown when value exceeds maximum length.</exception>
+    public string OldPolicy
+    {
+        get => _oldPolicy;
+        set
+        {
+            if (value.Length > MaxStringLength)
+            {
+                throw new ArgumentException($"Old policy cannot exceed {MaxStringLength} characters.", nameof(value));
+            }
+            _oldPolicy = value;
+        }
+    }
+
+    /// <summary>
+    /// New policy value
+    /// </summary>
+    /// <exception cref="ArgumentNullException">Thrown when value is null.</exception>
+    /// <exception cref="ArgumentException">Thrown when value exceeds maximum length.</exception>
+    public string NewPolicy
+    {
+        get => _newPolicy;
+        set
+        {
+            if (value.Length > MaxStringLength)
+            {
+                throw new ArgumentException($"New policy cannot exceed {MaxStringLength} characters.", nameof(value));
+            }
+            _newPolicy = value;
+        }
+    }
+
     public DateTime ChangedAt { get; set; }
 
     public DataIsolationPolicyChangedEvent()
@@ -235,8 +522,31 @@ public class DataIsolationPolicyChangedEvent : TenantEvent
 /// </summary>
 public class FeatureToggledEvent : TenantEvent
 {
-    public string FeatureName { get; set; } = string.Empty;
+    private const int MaxStringLength = 255;
+
+    private string _featureName = string.Empty;
+
+    /// <summary>
+    /// Feature name
+    /// </summary>
+    /// <exception cref="ArgumentNullException">Thrown when value is null.</exception>
+    /// <exception cref="ArgumentException">Thrown when value is empty or exceeds maximum length.</exception>
+    public string FeatureName
+    {
+        get => _featureName;
+        set
+        {
+            ArgumentException.ThrowIfNullOrEmpty(value, nameof(value));
+            if (value.Length > MaxStringLength)
+            {
+                throw new ArgumentException($"Feature name cannot exceed {MaxStringLength} characters.", nameof(value));
+            }
+            _featureName = value;
+        }
+    }
+
     public bool IsEnabled { get; set; }
+
     public DateTime ToggledAt { get; set; }
 
     public FeatureToggledEvent()
@@ -251,9 +561,78 @@ public class FeatureToggledEvent : TenantEvent
 /// </summary>
 public class TenantResourceAccessedEvent : TenantEvent, IHighFrequencyEvent
 {
-    public string ResourceType { get; set; } = string.Empty;
-    public string ResourceId { get; set; } = string.Empty;
-    public string Action { get; set; } = string.Empty;
+    private const int MaxStringLength = 255;
+    private const string PathTraversalPattern = "../";
+
+    private string _resourceType = string.Empty;
+    private string _resourceId = string.Empty;
+    private string _action = string.Empty;
+
+    /// <summary>
+    /// Resource type
+    /// </summary>
+    /// <exception cref="ArgumentNullException">Thrown when value is null.</exception>
+    /// <exception cref="ArgumentException">Thrown when value is empty or exceeds maximum length.</exception>
+    public string ResourceType
+    {
+        get => _resourceType;
+        set
+        {
+            ArgumentException.ThrowIfNullOrEmpty(value, nameof(value));
+            if (value.Length > MaxStringLength)
+            {
+                throw new ArgumentException($"Resource type cannot exceed {MaxStringLength} characters.", nameof(value));
+            }
+            _resourceType = value;
+        }
+    }
+
+    /// <summary>
+    /// Resource identifier - validated against path traversal sequences
+    /// </summary>
+    /// <exception cref="ArgumentNullException">Thrown when value is null.</exception>
+    /// <exception cref="ArgumentException">Thrown when value is empty, exceeds maximum length, or contains path traversal sequences.</exception>
+    public string ResourceId
+    {
+        get => _resourceId;
+        set
+        {
+            ArgumentException.ThrowIfNullOrEmpty(value, nameof(value));
+            if (value.Length > MaxStringLength)
+            {
+                throw new ArgumentException($"Resource ID cannot exceed {MaxStringLength} characters.", nameof(value));
+            }
+
+            // Check for path traversal sequences to prevent directory traversal attacks
+            if (value.Contains(PathTraversalPattern, StringComparison.Ordinal) ||
+                value.Contains("..\\", StringComparison.Ordinal))
+            {
+                throw new ArgumentException("Resource ID cannot contain path traversal sequences ('../' or '..\\').", nameof(value));
+            }
+
+            _resourceId = value;
+        }
+    }
+
+    /// <summary>
+    /// Action performed on resource
+    /// </summary>
+    /// <exception cref="ArgumentNullException">Thrown when value is null.</exception>
+    /// <exception cref="ArgumentException">Thrown when value is empty or exceeds maximum length.</exception>
+    public string Action
+    {
+        get => _action;
+        set
+        {
+            ArgumentException.ThrowIfNullOrEmpty(value, nameof(value));
+            if (value.Length > MaxStringLength)
+            {
+                throw new ArgumentException($"Action cannot exceed {MaxStringLength} characters.", nameof(value));
+            }
+            _action = value;
+        }
+    }
+
     public DateTime AccessedAt { get; set; }
     public bool WasSuccessful { get; set; }
 
@@ -268,7 +647,29 @@ public class TenantResourceAccessedEvent : TenantEvent, IHighFrequencyEvent
 /// </summary>
 public class TenantSubscriptionUpdatedEvent : TenantEvent
 {
-    public string SubscriptionPlan { get; set; } = string.Empty;
+    private const int MaxStringLength = 255;
+
+    private string _subscriptionPlan = string.Empty;
+
+    /// <summary>
+    /// Subscription plan identifier
+    /// </summary>
+    /// <exception cref="ArgumentNullException">Thrown when value is null.</exception>
+    /// <exception cref="ArgumentException">Thrown when value is empty or exceeds maximum length.</exception>
+    public string SubscriptionPlan
+    {
+        get => _subscriptionPlan;
+        set
+        {
+            ArgumentException.ThrowIfNullOrEmpty(value, nameof(value));
+            if (value.Length > MaxStringLength)
+            {
+                throw new ArgumentException($"Subscription plan cannot exceed {MaxStringLength} characters.", nameof(value));
+            }
+            _subscriptionPlan = value;
+        }
+    }
+
     public DateTime ExpiryDate { get; set; }
     public decimal Price { get; set; }
     public DateTime UpdatedAt { get; set; }
