@@ -90,6 +90,7 @@ public static class ServiceRegistrationExtensions
         if (options.EnableWebhooks)
         {
             services.AddScoped<IWebhookHandler, WebhookHandler>();
+            services.AddWebhookDeliveryService();
         }
 
         services.AddTenantIsolationHttpClientFactory();

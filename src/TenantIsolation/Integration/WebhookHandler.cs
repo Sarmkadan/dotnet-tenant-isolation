@@ -113,15 +113,18 @@ public class WebhookHandler : IWebhookHandler
 {
     private readonly IHttpClientFactory _httpClientFactory;
     private readonly ILogger<WebhookHandler> _logger;
+    private readonly IWebhookDeliveryService _webhookDeliveryService;
     private readonly ConcurrentDictionary<Guid, WebhookSubscription> _subscriptions;
     private readonly ConcurrentDictionary<Guid, List<WebhookDelivery>> _deliveryHistory;
 
     public WebhookHandler(
         IHttpClientFactory httpClientFactory,
-        ILogger<WebhookHandler> logger)
+        ILogger<WebhookHandler> logger,
+        IWebhookDeliveryService webhookDeliveryService)
     {
         _httpClientFactory = httpClientFactory;
         _logger = logger;
+        _webhookDeliveryService = webhookDeliveryService;
         _subscriptions = new ConcurrentDictionary<Guid, WebhookSubscription>();
         _deliveryHistory = new ConcurrentDictionary<Guid, List<WebhookDelivery>>();
     }
@@ -177,7 +180,7 @@ public class WebhookHandler : IWebhookHandler
             return;
         }
 
-        var tasks = webhooks.Select(w => SendToWebhookAsync(@event, w));
+        var tasks = webhooks.Select(w => DeliverWebhookWithEnhancedResilienceAsync(@event, w));
         await Task.WhenAll(tasks);
     }
 
@@ -206,10 +209,11 @@ public class WebhookHandler : IWebhookHandler
     }
 
     /// <summary>
-    /// Send webhook payload to endpoint with retry logic
+    /// Deliver webhook with enhanced resilience features including circuit breaker, timeout, and retry
     /// </summary>
-    private async Task SendToWebhookAsync(TenantEvent @event, WebhookSubscription webhook)
+    private async Task DeliverWebhookWithEnhancedResilienceAsync(TenantEvent @event, WebhookSubscription webhook)
     {
+        // Create webhook payload
         var payload = new WebhookPayload
         {
             EventId = @event.EventId,
@@ -219,75 +223,68 @@ public class WebhookHandler : IWebhookHandler
             Data = @event
         };
 
-        // Generate signature if secret is configured
-        if (!string.IsNullOrEmpty(webhook.Secret))
+        // Create endpoint configuration
+        var endpoint = new WebhookEndpoint
         {
-            var json = System.Text.Json.JsonSerializer.Serialize(payload);
-            payload.Signature = CryptographyUtility.GenerateHmacSha256(json, webhook.Secret);
+            Url = webhook.Url,
+            Secret = webhook.Secret,
+            Timeout = TimeSpan.FromSeconds(10),
+            MaxRetries = 3,
+            BaseDelayMilliseconds = 1000,
+            RespectRetryAfter = true,
+            UseCircuitBreaker = true
+        };
+
+        // Use the enhanced delivery service
+        var result = await _webhookDeliveryService.DeliverAsync(payload, endpoint);
+
+        // Record delivery history
+        var delivery = new WebhookDelivery
+        {
+            WebhookId = webhook.Id,
+            EventId = @event.EventId,
+            HttpStatusCode = result.HttpStatusCode ?? 0,
+            IsSuccessful = result.IsSuccess,
+            ErrorMessage = result.ErrorMessage,
+            RetryCount = result.RetryCount,
+            SentAt = DateTime.UtcNow
+        };
+
+        RecordDelivery(webhook.Id, delivery);
+
+        // Update webhook status based on delivery result
+        if (result.IsSuccess)
+        {
+            webhook.LastTriggeredAt = DateTime.UtcNow;
+            webhook.FailureCount = 0;
+            _logger.LogInformation(
+                "Webhook {WebhookId} delivered successfully for event {EventId} in {Duration}ms",
+                webhook.Id,
+                @event.EventId,
+                result.Duration.TotalMilliseconds);
         }
-
-        var maxRetries = 3;
-        var retryCount = 0;
-
-        while (retryCount < maxRetries)
+        else
         {
-            try
+            webhook.FailureCount++;
+
+            if (webhook.FailureCount > 5)
             {
-                var client = _httpClientFactory.CreateClient("webhook");
-                var json = System.Text.Json.JsonSerializer.Serialize(payload);
-                var content = new StringContent(json, System.Text.Encoding.UTF8, "application/json");
-
-                // Add webhook signature header if available
-                if (!string.IsNullOrEmpty(payload.Signature))
-                    content.Headers.Add("X-Signature", payload.Signature);
-
-                var response = await client.PostAsync(webhook.Url, content);
-
-                var delivery = new WebhookDelivery
-                {
-                    WebhookId = webhook.Id,
-                    EventId = @event.EventId,
-                    HttpStatusCode = (int)response.StatusCode,
-                    IsSuccessful = response.IsSuccessStatusCode,
-                    RetryCount = retryCount
-                };
-
-                if (response.IsSuccessStatusCode)
-                {
-                    webhook.LastTriggeredAt = DateTime.UtcNow;
-                    webhook.FailureCount = 0;
-                    _logger.LogInformation("Webhook {WebhookId} delivered successfully for event {EventId}",
-                        webhook.Id, @event.EventId);
-                }
-                else
-                {
-                    delivery.ErrorMessage = $"HTTP {(int)response.StatusCode}";
-                    webhook.FailureCount++;
-
-                    if (webhook.FailureCount > 5)
-                    {
-                        webhook.IsActive = false;
-                        webhook.DisabledAt = DateTime.UtcNow;
-                        _logger.LogWarning("Webhook {WebhookId} disabled due to repeated failures",
-                            webhook.Id);
-                    }
-                }
-
-                RecordDelivery(webhook.Id, delivery);
-                return;
+                webhook.IsActive = false;
+                webhook.DisabledAt = DateTime.UtcNow;
+                _logger.LogWarning(
+                    "Webhook {WebhookId} disabled due to repeated failures (total: {FailureCount})",
+                    webhook.Id,
+                    webhook.FailureCount);
             }
-            catch (Exception ex)
+            else
             {
-                retryCount++;
-                _logger.LogWarning(ex, "Webhook {WebhookId} delivery attempt {Attempt} failed",
-                    webhook.Id, retryCount);
-
-                if (retryCount < maxRetries)
-                    await Task.Delay(TimeSpan.FromSeconds(Math.Pow(2, retryCount)));
+                _logger.LogWarning(
+                    "Webhook {WebhookId} delivery failed for event {EventId}: {ErrorMessage}",
+                    webhook.Id,
+                    @event.EventId,
+                    result.ErrorMessage ?? "Unknown error");
             }
         }
-
-        webhook.FailureCount++;
     }
 
     private void RecordDelivery(Guid webhookId, WebhookDelivery delivery)

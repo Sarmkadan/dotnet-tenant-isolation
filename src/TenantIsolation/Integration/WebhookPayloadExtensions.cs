@@ -16,6 +16,22 @@ namespace TenantIsolation.Integration
     public static class WebhookPayloadExtensions
     {
         /// <summary>
+        /// Generates HMAC-SHA256 signature for the webhook payload using the provided secret.
+        /// </summary>
+        /// <param name="payload">The webhook payload to sign.</param>
+        /// <param name="secret">The secret key used to compute the HMAC.</param>
+        /// <returns>The hex-encoded HMAC-SHA256 signature.</returns>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="payload"/> or <paramref name="secret"/> is <c>null</c>.</exception>
+        /// <exception cref="ArgumentException">Thrown when <paramref name="secret"/> is an empty string.</exception>
+        public static string GenerateSignature(this WebhookPayload payload, string secret)
+        {
+            ArgumentNullException.ThrowIfNull(payload);
+            ArgumentException.ThrowIfNullOrEmpty(secret);
+
+            var message = JsonSerializer.Serialize(payload, new JsonSerializerOptions { WriteIndented = false });
+            return CryptographyUtility.GenerateHmacSha256(message, secret);
+        }
+        /// <summary>
         /// Validates the payload's <c>Signature</c> using the supplied secret.
         /// The signature is expected to be a hex‑encoded HMAC‑SHA256 of the JSON-serialized payload.
         /// </summary>
