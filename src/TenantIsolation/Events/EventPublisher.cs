@@ -51,8 +51,11 @@ public class EventPublisher : IEventPublisher
     /// Publish event with automatic context injection
     /// Injects correlation ID, tenant ID, and user ID from current request
     /// </summary>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="@event"/> is null.</exception>
     public async Task PublishAsync<TEvent>(TEvent @event) where TEvent : TenantEvent
     {
+        ArgumentNullException.ThrowIfNull(@event);
+
         try
         {
             // Inject request context if available

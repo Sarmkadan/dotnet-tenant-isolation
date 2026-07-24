@@ -3,7 +3,7 @@
 // =============================================================================
 // Author: Vladyslav Zaiets | https://sarmkadan.com
 // CTO & Software Architect
-// =============================================================================
+// =====================================================================
 
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -106,7 +106,9 @@ public interface IEventBus
 
     /// <summary>
     /// Publish event to all subscribers
+    /// Supports covariant dispatch - events are delivered to handlers registered for base types
     /// </summary>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="@event"/> is null.</exception>
     Task PublishAsync<TEvent>(TEvent @event) where TEvent : TenantEvent;
 
     /// <summary>
@@ -180,8 +182,7 @@ public class EventBus : IEventBus
     /// </summary>
     public void Subscribe<TEvent>(Func<TEvent, Task> handler) where TEvent : TenantEvent
     {
-        if (handler == null)
-            throw new ArgumentNullException(nameof(handler));
+        ArgumentNullException.ThrowIfNull(handler);
 
         lock (_lockObject)
         {
@@ -200,8 +201,7 @@ public class EventBus : IEventBus
     /// </summary>
     public void Unsubscribe<TEvent>(Func<TEvent, Task> handler) where TEvent : TenantEvent
     {
-        if (handler == null)
-            throw new ArgumentNullException(nameof(handler));
+        ArgumentNullException.ThrowIfNull(handler);
 
         lock (_lockObject)
         {
@@ -218,18 +218,37 @@ public class EventBus : IEventBus
     /// <summary>
     /// Publish event to all subscribers
     /// Executes handlers sequentially, collecting any exceptions
+    /// Supports covariant dispatch - events are delivered to handlers registered for base types
     /// </summary>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="@event"/> is null.</exception>
     public async Task PublishAsync<TEvent>(TEvent @event) where TEvent : TenantEvent
     {
-        if (@event == null)
-            throw new ArgumentNullException(nameof(@event));
+        ArgumentNullException.ThrowIfNull(@event);
 
         var eventType = typeof(TEvent);
-        List<Delegate>? handlers;
+        List<Delegate> handlers = new();
 
         lock (_lockObject)
         {
-            if (!_subscribers.TryGetValue(eventType, out handlers) || handlers.Count == 0)
+            // Find all handlers for this exact event type
+            if (_subscribers.TryGetValue(eventType, out var exactHandlers) && exactHandlers.Count > 0)
+            {
+                handlers.AddRange(exactHandlers);
+            }
+
+            // Find all handlers for base types (covariant dispatch support)
+            // Walk up the inheritance chain to find handlers registered for base TenantEvent types
+            var currentType = eventType.BaseType;
+            while (currentType != null && currentType != typeof(TenantEvent) && currentType != typeof(object))
+            {
+                if (_subscribers.TryGetValue(currentType, out var baseHandlers) && baseHandlers.Count > 0)
+                {
+                    handlers.AddRange(baseHandlers);
+                }
+                currentType = currentType.BaseType;
+            }
+
+            if (handlers.Count == 0)
             {
                 _logger.LogDebug("No subscribers for event {EventType}", eventType.Name);
                 return;
@@ -246,10 +265,33 @@ public class EventBus : IEventBus
         // exhausting its retries) never prevents delivery to the remaining handlers
         foreach (var handler in handlers)
         {
-            if (handler is Func<TEvent, Task> typedHandler)
+            // Check if handler matches the expected delegate type for this event
+            if (handler is Delegate d &&
+                d.Method.GetParameters()[0].ParameterType.IsAssignableFrom(eventType))
             {
-                await DispatchWithRetryAsync(typedHandler, @event);
+                // Create a typed delegate that matches the handler's expected parameter type
+                var typedHandler = Delegate.CreateDelegate(
+                    typeof(Func<,>).MakeGenericType(d.Method.GetParameters()[0].ParameterType, typeof(Task)),
+                    handler.Target,
+                    d.Method);
+
+                await (Task)typeof(EventBus)
+                    .GetMethod("DispatchWithRetryAsyncGeneric", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)
+                    .MakeGenericMethod(d.Method.GetParameters()[0].ParameterType)
+                    .Invoke(this, new object[] { typedHandler, @event });
             }
+        }
+    }
+
+    /// <summary>
+    /// Generic version of DispatchWithRetryAsync for covariant dispatch support
+    /// </summary>
+    private async Task DispatchWithRetryAsyncGeneric<THandlerEvent>(Func<THandlerEvent, Task> handler, TenantEvent @event)
+        where THandlerEvent : TenantEvent
+    {
+        if (@event is THandlerEvent typedEvent)
+        {
+            await DispatchWithRetryAsync(handler, typedEvent);
         }
     }
 
