@@ -340,20 +340,20 @@ public class TenantEventTests
         // Arrange
         var policyChangedEvent = new DataIsolationPolicyChangedEvent();
         var policyType = "DataAccess";
-        var oldPolicy = "Shared";
-        var newPolicy = "Isolated";
+        var oldPolicyJson = "{\"Id\":\"00000000-0000-0000-0000-000000000000\",\"TenantId\":\"00000000-0000-0000-0000-000000000000\",\"EntityType\":\"Order\",\"PolicyType\":0,\"Priority\":100,\"CreatedAt\":\"2024-01-01T00:00:00Z\",\"UpdatedAt\":\"2024-01-01T00:00:00Z\"}";
+        var newPolicyJson = "{\"Id\":\"11111111-1111-1111-1111-111111111111\",\"TenantId\":\"11111111-1111-1111-1111-111111111111\",\"EntityType\":\"Customer\",\"PolicyType\":1,\"Priority\":100,\"CreatedAt\":\"2024-01-01T00:00:00Z\",\"UpdatedAt\":\"2024-01-01T00:00:00Z\"}";
         var changedAt = DateTime.UtcNow.AddHours(-1);
 
         // Act
         policyChangedEvent.PolicyType = policyType;
-        policyChangedEvent.OldPolicy = oldPolicy;
-        policyChangedEvent.NewPolicy = newPolicy;
+        policyChangedEvent.OldPolicy = oldPolicyJson;
+        policyChangedEvent.NewPolicy = newPolicyJson;
         policyChangedEvent.ChangedAt = changedAt;
 
         // Assert
         policyChangedEvent.PolicyType.Should().Be(policyType);
-        policyChangedEvent.OldPolicy.Should().Be(oldPolicy);
-        policyChangedEvent.NewPolicy.Should().Be(newPolicy);
+        policyChangedEvent.OldPolicy.Should().Be(oldPolicyJson);
+        policyChangedEvent.NewPolicy.Should().Be(newPolicyJson);
         policyChangedEvent.ChangedAt.Should().Be(changedAt);
     }
 

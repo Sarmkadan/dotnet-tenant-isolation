@@ -3,9 +3,15 @@
 // =============================================================================
 // Author: Vladyslav Zaiets | https://sarmkadan.com
 // CTO & Software Architect
-// =============================================================================
+// =====================================================================
+
+using System.Text.Json;
+using TenantIsolation.Models;
 
 namespace TenantIsolation.Events;
+
+
+
 
 /// <summary>
 /// Marker interface for high-frequency telemetry events that may need sampling
@@ -477,17 +483,21 @@ public class DataIsolationPolicyChangedEvent : TenantEvent
     /// Old policy value
     /// </summary>
     /// <exception cref="ArgumentNullException">Thrown when value is null.</exception>
-    /// <exception cref="ArgumentException">Thrown when value exceeds maximum length.</exception>
+    /// <exception cref="ArgumentException">
+    /// Thrown when value exceeds maximum length or when value is not a valid serialized DataIsolationPolicy.
+    /// </exception>
     public string OldPolicy
     {
         get => _oldPolicy;
         set
         {
+            ArgumentNullException.ThrowIfNull(value, nameof(value));
             if (value.Length > MaxStringLength)
             {
                 throw new ArgumentException($"Old policy cannot exceed {MaxStringLength} characters.", nameof(value));
             }
             _oldPolicy = value;
+            ValidatePolicyString(value, nameof(OldPolicy));
         }
     }
 
@@ -495,17 +505,21 @@ public class DataIsolationPolicyChangedEvent : TenantEvent
     /// New policy value
     /// </summary>
     /// <exception cref="ArgumentNullException">Thrown when value is null.</exception>
-    /// <exception cref="ArgumentException">Thrown when value exceeds maximum length.</exception>
+    /// <exception cref="ArgumentException">
+    /// Thrown when value exceeds maximum length or when value is not a valid serialized DataIsolationPolicy.
+    /// </exception>
     public string NewPolicy
     {
         get => _newPolicy;
         set
         {
+            ArgumentNullException.ThrowIfNull(value, nameof(value));
             if (value.Length > MaxStringLength)
             {
                 throw new ArgumentException($"New policy cannot exceed {MaxStringLength} characters.", nameof(value));
             }
             _newPolicy = value;
+            ValidatePolicyString(value, nameof(NewPolicy));
         }
     }
 
@@ -514,6 +528,31 @@ public class DataIsolationPolicyChangedEvent : TenantEvent
     public DataIsolationPolicyChangedEvent()
     {
         Source = nameof(DataIsolationPolicyChangedEvent);
+    }
+
+    /// <summary>
+    /// Validates that a policy string represents a valid DataIsolationPolicy.
+    /// </summary>
+    /// <param name="policyJson">The JSON string representation of a DataIsolationPolicy.</param>
+    /// <param name="paramName">The name of the property being validated.</param>
+    /// <exception cref="ArgumentException">Thrown when the policy string is not valid.</exception>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="policyJson"/> is null.</exception>
+    private static void ValidatePolicyString(string policyJson, string paramName)
+    {
+        try
+        {
+            var policy = JsonSerializer.Deserialize<DataIsolationPolicy>(policyJson);
+            if (policy == null)
+            {
+                throw new ArgumentException("Policy string cannot deserialize to a valid DataIsolationPolicy.", paramName);
+            }
+
+            policy.EnsureValid();
+        }
+        catch (JsonException ex)
+        {
+            throw new ArgumentException("Policy string is not valid JSON or cannot be deserialized to DataIsolationPolicy.", paramName, ex);
+        }
     }
 }
 
