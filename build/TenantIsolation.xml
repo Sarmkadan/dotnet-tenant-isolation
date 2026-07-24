@@ -95,15 +95,36 @@
             Gets or sets the retention period for soft-deleted records before permanent deletion
             </summary>
         </member>
+        <member name="M:TenantIsolation.BackgroundTasks.TenantCleanupWorker.#ctor(System.IServiceProvider,Microsoft.Extensions.Logging.ILogger{TenantIsolation.BackgroundTasks.TenantCleanupWorker})">
+            <summary>
+            Initializes a new instance of the <see cref="T:TenantIsolation.BackgroundTasks.TenantCleanupWorker"/> class
+            </summary>
+            <param name="serviceProvider">The service provider for creating scoped services</param>
+            <param name="logger">The logger for recording operational information</param>
+            <exception cref="T:System.ArgumentNullException">Thrown if serviceProvider or logger is null</exception>
+        </member>
         <member name="M:TenantIsolation.BackgroundTasks.TenantCleanupWorker.PerformCleanupAsync(System.Threading.CancellationToken)">
             <summary>
-            Perform cleanup operations
+            Perform cleanup operations including:
+            <list type="bullet">
+            <item>Hard deleting soft-deleted tenants older than retention period</item>
+            <item>Cleaning up orphaned users without valid tenants</item>
+            <item>Rebuilding database statistics</item>
+            </list>
             </summary>
+            <param name="cancellationToken">Cancellation token to monitor for cancellation requests</param>
+            <returns>Task representing the cleanup operation</returns>
+            <exception cref="T:System.ArgumentNullException">Thrown if cancellationToken is null</exception>
         </member>
         <member name="M:TenantIsolation.BackgroundTasks.TenantCleanupWorker.RebuildStatisticsAsync(TenantIsolation.Data.TenantDbContext,System.Threading.CancellationToken)">
             <summary>
-            Rebuild database statistics after cleanup
+            Rebuilds database statistics after cleanup to maintain query performance.
+            This operation may not be supported by all database providers.
             </summary>
+            <param name="dbContext">The database context to use for statistics update</param>
+            <param name="cancellationToken">Cancellation token to monitor for cancellation requests</param>
+            <returns>Task representing the statistics rebuild operation</returns>
+            <exception cref="T:System.ArgumentNullException">Thrown if dbContext or cancellationToken is null</exception>
         </member>
         <member name="T:TenantIsolation.BackgroundTasks.TenantCleanupWorkerExtensions">
             <summary>
@@ -122,7 +143,7 @@
         </member>
         <member name="M:TenantIsolation.BackgroundTasks.TenantCleanupWorkerExtensions.AddTenantCleanupWorker(Microsoft.Extensions.Hosting.IHostBuilder,System.TimeSpan)">
             <summary>
-            Configures the tenant cleanup worker with custom retention period but default interval
+            Configures the tenant cleanup worker with custom retention period but default interval (1 day)
             </summary>
             <param name="builder">The host builder</param>
             <param name="retentionPeriod">How long to keep soft-deleted records before permanent deletion</param>
@@ -2358,10 +2379,238 @@
             Get user activity statistics
             </summary>
         </member>
+        <member name="T:TenantIsolation.Events.BufferedEventPublisherOptions">
+            <summary>
+            Configuration options for buffered event publishing behavior
+            </summary>
+        </member>
+        <member name="P:TenantIsolation.Events.BufferedEventPublisherOptions.ChannelCapacity">
+            <summary>
+            Maximum number of events to buffer in the channel
+            Defaults to 10,000 events
+            </summary>
+        </member>
+        <member name="P:TenantIsolation.Events.BufferedEventPublisherOptions.OverflowMode">
+            <summary>
+            Behavior when the channel is full
+            DropOldest: Drop the oldest event to make room for new ones (recommended for telemetry)
+            Wait: Block until space is available (recommended for critical lifecycle events)
+            </summary>
+        </member>
+        <member name="P:TenantIsolation.Events.BufferedEventPublisherOptions.EnableHighFrequencyBuffering">
+            <summary>
+            Whether to enable buffering for IHighFrequencyEvent events
+            Defaults to true
+            </summary>
+        </member>
+        <member name="P:TenantIsolation.Events.BufferedEventPublisherOptions.EnableAllEventsBuffering">
+            <summary>
+            Whether to enable buffering for all events (when EnableHighFrequencyBuffering is false)
+            Defaults to false (only high-frequency events are buffered)
+            </summary>
+        </member>
+        <member name="P:TenantIsolation.Events.BufferedEventPublisherOptions.BatchSize">
+            <summary>
+            Maximum number of events to process in a single batch
+            Defaults to 100 events
+            </summary>
+        </member>
+        <member name="P:TenantIsolation.Events.BufferedEventPublisherOptions.MaxBatchDelay">
+            <summary>
+            Maximum delay before processing a batch, even if batch size isn't reached
+            Defaults to 100 milliseconds
+            </summary>
+        </member>
+        <member name="T:TenantIsolation.Events.BufferedEventPublisher">
+             <summary>
+             Event publisher decorator that buffers high-frequency events using System.Threading.Channels
+             to provide fire-and-forget publishing with configurable overflow behavior.
+            
+             <para>Benefits:</para>
+             <list type="bullet">
+             <item><description>Non-blocking PublishAsync for high-frequency events</description></item>
+             <item><description>Configurable overflow behavior (DropOldest/Wait)</description></item>
+             <item><description>Background batch processing for efficiency</description></item>
+             <item><description>Metrics for dropped events and processing latency</description></item>
+             </list>
+             </summary>
+             <remarks>
+             Usage example:
+             <code>
+             services.AddEventBus();
+             services.AddSingleton&lt;IEventPublisher, BufferedEventPublisher&gt;();
+             services.Configure&lt;BufferedEventPublisherOptions&gt;(options => {
+                 options.ChannelCapacity = 50_000;
+                 options.OverflowMode = BoundedChannelFullMode.DropOldest;
+             });
+             </code>
+             </remarks>
+        </member>
+        <member name="M:TenantIsolation.Events.BufferedEventPublisher.#ctor(TenantIsolation.Events.IEventPublisher,Microsoft.Extensions.Logging.ILogger{TenantIsolation.Events.BufferedEventPublisher},TenantIsolation.Events.BufferedEventPublisherOptions)">
+            <summary>
+            Creates a new BufferedEventPublisher that wraps an inner event publisher
+            </summary>
+            <param name="innerPublisher">The underlying event publisher to delegate to</param>
+            <param name="logger">Logger for diagnostic information</param>
+            <param name="options">Configuration options for buffering behavior</param>
+            <exception cref="T:System.ArgumentNullException">Thrown if innerPublisher or logger is null</exception>
+        </member>
+        <member name="M:TenantIsolation.Events.BufferedEventPublisher.PublishAsync``1(``0)">
+            <summary>
+            Publish event with automatic buffering based on event type
+            </summary>
+            <typeparam name="TEvent">Event type</typeparam>
+            <param name="event">Event to publish</param>
+            <returns>Task representing the publish operation</returns>
+            <exception cref="T:System.ArgumentNullException">Thrown if event is null</exception>
+        </member>
+        <member name="M:TenantIsolation.Events.BufferedEventPublisher.PublishBatchAsync``1(System.Collections.Generic.IEnumerable{``0})">
+            <summary>
+            Publish multiple events in batch
+            Events are distributed between buffered and direct publishing based on their type
+            </summary>
+            <typeparam name="TEvent">Event type</typeparam>
+            <param name="events">Collection of events to publish</param>
+            <returns>Task representing the batch publish operation</returns>
+            <exception cref="T:System.ArgumentNullException">Thrown if events is null</exception>
+        </member>
+        <member name="M:TenantIsolation.Events.BufferedEventPublisher.GetDroppedEventsCount``1">
+            <summary>
+            Gets the number of events dropped due to channel overflow
+            </summary>
+            <typeparam name="TEvent">Event type to check</typeparam>
+            <returns>Number of dropped events, or 0 if none</returns>
+        </member>
+        <member name="M:TenantIsolation.Events.BufferedEventPublisher.GetPublishedEventsCount``1">
+            <summary>
+            Gets the total number of events published
+            </summary>
+            <typeparam name="TEvent">Event type to check</typeparam>
+            <returns>Number of published events, or 0 if none</returns>
+        </member>
+        <member name="M:TenantIsolation.Events.BufferedEventPublisher.GetAverageProcessingLatencyMs``1">
+            <summary>
+            Gets the average processing latency in milliseconds for events of the specified type
+            </summary>
+            <typeparam name="TEvent">Event type to check</typeparam>
+            <returns>Average processing latency in milliseconds, or 0 if no events processed</returns>
+        </member>
+        <member name="M:TenantIsolation.Events.BufferedEventPublisher.StartDrainLoopIfNeeded">
+            <summary>
+            Starts the background drain loop if not already running
+            </summary>
+        </member>
+        <member name="M:TenantIsolation.Events.BufferedEventPublisher.DrainChannelAsync">
+            <summary>
+            Background task that drains events from the channel and publishes them
+            </summary>
+        </member>
+        <member name="M:TenantIsolation.Events.BufferedEventPublisher.ProcessBatchAsync(System.Collections.Generic.IReadOnlyList{TenantIsolation.Events.TenantEvent})">
+            <summary>
+            Process a batch of events
+            </summary>
+        </member>
+        <member name="M:TenantIsolation.Events.BufferedEventPublisher.ShouldBufferEvent(TenantIsolation.Events.TenantEvent)">
+            <summary>
+            Determines if an event should be buffered based on its type
+            </summary>
+        </member>
+        <member name="M:TenantIsolation.Events.BufferedEventPublisher.TryWriteToChannelAsync(TenantIsolation.Events.TenantEvent)">
+            <summary>
+            Attempts to write an event to the channel, tracking drops if channel is full
+            </summary>
+        </member>
+        <member name="M:TenantIsolation.Events.BufferedEventPublisher.TrackDroppedEvent(TenantIsolation.Events.TenantEvent)">
+            <summary>
+            Tracks an event that was dropped due to channel overflow
+            </summary>
+        </member>
+        <member name="M:TenantIsolation.Events.BufferedEventPublisher.Dispose">
+            <summary>
+            Disposes the background drain loop and cleans up resources
+            </summary>
+        </member>
+        <member name="T:TenantIsolation.Events.BufferedEventPublisherExtensions">
+            <summary>
+            Extension methods for configuring BufferedEventPublisher in DI container
+            </summary>
+        </member>
+        <member name="M:TenantIsolation.Events.BufferedEventPublisherExtensions.AddBufferedEventPublisher(Microsoft.Extensions.DependencyInjection.IServiceCollection)">
+            <summary>
+            Registers BufferedEventPublisher as the IEventPublisher implementation
+            Uses default BufferedEventPublisherOptions
+            </summary>
+            <param name="services">Service collection</param>
+            <returns>Service collection for chaining</returns>
+            <exception cref="T:System.ArgumentNullException">Thrown if services is null</exception>
+        </member>
+        <member name="M:TenantIsolation.Events.BufferedEventPublisherExtensions.AddBufferedEventPublisher(Microsoft.Extensions.DependencyInjection.IServiceCollection,System.Action{TenantIsolation.Events.BufferedEventPublisherOptions})">
+            <summary>
+            Registers BufferedEventPublisher with custom configuration
+            </summary>
+            <param name="services">Service collection</param>
+            <param name="configure">Configuration action</param>
+            <returns>Service collection for chaining</returns>
+            <exception cref="T:System.ArgumentNullException">Thrown if services or configure is null</exception>
+        </member>
         <member name="T:TenantIsolation.Events.EventHandlerDelegate`1">
             <summary>
             Event handler delegate
             </summary>
+        </member>
+        <member name="T:TenantIsolation.Events.PublisherResilienceOptions">
+            <summary>
+            Configuration options controlling per-handler retry and backoff behavior for <see cref="T:TenantIsolation.Events.EventBus"/>
+            </summary>
+        </member>
+        <member name="P:TenantIsolation.Events.PublisherResilienceOptions.MaxRetries">
+            <summary>
+            Maximum number of retry attempts performed for a handler after its initial failed invocation
+            Defaults to 3
+            </summary>
+        </member>
+        <member name="P:TenantIsolation.Events.PublisherResilienceOptions.BaseDelay">
+            <summary>
+            Base delay used to compute exponential backoff between retry attempts
+            The delay before attempt N is <c>BaseDelay * 2^(N-1)</c>
+            Defaults to 200 milliseconds
+            </summary>
+        </member>
+        <member name="T:TenantIsolation.Events.IDeadLetterSink">
+            <summary>
+            Sink that receives events whose handler exhausted all configured retry attempts
+            </summary>
+        </member>
+        <member name="M:TenantIsolation.Events.IDeadLetterSink.HandleAsync``1(``0,System.String,System.Exception)">
+            <summary>
+            Handle an event whose delivery to a specific handler permanently failed
+            </summary>
+            <param name="event">The event that could not be delivered</param>
+            <param name="handlerName">Name of the handler that failed to process the event</param>
+            <param name="exception">The last exception thrown by the handler</param>
+            <exception cref="T:System.ArgumentNullException">Thrown when <paramref name="event"/>, <paramref name="handlerName"/>, or <paramref name="exception"/> is null</exception>
+        </member>
+        <member name="T:TenantIsolation.Events.LoggingDeadLetterSink">
+            <summary>
+            Default dead-letter sink implementation that logs the failure
+            Suitable as a fallback when no dedicated dead-letter storage is configured
+            </summary>
+        </member>
+        <member name="M:TenantIsolation.Events.LoggingDeadLetterSink.#ctor(Microsoft.Extensions.Logging.ILogger{TenantIsolation.Events.LoggingDeadLetterSink})">
+            <summary>
+            Initializes a new instance of <see cref="T:TenantIsolation.Events.LoggingDeadLetterSink"/>
+            </summary>
+            <param name="logger">Logger used to record dead-lettered events</param>
+            <exception cref="T:System.ArgumentNullException">Thrown when <paramref name="logger"/> is null</exception>
+        </member>
+        <member name="M:TenantIsolation.Events.LoggingDeadLetterSink.HandleAsync``1(``0,System.String,System.Exception)">
+            <summary>
+            Logs the event, handler name, and terminal exception at error level
+            </summary>
+            <param name="event">The event that could not be delivered</param>
+            <param name="handlerName">Name of the handler that failed to process the event</param>
+            <param name="exception">The last exception thrown by the handler</param>
+            <exception cref="T:System.ArgumentNullException">Thrown when <paramref name="event"/>, <paramref name="handlerName"/>, or <paramref name="exception"/> is null</exception>
         </member>
         <member name="T:TenantIsolation.Events.IEventBus">
             <summary>
@@ -2394,6 +2643,26 @@
             Supports type-safe event subscriptions and async handling
             </summary>
         </member>
+        <member name="M:TenantIsolation.Events.EventBus.#ctor(Microsoft.Extensions.Logging.ILogger{TenantIsolation.Events.EventBus},Microsoft.Extensions.Options.IOptions{TenantIsolation.Events.PublisherResilienceOptions},TenantIsolation.Events.IDeadLetterSink)">
+            <summary>
+            Initializes a new instance of <see cref="T:TenantIsolation.Events.EventBus"/>
+            </summary>
+            <param name="logger">Logger used to record subscription and publishing activity</param>
+            <param name="resilienceOptions">
+            Optional retry/backoff configuration. When null, default <see cref="T:TenantIsolation.Events.PublisherResilienceOptions"/> values are used
+            </param>
+            <param name="deadLetterSink">
+            Optional sink invoked once a handler exhausts its retries. When null, a <see cref="T:TenantIsolation.Events.LoggingDeadLetterSink"/> backed by <paramref name="logger"/>'s logger factory is not available,
+            so a minimal internal fallback that logs through <paramref name="logger"/> is used instead
+            </param>
+            <exception cref="T:System.ArgumentNullException">Thrown when <paramref name="logger"/> is null</exception>
+        </member>
+        <member name="T:TenantIsolation.Events.EventBus.FallbackDeadLetterSink">
+            <summary>
+            Minimal dead-letter sink used when no <see cref="T:TenantIsolation.Events.IDeadLetterSink"/> is registered in DI,
+            so retry exhaustion is never silently swallowed
+            </summary>
+        </member>
         <member name="M:TenantIsolation.Events.EventBus.Subscribe``1(System.Func{``0,System.Threading.Tasks.Task})">
             <summary>
             Subscribe to events of specific type
@@ -2409,6 +2678,13 @@
             <summary>
             Publish event to all subscribers
             Executes handlers sequentially, collecting any exceptions
+            </summary>
+        </member>
+        <member name="M:TenantIsolation.Events.EventBus.DispatchWithRetryAsync``1(System.Func{``0,System.Threading.Tasks.Task},``0)">
+            <summary>
+            Invokes a single handler for an event, retrying on failure with exponential backoff.
+            If all attempts fail, the event is forwarded to the configured <see cref="T:TenantIsolation.Events.IDeadLetterSink"/>
+            instead of propagating the exception, keeping handler failures isolated
             </summary>
         </member>
         <member name="M:TenantIsolation.Events.EventBus.GetSubscriberCount``1">
@@ -2429,6 +2705,7 @@
         <member name="M:TenantIsolation.Events.EventBusExtensions.AddEventBus(Microsoft.Extensions.DependencyInjection.IServiceCollection)">
             <summary>
             Register event bus and event publisher in DI container
+            Uses the default EventPublisher implementation
             </summary>
         </member>
         <member name="T:TenantIsolation.Events.IEventPublisher">
@@ -2470,36 +2747,214 @@
             Provides discovery and management of event handlers
             </summary>
         </member>
-        <member name="M:TenantIsolation.Events.IEventSubscriptionRegistry.RegisterHandler``1(System.Func{``0,System.Threading.Tasks.Task},System.String)">
+        <member name="M:TenantIsolation.Events.IEventSubscriptionRegistry.Subscribe``1(System.Func{``0,System.Threading.Tasks.Task},System.String)">
             <summary>
-            Register event handler
+            Register event handler and return an <see cref="T:System.IDisposable"/> token for unsubscribing
             </summary>
+            <param name="handler">Event handler to register</param>
+            <param name="handlerName">Optional name for the handler</param>
+            <returns>Subscription token that automatically unsubscribes when disposed</returns>
         </member>
-        <member name="M:TenantIsolation.Events.IEventSubscriptionRegistry.GetHandlers``1">
+        <member name="M:TenantIsolation.Events.IEventSubscriptionRegistry.Subscribe``1(System.Action{``0},System.String)">
+            <summary>
+            Register event handler and return an <see cref="T:System.IDisposable"/> token for unsubscribing
+            </summary>
+            <param name="handler">Event handler to register</param>
+            <param name="handlerName">Optional name for the handler</param>
+            <returns>Subscription token that automatically unsubscribes when disposed</returns>
+        </member>
+        <member name="M:TenantIsolation.Events.IEventSubscriptionRegistry.Unsubscribe``1(System.Func{``0,System.Threading.Tasks.Task})">
+            <summary>
+            Unregister a specific handler for an event type
+            </summary>
+            <param name="handler">Handler to unsubscribe</param>
+            <returns>True if handler was found and removed; false otherwise</returns>
+        </member>
+        <member name="M:TenantIsolation.Events.IEventSubscriptionRegistry.Unsubscribe``1(System.Action{``0})">
+            <summary>
+            Unregister a specific handler for an event type
+            </summary>
+            <param name="handler">Handler to unsubscribe</param>
+            <returns>True if handler was found and removed; false otherwise</returns>
+        </member>
+        <member name="M:TenantIsolation.Events.IEventSubscriptionRegistry.GetHandlers``1(System.Nullable{System.Guid})">
             <summary>
             Get all registered handlers for event type
             </summary>
+            <param name="tenantId">Optional tenant ID to filter by. If null or empty, returns all handlers regardless of tenant.</param>
         </member>
-        <member name="M:TenantIsolation.Events.IEventSubscriptionRegistry.GetAllHandlers">
+        <member name="M:TenantIsolation.Events.IEventSubscriptionRegistry.GetAllHandlers(System.Nullable{System.Guid})">
             <summary>
             Get all registered handlers
             </summary>
+            <param name="tenantId">Optional tenant ID to filter by. If null or empty, returns all handlers regardless of tenant.</param>
         </member>
         <member name="T:TenantIsolation.Events.EventHandlerInfo">
             <summary>
             Information about registered event handler
             </summary>
         </member>
+        <member name="P:TenantIsolation.Events.EventHandlerInfo.EventType">
+            <summary>
+            Type name of the event
+            </summary>
+        </member>
+        <member name="P:TenantIsolation.Events.EventHandlerInfo.HandlerName">
+            <summary>
+            Name of the handler
+            </summary>
+        </member>
+        <member name="P:TenantIsolation.Events.EventHandlerInfo.TenantId">
+            <summary>
+            Tenant ID that registered this handler (empty if not tenant-scoped)
+            </summary>
+        </member>
+        <member name="P:TenantIsolation.Events.EventHandlerInfo.RegisteredAt">
+            <summary>
+            When the handler was registered
+            </summary>
+        </member>
+        <member name="P:TenantIsolation.Events.EventHandlerInfo.HandlerSignature">
+            <summary>
+            Handler method signature hash for matching
+            </summary>
+        </member>
+        <member name="T:TenantIsolation.Events.TenantEventHandler`1">
+            <summary>
+            Base class for tenant-scoped event handlers
+            </summary>
+            <typeparam name="TEvent">Event type</typeparam>
+        </member>
+        <member name="P:TenantIsolation.Events.TenantEventHandler`1.TenantId">
+            <summary>
+            Tenant ID that this handler is scoped to
+            </summary>
+        </member>
+        <member name="M:TenantIsolation.Events.TenantEventHandler`1.#ctor(System.Guid)">
+            <summary>
+            Initializes a new tenant-scoped event handler
+            </summary>
+            <param name="tenantId">Tenant ID</param>
+        </member>
+        <member name="M:TenantIsolation.Events.TenantEventHandler`1.HandleAsync(`0)">
+            <summary>
+            Handle the event
+            </summary>
+            <param name="@event">Event to handle</param>
+            <returns>Task</returns>
+        </member>
+        <member name="T:TenantIsolation.Events.SubscriptionToken">
+            <summary>
+            Subscription token that allows unsubscribing from events
+            </summary>
+        </member>
+        <member name="M:TenantIsolation.Events.SubscriptionToken.#ctor(TenantIsolation.Events.EventSubscriptionRegistry,System.Type,System.Delegate)">
+            <summary>
+            Initializes a new subscription token
+            </summary>
+            <param name="registry">Registry instance</param>
+            <param name="eventType">Event type</param>
+            <param name="handler">Handler delegate</param>
+        </member>
+        <member name="M:TenantIsolation.Events.SubscriptionToken.Dispose">
+            <summary>
+            Unsubscribes from the event
+            </summary>
+        </member>
         <member name="T:TenantIsolation.Events.EventSubscriptionRegistry">
             <summary>
-            Event subscription registry implementation
+            Thread-safe event subscription registry implementation using immutable collections
+            Supports concurrent subscription and unsubscription without collection modification exceptions
+            </summary>
+        </member>
+        <member name="M:TenantIsolation.Events.EventSubscriptionRegistry.Subscribe``1(System.Func{``0,System.Threading.Tasks.Task},System.String)">
+            <summary>
+            Register event handler and return a subscription token for automatic cleanup
+            </summary>
+            <param name="handler">Event handler to register</param>
+            <param name="handlerName">Optional name for the handler</param>
+            <returns>Subscription token that automatically unsubscribes when disposed</returns>
+            <exception cref="T:System.InvalidOperationException">Thrown when the maximum number of handlers per event type has been reached</exception>
+        </member>
+        <member name="M:TenantIsolation.Events.EventSubscriptionRegistry.Subscribe``1(System.Action{``0},System.String)">
+            <summary>
+            Register event handler and return a subscription token for automatic cleanup
+            </summary>
+            <param name="handler">Event handler to register</param>
+            <param name="handlerName">Optional name for the handler</param>
+            <returns>Subscription token that automatically unsubscribes when disposed</returns>
+            <exception cref="T:System.InvalidOperationException">Thrown when the maximum number of handlers per event type has been reached</exception>
+        </member>
+        <member name="M:TenantIsolation.Events.EventSubscriptionRegistry.Unsubscribe``1(System.Func{``0,System.Threading.Tasks.Task})">
+            <summary>
+            Unregister a specific handler for an event type
+            </summary>
+            <param name="handler">Handler to unsubscribe</param>
+            <returns>True if handler was found and removed; false otherwise</returns>
+        </member>
+        <member name="M:TenantIsolation.Events.EventSubscriptionRegistry.Unsubscribe``1(System.Action{``0})">
+            <summary>
+            Unregister a specific handler for an event type
+            </summary>
+            <param name="handler">Handler to unsubscribe</param>
+            <returns>True if handler was found and removed; false otherwise</returns>
+        </member>
+        <member name="M:TenantIsolation.Events.EventSubscriptionRegistry.GetHandlers``1(System.Nullable{System.Guid})">
+            <summary>
+            Get registered handlers for event type, optionally filtered by tenant
+            </summary>
+            <typeparam name="TEvent">Event type</typeparam>
+            <param name="tenantId">Optional tenant ID to filter by. If null or empty, returns all handlers regardless of tenant.</param>
+            <returns>Filtered list of handlers</returns>
+        </member>
+        <member name="M:TenantIsolation.Events.EventSubscriptionRegistry.Clear">
+            <summary>
+            Clear all subscriptions (useful for testing)
+            </summary>
+        </member>
+        <member name="M:TenantIsolation.Events.EventSubscriptionRegistry.GetAllHandlers(System.Nullable{System.Guid})">
+            <summary>
+            Get all registered handlers
+            </summary>
+            <param name="tenantId">Optional tenant ID to filter by. If null or empty, returns all handlers regardless of tenant.</param>
+            <returns>Filtered list of all handlers</returns>
+        </member>
+        <member name="T:TenantIsolation.Events.IHighFrequencyEvent">
+            <summary>
+            Marker interface for high-frequency telemetry events that may need sampling
+            when published to webhooks or other high-volume consumers
             </summary>
         </member>
         <member name="T:TenantIsolation.Events.TenantEvent">
-            <summary>
-            Base class for all domain events in the tenant isolation system
-            Implements pub-sub pattern for cross-service communication
-            </summary>
+             <summary>
+             Base class for all domain events in the tenant isolation system
+             Implements pub-sub pattern for cross-service communication
+            
+             <para>Event Hierarchy:</para>
+             <list type="bullet">
+             <item><see cref="T:TenantIsolation.Events.TenantCreatedEvent"/> - Tenant creation event</item>
+             <item><see cref="T:TenantIsolation.Events.TenantActivatedEvent"/> - Tenant activation event</item>
+             <item><see cref="T:TenantIsolation.Events.TenantSuspendedEvent"/> - Tenant suspension event (hard suspension)</item>
+             <item><see cref="T:TenantIsolation.Events.TenantDeactivatedEvent"/> - Tenant deactivation event (soft deactivation)</item>
+             <item><see cref="T:TenantIsolation.Events.TenantReactivatedEvent"/> - Tenant reactivation event</item>
+             <item><see cref="T:TenantIsolation.Events.TenantDeletedEvent"/> - Tenant deletion event</item>
+             <item><see cref="T:TenantIsolation.Events.TenantConfigurationChangedEvent"/> - Configuration change event</item>
+             <item><see cref="T:TenantIsolation.Events.UserAddedToTenantEvent"/> - User addition event</item>
+             <item><see cref="T:TenantIsolation.Events.DataIsolationPolicyChangedEvent"/> - Data isolation policy change event</item>
+             <item><see cref="T:TenantIsolation.Events.FeatureToggledEvent"/> - Feature flag toggle event</item>
+             <item><see cref="T:TenantIsolation.Events.TenantResourceAccessedEvent"/> - High-frequency resource access event (implements <see cref="T:TenantIsolation.Events.IHighFrequencyEvent"/>)</item>
+             <item><see cref="T:TenantIsolation.Events.TenantSubscriptionUpdatedEvent"/> - Subscription update event</item>
+             </list>
+            
+             <para>State Machine Pattern:</para>
+             <code>Created → Activated → (Suspended|Deactivated) → Reactivated → Deleted</code>
+            
+             Where:
+             <list type="bullet">
+             <item><see cref="T:TenantIsolation.Events.TenantSuspendedEvent"/> - Permanent suspension (e.g., billing issues)</item>
+             <item><see cref="T:TenantIsolation.Events.TenantDeactivatedEvent"/> - Soft deactivation (temporary pause)</item>
+             </list>
+             </summary>
         </member>
         <member name="P:TenantIsolation.Events.TenantEvent.EventId">
             <summary>
@@ -2546,6 +3001,38 @@
             Event when tenant is suspended
             </summary>
         </member>
+        <member name="T:TenantIsolation.Events.TenantDeactivatedEvent">
+            <summary>
+            Event when tenant is deactivated (soft-deleted/suspended from active use)
+            Completes the state machine: Created → Activated → Deactivated → Reactivated → Deleted
+            </summary>
+        </member>
+        <member name="P:TenantIsolation.Events.TenantDeactivatedEvent.DeactivationReason">
+            <summary>
+            Reason for deactivation
+            </summary>
+        </member>
+        <member name="P:TenantIsolation.Events.TenantDeactivatedEvent.DeactivatedAt">
+            <summary>
+            When the tenant was deactivated
+            </summary>
+        </member>
+        <member name="T:TenantIsolation.Events.TenantReactivatedEvent">
+            <summary>
+            Event when tenant is reactivated after being deactivated
+            Completes the state machine: Created → Activated → Deactivated → Reactivated → Deleted
+            </summary>
+        </member>
+        <member name="P:TenantIsolation.Events.TenantReactivatedEvent.ReactivationReason">
+            <summary>
+            Reason for reactivation
+            </summary>
+        </member>
+        <member name="P:TenantIsolation.Events.TenantReactivatedEvent.ReactivatedAt">
+            <summary>
+            When the tenant was reactivated
+            </summary>
+        </member>
         <member name="T:TenantIsolation.Events.TenantDeletedEvent">
             <summary>
             Event when tenant is deleted
@@ -2574,6 +3061,7 @@
         <member name="T:TenantIsolation.Events.TenantResourceAccessedEvent">
             <summary>
             Event for tenant resource access
+            Implements IHighFrequencyEvent for telemetry sampling
             </summary>
         </member>
         <member name="T:TenantIsolation.Events.TenantSubscriptionUpdatedEvent">
@@ -2618,6 +3106,30 @@
             <param name="event">The <see cref="T:TenantIsolation.Events.TenantEvent"/> to check.</param>
             <returns>
             <see langword="true"/> if <paramref name="event"/> is a <see cref="T:TenantIsolation.Events.TenantSuspendedEvent"/>; otherwise, <see langword="false"/>.
+            </returns>
+            <exception cref="T:System.ArgumentNullException">
+            Thrown when <paramref name="event"/> is <see langword="null"/>.
+            </exception>
+        </member>
+        <member name="M:TenantIsolation.Events.TenantEventExtensions.IsTenantDeactivatedEvent(TenantIsolation.Events.TenantEvent)">
+            <summary>
+            Determines whether the specified <see cref="T:TenantIsolation.Events.TenantEvent"/> is of type <see cref="T:TenantIsolation.Events.TenantDeactivatedEvent"/>.
+            </summary>
+            <param name="event">The <see cref="T:TenantIsolation.Events.TenantEvent"/> to check.</param>
+            <returns>
+            <see langword="true"/> if <paramref name="event"/> is a <see cref="T:TenantIsolation.Events.TenantDeactivatedEvent"/>; otherwise, <see langword="false"/>.
+            </returns>
+            <exception cref="T:System.ArgumentNullException">
+            Thrown when <paramref name="event"/> is <see langword="null"/>.
+            </exception>
+        </member>
+        <member name="M:TenantIsolation.Events.TenantEventExtensions.IsTenantReactivatedEvent(TenantIsolation.Events.TenantEvent)">
+            <summary>
+            Determines whether the specified <see cref="T:TenantIsolation.Events.TenantEvent"/> is of type <see cref="T:TenantIsolation.Events.TenantReactivatedEvent"/>.
+            </summary>
+            <param name="event">The <see cref="T:TenantIsolation.Events.TenantEvent"/> to check.</param>
+            <returns>
+            <see langword="true"/> if <paramref name="event"/> is a <see cref="T:TenantIsolation.Events.TenantReactivatedEvent"/>; otherwise, <see langword="false"/>.
             </returns>
             <exception cref="T:System.ArgumentNullException">
             Thrown when <paramref name="event"/> is <see langword="null"/>.
@@ -3095,6 +3607,268 @@
             Extension method to register HTTP client factory
             </summary>
         </member>
+        <member name="T:TenantIsolation.Integration.IWebhookDeliveryService">
+            <summary>
+            Webhook delivery service interface for sending webhook payloads to external endpoints
+            with advanced resilience features including circuit breakers, timeouts, and retry policies.
+            </summary>
+        </member>
+        <member name="M:TenantIsolation.Integration.IWebhookDeliveryService.DeliverAsync(TenantIsolation.Integration.WebhookPayload,TenantIsolation.Integration.WebhookEndpoint)">
+            <summary>
+            Deliver webhook payload to the specified endpoint with resilience features
+            </summary>
+            <param name="payload">The webhook payload to deliver</param>
+            <param name="endpoint">The webhook endpoint configuration</param>
+            <returns>Delivery result with status and metadata</returns>
+            <exception cref="T:System.ArgumentNullException">Thrown when payload or endpoint is null</exception>
+        </member>
+        <member name="M:TenantIsolation.Integration.IWebhookDeliveryService.GetCircuitBreakerState(System.String)">
+            <summary>
+            Get the current circuit breaker state for monitoring
+            </summary>
+            <param name="endpointUrl">The endpoint URL to check</param>
+            <returns>Circuit breaker state information</returns>
+        </member>
+        <member name="T:TenantIsolation.Integration.WebhookEndpoint">
+            <summary>
+            Webhook endpoint configuration with delivery settings
+            </summary>
+        </member>
+        <member name="P:TenantIsolation.Integration.WebhookEndpoint.Url">
+            <summary>
+            The webhook endpoint URL
+            </summary>
+        </member>
+        <member name="P:TenantIsolation.Integration.WebhookEndpoint.Secret">
+            <summary>
+            Optional secret key for HMAC-SHA256 payload signing
+            </summary>
+        </member>
+        <member name="P:TenantIsolation.Integration.WebhookEndpoint.Timeout">
+            <summary>
+            Timeout for the HTTP request (default: 10 seconds)
+            </summary>
+        </member>
+        <member name="P:TenantIsolation.Integration.WebhookEndpoint.MaxRetries">
+            <summary>
+            Maximum number of retry attempts (default: 3)
+            </summary>
+        </member>
+        <member name="P:TenantIsolation.Integration.WebhookEndpoint.BaseDelayMilliseconds">
+            <summary>
+            Base delay between retries in milliseconds (default: 1000ms)
+            </summary>
+        </member>
+        <member name="P:TenantIsolation.Integration.WebhookEndpoint.RespectRetryAfter">
+            <summary>
+            Whether to respect Retry-After header (default: true)
+            </summary>
+        </member>
+        <member name="P:TenantIsolation.Integration.WebhookEndpoint.UseCircuitBreaker">
+            <summary>
+            Whether to use circuit breaker pattern (default: true)
+            </summary>
+        </member>
+        <member name="P:TenantIsolation.Integration.WebhookEndpoint.CircuitBreakerFailureThreshold">
+            <summary>
+            Circuit breaker failure threshold percentage (0-100, default: 50)
+            </summary>
+        </member>
+        <member name="P:TenantIsolation.Integration.WebhookEndpoint.CircuitBreakerSamplingPeriodSeconds">
+            <summary>
+            Circuit breaker sampling period in seconds (default: 60)
+            </summary>
+        </member>
+        <member name="P:TenantIsolation.Integration.WebhookEndpoint.CircuitBreakerMinimumThroughput">
+            <summary>
+            Circuit breaker minimum through requests (default: 10)
+            </summary>
+        </member>
+        <member name="P:TenantIsolation.Integration.WebhookEndpoint.CircuitBreakerDurationOfOpenStateSeconds">
+            <summary>
+            Circuit breaker duration of open state in seconds (default: 30)
+            </summary>
+        </member>
+        <member name="T:TenantIsolation.Integration.WebhookDeliveryResult">
+            <summary>
+            Result of a webhook delivery attempt
+            </summary>
+        </member>
+        <member name="P:TenantIsolation.Integration.WebhookDeliveryResult.IsSuccess">
+            <summary>
+            Whether the delivery was successful
+            </summary>
+        </member>
+        <member name="P:TenantIsolation.Integration.WebhookDeliveryResult.HttpStatusCode">
+            <summary>
+            HTTP status code if applicable
+            </summary>
+        </member>
+        <member name="P:TenantIsolation.Integration.WebhookDeliveryResult.ErrorMessage">
+            <summary>
+            Error message if delivery failed
+            </summary>
+        </member>
+        <member name="P:TenantIsolation.Integration.WebhookDeliveryResult.RetryCount">
+            <summary>
+            Number of retry attempts made
+            </summary>
+        </member>
+        <member name="P:TenantIsolation.Integration.WebhookDeliveryResult.Duration">
+            <summary>
+            Total duration of the delivery attempt
+            </summary>
+        </member>
+        <member name="P:TenantIsolation.Integration.WebhookDeliveryResult.WasRetried">
+            <summary>
+            Whether the request was retried
+            </summary>
+        </member>
+        <member name="T:TenantIsolation.Integration.CircuitBreakerState">
+            <summary>
+            Circuit breaker state information for monitoring
+            </summary>
+        </member>
+        <member name="P:TenantIsolation.Integration.CircuitBreakerState.EndpointUrl">
+            <summary>
+            The endpoint URL
+            </summary>
+        </member>
+        <member name="P:TenantIsolation.Integration.CircuitBreakerState.Status">
+            <summary>
+            Current state of the circuit breaker
+            </summary>
+        </member>
+        <member name="P:TenantIsolation.Integration.CircuitBreakerState.FailureCount">
+            <summary>
+            Number of failures in the current sampling window
+            </summary>
+        </member>
+        <member name="P:TenantIsolation.Integration.CircuitBreakerState.SuccessCount">
+            <summary>
+            Number of successful requests in the current sampling window
+            </summary>
+        </member>
+        <member name="P:TenantIsolation.Integration.CircuitBreakerState.TotalRequests">
+            <summary>
+            Total number of requests in the current sampling window
+            </summary>
+        </member>
+        <member name="P:TenantIsolation.Integration.CircuitBreakerState.LastChanged">
+            <summary>
+            Timestamp when the circuit breaker was last changed
+            </summary>
+        </member>
+        <member name="P:TenantIsolation.Integration.CircuitBreakerState.LastFailureReason">
+            <summary>
+            Exception that caused the last failure (if any)
+            </summary>
+        </member>
+        <member name="T:TenantIsolation.Integration.CircuitBreakerStatus">
+            <summary>
+            Circuit breaker operational status
+            </summary>
+        </member>
+        <member name="F:TenantIsolation.Integration.CircuitBreakerStatus.Closed">
+            <summary>Circuit is closed - requests are allowed</summary>
+        </member>
+        <member name="F:TenantIsolation.Integration.CircuitBreakerStatus.Open">
+            <summary>Circuit is open - requests are blocked</summary>
+        </member>
+        <member name="F:TenantIsolation.Integration.CircuitBreakerStatus.HalfOpen">
+            <summary>Circuit is half-open - limited requests are allowed for testing</summary>
+        </member>
+        <member name="T:TenantIsolation.Integration.WebhookDeliveryService">
+            <summary>
+            Webhook delivery service implementation with advanced resilience features including
+            circuit breakers, timeouts, and retry policies with Retry-After header support.
+            </summary>
+        </member>
+        <member name="M:TenantIsolation.Integration.WebhookDeliveryService.#ctor(TenantIsolation.Integration.IHttpClientFactory,Microsoft.Extensions.Logging.ILogger{TenantIsolation.Integration.WebhookDeliveryService},System.TimeProvider)">
+            <summary>
+            Initializes a new instance of the <see cref="T:TenantIsolation.Integration.WebhookDeliveryService"/> class.
+            </summary>
+            <param name="httpClientFactory">HTTP client factory for creating clients</param>
+            <param name="logger">Logger instance</param>
+            <param name="timeProvider">Time provider for testing</param>
+            <exception cref="T:System.ArgumentNullException">Thrown when httpClientFactory or logger is null</exception>
+        </member>
+        <member name="M:TenantIsolation.Integration.WebhookDeliveryService.DeliverAsync(TenantIsolation.Integration.WebhookPayload,TenantIsolation.Integration.WebhookEndpoint)">
+            <inheritdoc/>
+        </member>
+        <member name="M:TenantIsolation.Integration.WebhookDeliveryService.GetCircuitBreakerState(System.String)">
+            <inheritdoc/>
+        </member>
+        <member name="M:TenantIsolation.Integration.WebhookDeliveryService.BuildSignedPayload(TenantIsolation.Integration.WebhookPayload,TenantIsolation.Integration.WebhookEndpoint)">
+            <summary>
+            Build signed webhook payload with HMAC-SHA256 signature
+            </summary>
+        </member>
+        <member name="M:TenantIsolation.Integration.WebhookDeliveryService.HandleRetryableErrorAsync(TenantIsolation.Integration.WebhookPayload,TenantIsolation.Integration.WebhookEndpoint,System.Net.Http.HttpResponseMessage,TenantIsolation.Integration.WebhookDeliveryResult,System.Diagnostics.Stopwatch)">
+            <summary>
+            Handle retryable HTTP errors (5xx) with exponential backoff and Retry-After support
+            </summary>
+        </member>
+        <member name="M:TenantIsolation.Integration.WebhookDeliveryService.GetCircuitBreaker(System.String)">
+            <summary>
+            Get or create circuit breaker for the specified endpoint
+            </summary>
+        </member>
+        <member name="T:TenantIsolation.Integration.WebhookDeliveryService.CircuitBreaker">
+            <summary>
+            Circuit breaker implementation for tracking endpoint health
+            </summary>
+        </member>
+        <member name="T:TenantIsolation.Integration.WebhookDeliveryService.CircuitBreakerStateInfo">
+            <summary>
+            Internal state information for circuit breaker
+            </summary>
+        </member>
+        <member name="T:TenantIsolation.Integration.WebhookDeliveryServiceExtensions">
+            <summary>
+            Extension methods for IServiceCollection to register webhook delivery service
+            </summary>
+        </member>
+        <member name="M:TenantIsolation.Integration.WebhookDeliveryServiceExtensions.AddWebhookDeliveryService(Microsoft.Extensions.DependencyInjection.IServiceCollection)">
+            <summary>
+            Add webhook delivery service with default configuration
+            </summary>
+        </member>
+        <member name="M:TenantIsolation.Integration.WebhookDeliveryServiceExtensions.AddWebhookDeliveryService(Microsoft.Extensions.DependencyInjection.IServiceCollection,System.Action{TenantIsolation.Integration.WebhookDeliveryOptions})">
+            <summary>
+            Add webhook delivery service with custom configuration
+            </summary>
+        </member>
+        <member name="T:TenantIsolation.Integration.WebhookDeliveryOptions">
+            <summary>
+            Configuration options for webhook delivery service
+            </summary>
+        </member>
+        <member name="P:TenantIsolation.Integration.WebhookDeliveryOptions.DefaultTimeout">
+            <summary>
+            Default timeout for webhook requests
+            </summary>
+        </member>
+        <member name="P:TenantIsolation.Integration.WebhookDeliveryOptions.DefaultMaxRetries">
+            <summary>
+            Default maximum number of retries
+            </summary>
+        </member>
+        <member name="P:TenantIsolation.Integration.WebhookDeliveryOptions.DefaultBaseDelayMilliseconds">
+            <summary>
+            Default base delay between retries in milliseconds
+            </summary>
+        </member>
+        <member name="P:TenantIsolation.Integration.WebhookDeliveryOptions.DefaultRespectRetryAfter">
+            <summary>
+            Whether to respect Retry-After header by default
+            </summary>
+        </member>
+        <member name="P:TenantIsolation.Integration.WebhookDeliveryOptions.DefaultUseCircuitBreaker">
+            <summary>
+            Whether to use circuit breaker by default
+            </summary>
+        </member>
         <member name="T:TenantIsolation.Integration.WebhookPayload">
             <summary>
             Webhook payload sent to registered endpoints
@@ -3151,15 +3925,25 @@
             Webhook handler implementation
             </summary>
         </member>
-        <member name="M:TenantIsolation.Integration.WebhookHandler.SendToWebhookAsync(TenantIsolation.Events.TenantEvent,TenantIsolation.Integration.WebhookSubscription)">
+        <member name="M:TenantIsolation.Integration.WebhookHandler.DeliverWebhookWithEnhancedResilienceAsync(TenantIsolation.Events.TenantEvent,TenantIsolation.Integration.WebhookSubscription)">
             <summary>
-            Send webhook payload to endpoint with retry logic
+            Deliver webhook with enhanced resilience features including circuit breaker, timeout, and retry
             </summary>
         </member>
         <member name="T:TenantIsolation.Integration.WebhookPayloadExtensions">
             <summary>
             Provides utility extensions for <see cref="T:TenantIsolation.Integration.WebhookPayload"/>.
             </summary>
+        </member>
+        <member name="M:TenantIsolation.Integration.WebhookPayloadExtensions.GenerateSignature(TenantIsolation.Integration.WebhookPayload,System.String)">
+            <summary>
+            Generates HMAC-SHA256 signature for the webhook payload using the provided secret.
+            </summary>
+            <param name="payload">The webhook payload to sign.</param>
+            <param name="secret">The secret key used to compute the HMAC.</param>
+            <returns>The hex-encoded HMAC-SHA256 signature.</returns>
+            <exception cref="T:System.ArgumentNullException">Thrown when <paramref name="payload"/> or <paramref name="secret"/> is <c>null</c>.</exception>
+            <exception cref="T:System.ArgumentException">Thrown when <paramref name="secret"/> is an empty string.</exception>
         </member>
         <member name="M:TenantIsolation.Integration.WebhookPayloadExtensions.ValidateSignature(TenantIsolation.Integration.WebhookPayload,System.String)">
             <summary>
@@ -3631,7 +4415,12 @@
         </member>
         <member name="T:TenantIsolation.Models.DataIsolationPolicyValidation">
             <summary>
-            Provides validation helpers for <see cref="T:TenantIsolation.Models.DataIsolationPolicy"/> instances
+            Thin, database-independent compatibility shim over <see cref="T:TenantIsolation.Services.DataIsolationPolicyValidator"/>'s
+            field-level checks. Kept for callers that validate a policy's intrinsic shape without a
+            dependency-injected <see cref="T:TenantIsolation.Services.IDataIsolationPolicyValidator"/> in scope (e.g. constructors,
+            unit tests, model binding). New code that has access to DI should prefer injecting
+            <see cref="T:TenantIsolation.Services.IDataIsolationPolicyValidator"/> and calling <c>ValidateAsync</c>, which additionally
+            checks connection-string presence and cross-policy isolation-mode conflicts.
             </summary>
         </member>
         <member name="M:TenantIsolation.Models.DataIsolationPolicyValidation.Validate(TenantIsolation.Models.DataIsolationPolicy)">
@@ -3640,6 +4429,15 @@
             </summary>
             <param name="value">The policy to validate</param>
             <returns>List of validation problems (empty if valid)</returns>
+            <exception cref="T:System.ArgumentNullException">Thrown if <paramref name="value"/> is null</exception>
+        </member>
+        <member name="M:TenantIsolation.Models.DataIsolationPolicyValidation.ValidateStructured(TenantIsolation.Models.DataIsolationPolicy)">
+            <summary>
+            Validates a DataIsolationPolicy instance's intrinsic field-level shape and returns a
+            structured result carrying <see cref="T:TenantIsolation.Models.PolicyErrorCode"/> values instead of bare strings
+            </summary>
+            <param name="value">The policy to validate</param>
+            <returns>The structured field-level validation result</returns>
             <exception cref="T:System.ArgumentNullException">Thrown if <paramref name="value"/> is null</exception>
         </member>
         <member name="M:TenantIsolation.Models.DataIsolationPolicyValidation.IsValid(TenantIsolation.Models.DataIsolationPolicy)">
@@ -3847,6 +4645,214 @@
             </param>
             <returns><see langword="true"/> if deserialization succeeds; otherwise <see langword="false"/>.</returns>
             <exception cref="T:System.ArgumentNullException"><paramref name="json"/> is <see langword="null"/>.</exception>
+        </member>
+        <member name="T:TenantIsolation.Models.PolicyErrorCode">
+            <summary>
+            Enumerates the specific, machine-readable reasons a <see cref="T:TenantIsolation.Models.DataIsolationPolicy"/>
+            can fail validation. Consumers (dashboards, alerting, startup guardrails) should
+            branch on this value rather than parsing free-text error messages.
+            </summary>
+        </member>
+        <member name="F:TenantIsolation.Models.PolicyErrorCode.MissingId">
+            <summary>Policy identifier is an empty GUID.</summary>
+        </member>
+        <member name="F:TenantIsolation.Models.PolicyErrorCode.MissingTenantId">
+            <summary>Tenant identifier is an empty GUID.</summary>
+        </member>
+        <member name="F:TenantIsolation.Models.PolicyErrorCode.MissingEntityType">
+            <summary>Entity type is missing or blank.</summary>
+        </member>
+        <member name="F:TenantIsolation.Models.PolicyErrorCode.EntityTypeTooLong">
+            <summary>Entity type exceeds the maximum allowed length.</summary>
+        </member>
+        <member name="F:TenantIsolation.Models.PolicyErrorCode.InvalidPolicyType">
+            <summary>Policy type is not a defined <see cref="!:DataIsolationPolicyType"/> value.</summary>
+        </member>
+        <member name="F:TenantIsolation.Models.PolicyErrorCode.PriorityOutOfRange">
+            <summary>Priority is outside the allowed 0-1000 range.</summary>
+        </member>
+        <member name="F:TenantIsolation.Models.PolicyErrorCode.InvalidCreatedAt">
+            <summary>CreatedAt is unset or in the future.</summary>
+        </member>
+        <member name="F:TenantIsolation.Models.PolicyErrorCode.InvalidUpdatedAt">
+            <summary>UpdatedAt is unset or in the future.</summary>
+        </member>
+        <member name="F:TenantIsolation.Models.PolicyErrorCode.MissingFilterRule">
+            <summary>Custom policy type is missing its required filter rule.</summary>
+        </member>
+        <member name="F:TenantIsolation.Models.PolicyErrorCode.InvalidFieldList">
+            <summary>Allowed or denied field list contains an empty/whitespace entry.</summary>
+        </member>
+        <member name="F:TenantIsolation.Models.PolicyErrorCode.ConflictingFieldRules">
+            <summary>A field appears in both the allowed and denied field lists.</summary>
+        </member>
+        <member name="F:TenantIsolation.Models.PolicyErrorCode.InvalidCrossTenantAccessFormat">
+            <summary>Cross-tenant access list contains a value that is not a valid GUID.</summary>
+        </member>
+        <member name="F:TenantIsolation.Models.PolicyErrorCode.DescriptionTooLong">
+            <summary>Description exceeds the maximum allowed length.</summary>
+        </member>
+        <member name="F:TenantIsolation.Models.PolicyErrorCode.FilterRuleTooLong">
+            <summary>Filter rule exceeds the maximum allowed length.</summary>
+        </member>
+        <member name="F:TenantIsolation.Models.PolicyErrorCode.MissingConnectionString">
+            <summary>
+            No active connection string is configured for the tenant that owns this policy,
+            so the isolation boundary cannot actually be enforced at the data-access layer.
+            </summary>
+        </member>
+        <member name="F:TenantIsolation.Models.PolicyErrorCode.ConflictingIsolationMode">
+            <summary>
+            The policy's isolation mode contradicts itself or another active policy for the
+            same tenant/entity - e.g. a Strict policy that also whitelists cross-tenant access,
+            or two active policies for the same tenant/entity declaring different policy types.
+            </summary>
+        </member>
+        <member name="T:TenantIsolation.Models.PolicyValidationError">
+            <summary>
+            A single, structured validation failure for a <see cref="T:TenantIsolation.Models.DataIsolationPolicy"/>.
+            </summary>
+            <param name="Code">The machine-readable failure reason.</param>
+            <param name="Message">A human-readable description of the failure.</param>
+            <param name="Field">The policy field the failure relates to, if applicable.</param>
+        </member>
+        <member name="M:TenantIsolation.Models.PolicyValidationError.#ctor(TenantIsolation.Models.PolicyErrorCode,System.String,System.String)">
+            <summary>
+            A single, structured validation failure for a <see cref="T:TenantIsolation.Models.DataIsolationPolicy"/>.
+            </summary>
+            <param name="Code">The machine-readable failure reason.</param>
+            <param name="Message">A human-readable description of the failure.</param>
+            <param name="Field">The policy field the failure relates to, if applicable.</param>
+        </member>
+        <member name="P:TenantIsolation.Models.PolicyValidationError.Code">
+            <summary>The machine-readable failure reason.</summary>
+        </member>
+        <member name="P:TenantIsolation.Models.PolicyValidationError.Message">
+            <summary>A human-readable description of the failure.</summary>
+        </member>
+        <member name="P:TenantIsolation.Models.PolicyValidationError.Field">
+            <summary>The policy field the failure relates to, if applicable.</summary>
+        </member>
+        <member name="M:TenantIsolation.Models.PolicyValidationError.ToString">
+            <summary>
+            Returns a human-readable representation combining the error code and message.
+            </summary>
+            <returns>A string in the form "Code: Message".</returns>
+        </member>
+        <member name="T:TenantIsolation.Models.PolicyValidationResult">
+            <summary>
+            The outcome of validating a single <see cref="T:TenantIsolation.Models.DataIsolationPolicy"/>, carrying
+            structured error codes instead of a bare boolean or free-text list.
+            </summary>
+        </member>
+        <member name="P:TenantIsolation.Models.PolicyValidationResult.Errors">
+            <summary>
+            Structured validation errors. Empty when the policy is valid.
+            </summary>
+        </member>
+        <member name="P:TenantIsolation.Models.PolicyValidationResult.IsValid">
+            <summary>
+            True when no validation errors were found.
+            </summary>
+        </member>
+        <member name="M:TenantIsolation.Models.PolicyValidationResult.#ctor(System.Collections.Generic.IReadOnlyList{TenantIsolation.Models.PolicyValidationError})">
+            <summary>
+            Initializes a new instance of the <see cref="T:TenantIsolation.Models.PolicyValidationResult"/> class.
+            </summary>
+            <param name="errors">The validation errors found, if any.</param>
+            <exception cref="T:System.ArgumentNullException">Thrown if <paramref name="errors"/> is null.</exception>
+        </member>
+        <member name="M:TenantIsolation.Models.PolicyValidationResult.Success">
+            <summary>
+            Gets a shared, cached result representing a valid policy with no errors.
+            </summary>
+            <returns>A <see cref="T:TenantIsolation.Models.PolicyValidationResult"/> with an empty error list.</returns>
+        </member>
+        <member name="M:TenantIsolation.Models.PolicyValidationResult.Failure(System.Collections.Generic.IEnumerable{TenantIsolation.Models.PolicyValidationError})">
+            <summary>
+            Builds a failed result from the given errors.
+            </summary>
+            <param name="errors">The validation errors to include.</param>
+            <returns>A <see cref="T:TenantIsolation.Models.PolicyValidationResult"/> wrapping the provided errors.</returns>
+            <exception cref="T:System.ArgumentNullException">Thrown if <paramref name="errors"/> is null.</exception>
+        </member>
+        <member name="M:TenantIsolation.Models.PolicyValidationResult.ToDisplayString">
+            <summary>
+            Renders all errors as a single, newline-delimited, human-readable message.
+            </summary>
+            <returns>A formatted summary of the validation errors, or an empty string when valid.</returns>
+        </member>
+        <member name="T:TenantIsolation.Models.PolicyValidationReportEntry">
+            <summary>
+            One entry of an aggregated startup validation report, identifying which policy
+            produced which result.
+            </summary>
+            <param name="PolicyId">The identifier of the policy that was validated.</param>
+            <param name="TenantId">The tenant that owns the policy.</param>
+            <param name="EntityType">The entity type the policy applies to.</param>
+            <param name="Result">The structured validation outcome for this policy.</param>
+        </member>
+        <member name="M:TenantIsolation.Models.PolicyValidationReportEntry.#ctor(System.Guid,System.Guid,System.String,TenantIsolation.Models.PolicyValidationResult)">
+            <summary>
+            One entry of an aggregated startup validation report, identifying which policy
+            produced which result.
+            </summary>
+            <param name="PolicyId">The identifier of the policy that was validated.</param>
+            <param name="TenantId">The tenant that owns the policy.</param>
+            <param name="EntityType">The entity type the policy applies to.</param>
+            <param name="Result">The structured validation outcome for this policy.</param>
+        </member>
+        <member name="P:TenantIsolation.Models.PolicyValidationReportEntry.PolicyId">
+            <summary>The identifier of the policy that was validated.</summary>
+        </member>
+        <member name="P:TenantIsolation.Models.PolicyValidationReportEntry.TenantId">
+            <summary>The tenant that owns the policy.</summary>
+        </member>
+        <member name="P:TenantIsolation.Models.PolicyValidationReportEntry.EntityType">
+            <summary>The entity type the policy applies to.</summary>
+        </member>
+        <member name="P:TenantIsolation.Models.PolicyValidationReportEntry.Result">
+            <summary>The structured validation outcome for this policy.</summary>
+        </member>
+        <member name="T:TenantIsolation.Models.PolicyValidationReport">
+            <summary>
+            Aggregated result of validating every configured <see cref="T:TenantIsolation.Models.DataIsolationPolicy"/>,
+            produced by <see cref="!:IDataIsolationPolicyValidator.ValidateAllAsync"/> and used by the
+            startup guardrail to fail fast on misconfiguration.
+            </summary>
+        </member>
+        <member name="P:TenantIsolation.Models.PolicyValidationReport.ValidatedAt">
+            <summary>
+            UTC timestamp at which validation ran.
+            </summary>
+        </member>
+        <member name="P:TenantIsolation.Models.PolicyValidationReport.Entries">
+            <summary>
+            Every policy that was evaluated, along with its individual result.
+            </summary>
+        </member>
+        <member name="P:TenantIsolation.Models.PolicyValidationReport.IsValid">
+            <summary>
+            True when every policy in <see cref="P:TenantIsolation.Models.PolicyValidationReport.Entries"/> is valid.
+            </summary>
+        </member>
+        <member name="P:TenantIsolation.Models.PolicyValidationReport.FailedEntries">
+            <summary>
+            The subset of <see cref="P:TenantIsolation.Models.PolicyValidationReport.Entries"/> that failed validation.
+            </summary>
+        </member>
+        <member name="M:TenantIsolation.Models.PolicyValidationReport.#ctor(System.Collections.Generic.IReadOnlyList{TenantIsolation.Models.PolicyValidationReportEntry})">
+            <summary>
+            Initializes a new instance of the <see cref="T:TenantIsolation.Models.PolicyValidationReport"/> class.
+            </summary>
+            <param name="entries">The per-policy validation results.</param>
+            <exception cref="T:System.ArgumentNullException">Thrown if <paramref name="entries"/> is null.</exception>
+        </member>
+        <member name="M:TenantIsolation.Models.PolicyValidationReport.ToDisplayString">
+            <summary>
+            Renders a full human-readable report suitable for logging or startup failure messages.
+            </summary>
+            <returns>A multi-line summary of every failed policy and its errors.</returns>
         </member>
         <member name="T:TenantIsolation.Models.Tenant">
             <summary>
@@ -4211,6 +5217,18 @@
             Record failed connection test
             </summary>
         </member>
+        <member name="M:TenantIsolation.Models.TenantConnectionString.ToString">
+            <summary>
+            Returns a string representation that redacts sensitive connection string details
+            </summary>
+            <returns>A redacted string representation of the connection string</returns>
+        </member>
+        <member name="M:TenantIsolation.Models.TenantConnectionString.GetRedactedConnectionString">
+            <summary>
+            Gets a redacted version of the connection string for display/logging purposes
+            </summary>
+            <returns>A redacted connection string</returns>
+        </member>
         <member name="T:TenantIsolation.Models.TenantConnectionStringExtensions">
             <summary>
             Provides extension methods for the <see cref="T:TenantIsolation.Models.TenantConnectionString"/> class.
@@ -4232,6 +5250,28 @@
             <returns>A formatted string representing the connection string.</returns>
             <exception cref="T:System.ArgumentNullException">Thrown if <paramref name="connectionString"/> is null.</exception>
         </member>
+        <member name="T:TenantIsolation.Models.TenantConnectionStringJsonConverter">
+            <summary>
+            Custom JSON converter for TenantConnectionString that redacts sensitive connection string details
+            </summary>
+        </member>
+        <member name="M:TenantIsolation.Models.TenantConnectionStringJsonConverter.Read(System.Text.Json.Utf8JsonReader@,System.Type,System.Text.Json.JsonSerializerOptions)">
+            <summary>
+            Reads and converts the JSON to a TenantConnectionString
+            </summary>
+            <param name="reader">The reader</param>
+            <param name="typeToConvert">The type to convert</param>
+            <param name="options">Serializer options</param>
+            <returns>The deserialized TenantConnectionString</returns>
+        </member>
+        <member name="M:TenantIsolation.Models.TenantConnectionStringJsonConverter.Write(System.Text.Json.Utf8JsonWriter,TenantIsolation.Models.TenantConnectionString,System.Text.Json.JsonSerializerOptions)">
+            <summary>
+            Writes a TenantConnectionString to JSON with redacted connection string
+            </summary>
+            <param name="writer">The writer to write to</param>
+            <param name="value">The value to serialize</param>
+            <param name="options">Serializer options</param>
+        </member>
         <member name="T:TenantIsolation.Models.TenantConnectionStringJsonExtensions">
             <summary>
             Provides System.Text.Json serialization extensions for <see cref="T:TenantIsolation.Models.TenantConnectionString"/>
@@ -4252,7 +5292,7 @@
             </summary>
             <param name="json">The JSON string to deserialize</param>
             <returns>The deserialized connection string, or null if the JSON is null or empty</returns>
-            <exception cref="T:System.ArgumentNullException">Thrown when <paramref name="json"/> is null or whitespace</exception>
+            <exception cref="T:System.ArgumentException">Thrown when <paramref name="json"/> is null, empty, or whitespace</exception>
             <exception cref="T:System.Text.Json.JsonException">Thrown when the JSON is invalid or cannot be deserialized</exception>
         </member>
         <member name="M:TenantIsolation.Models.TenantConnectionStringJsonExtensions.TryFromJson(System.String,TenantIsolation.Models.TenantConnectionString@)">
@@ -5059,6 +6099,99 @@
             <exception cref="T:System.ArgumentNullException"><paramref name="service"/> or <paramref name="key"/> is null</exception>
             <exception cref="T:TenantIsolation.Exceptions.TenantConfigurationException">Configuration not found or invalid for the specified key</exception>
         </member>
+        <member name="T:TenantIsolation.Services.DataIsolationPolicyStartupValidator">
+            <summary>
+            Startup guardrail that validates every configured <see cref="T:TenantIsolation.Models.DataIsolationPolicy"/> at
+            boot via <see cref="M:TenantIsolation.Services.IDataIsolationPolicyValidator.ValidateAllAsync(System.Threading.CancellationToken)"/> and fails application
+            startup with an aggregated report when any policy is misconfigured, instead of letting the
+            problem surface later as a cross-tenant data leak. Also re-runs validation whenever a
+            <see cref="T:TenantIsolation.Events.DataIsolationPolicyChangedEvent"/> is published, logging (but not crashing on)
+            any regression introduced after startup.
+            </summary>
+        </member>
+        <member name="M:TenantIsolation.Services.DataIsolationPolicyStartupValidator.#ctor(Microsoft.Extensions.DependencyInjection.IServiceScopeFactory,TenantIsolation.Events.IEventBus,Microsoft.Extensions.Logging.ILogger{TenantIsolation.Services.DataIsolationPolicyStartupValidator})">
+            <summary>
+            Initializes a new instance of the <see cref="T:TenantIsolation.Services.DataIsolationPolicyStartupValidator"/> class.
+            </summary>
+            <param name="scopeFactory">Used to create a scope for resolving the scoped <see cref="T:TenantIsolation.Services.IDataIsolationPolicyValidator"/>.</param>
+            <param name="eventBus">Event bus subscribed to for policy-change re-validation.</param>
+            <param name="logger">Logger used to record validation outcomes.</param>
+            <exception cref="T:System.ArgumentNullException">Thrown if any parameter is null.</exception>
+        </member>
+        <member name="M:TenantIsolation.Services.DataIsolationPolicyStartupValidator.StartAsync(System.Threading.CancellationToken)">
+            <summary>
+            Validates all data isolation policies and throws with an aggregated report if any are
+            invalid, then subscribes to <see cref="T:TenantIsolation.Events.DataIsolationPolicyChangedEvent"/> for ongoing
+            re-validation.
+            </summary>
+            <param name="cancellationToken">A token to observe while validating.</param>
+            <returns>A task that completes once startup validation and subscription succeed.</returns>
+            <exception cref="T:System.InvalidOperationException">Thrown if one or more policies fail validation.</exception>
+        </member>
+        <member name="M:TenantIsolation.Services.DataIsolationPolicyStartupValidator.StopAsync(System.Threading.CancellationToken)">
+            <summary>
+            Unsubscribes from policy-change notifications on shutdown.
+            </summary>
+            <param name="cancellationToken">A token to observe while stopping.</param>
+            <returns>A completed task.</returns>
+        </member>
+        <member name="M:TenantIsolation.Services.DataIsolationPolicyStartupValidator.OnPolicyChangedAsync(TenantIsolation.Events.DataIsolationPolicyChangedEvent)">
+            <summary>
+            Re-runs full policy validation in response to a policy change, logging an aggregated
+            report if the change introduced a misconfiguration. Does not throw, since the
+            application is already running and fail-fast is only appropriate at startup.
+            </summary>
+            <param name="changeEvent">The change notification that triggered re-validation.</param>
+            <returns>A task that completes once re-validation has run.</returns>
+            <exception cref="T:System.ArgumentNullException">Thrown if <paramref name="changeEvent"/> is null.</exception>
+        </member>
+        <member name="M:TenantIsolation.Services.DataIsolationPolicyStartupValidator.RunValidationAsync(System.Threading.CancellationToken)">
+            <summary>
+            Resolves a scoped <see cref="T:TenantIsolation.Services.IDataIsolationPolicyValidator"/> and runs a full validation pass.
+            </summary>
+            <param name="cancellationToken">A token to observe while validating.</param>
+            <returns>The aggregated validation report.</returns>
+        </member>
+        <member name="T:TenantIsolation.Services.DataIsolationPolicyValidator">
+            <summary>
+            Default <see cref="T:TenantIsolation.Services.IDataIsolationPolicyValidator"/> implementation backed by
+            <see cref="T:TenantIsolation.Data.TenantDbContext"/>. Field-level rules mirror the historical behaviour of
+            the static <c>DataIsolationPolicyValidation</c> helper, extended with structured error
+            codes and database-aware checks (connection string presence, cross-policy conflicts).
+            </summary>
+        </member>
+        <member name="M:TenantIsolation.Services.DataIsolationPolicyValidator.#ctor(TenantIsolation.Data.TenantDbContext,Microsoft.Extensions.Logging.ILogger{TenantIsolation.Services.DataIsolationPolicyValidator})">
+            <summary>
+            Initializes a new instance of the <see cref="T:TenantIsolation.Services.DataIsolationPolicyValidator"/> class.
+            </summary>
+            <param name="context">The database context used for connection-string and sibling-policy lookups.</param>
+            <param name="logger">Logger used to record validation outcomes.</param>
+            <exception cref="T:System.ArgumentNullException">Thrown if <paramref name="context"/> or <paramref name="logger"/> is null.</exception>
+        </member>
+        <member name="M:TenantIsolation.Services.DataIsolationPolicyValidator.ValidateFields(TenantIsolation.Models.DataIsolationPolicy)">
+            <inheritdoc />
+        </member>
+        <member name="M:TenantIsolation.Services.DataIsolationPolicyValidator.ValidateFieldsStatic(TenantIsolation.Models.DataIsolationPolicy)">
+            <summary>
+            Validates the intrinsic field-level shape of a policy without requiring an instance of
+            this validator or a database context. Exposed for the static
+            <see cref="T:TenantIsolation.Models.DataIsolationPolicyValidation"/> compatibility shim.
+            </summary>
+            <param name="policy">The policy to validate.</param>
+            <returns>The structured field-level validation result.</returns>
+            <exception cref="T:System.ArgumentNullException">Thrown if <paramref name="policy"/> is null.</exception>
+        </member>
+        <member name="M:TenantIsolation.Services.DataIsolationPolicyValidator.ValidateAsync(TenantIsolation.Models.DataIsolationPolicy,System.Threading.CancellationToken)">
+            <inheritdoc />
+        </member>
+        <member name="M:TenantIsolation.Services.DataIsolationPolicyValidator.ValidateAllAsync(System.Threading.CancellationToken)">
+            <inheritdoc />
+        </member>
+        <member name="M:TenantIsolation.Services.DataIsolationPolicyValidator.EnumerateFieldErrors(TenantIsolation.Models.DataIsolationPolicy)">
+            <summary>
+            Computes the field-level (database-independent) validation errors for a policy.
+            </summary>
+        </member>
         <member name="T:TenantIsolation.Services.DataIsolationService">
             <summary>
             Service for enforcing data isolation policies
@@ -5377,6 +6510,43 @@
             <summary>
             Extension method to register health check service
             </summary>
+        </member>
+        <member name="T:TenantIsolation.Services.IDataIsolationPolicyValidator">
+            <summary>
+            Validates <see cref="T:TenantIsolation.Models.DataIsolationPolicy"/> instances, both in isolation (field-level
+            shape checks) and against the rest of the system (connection strings, sibling policies),
+            returning structured <see cref="T:TenantIsolation.Models.PolicyValidationResult"/> outcomes instead of booleans.
+            </summary>
+        </member>
+        <member name="M:TenantIsolation.Services.IDataIsolationPolicyValidator.ValidateFields(TenantIsolation.Models.DataIsolationPolicy)">
+            <summary>
+            Validates the intrinsic shape of a policy (required fields, ranges, field-list
+            consistency) without touching the database.
+            </summary>
+            <param name="policy">The policy to validate.</param>
+            <returns>The structured validation result.</returns>
+            <exception cref="T:System.ArgumentNullException">Thrown if <paramref name="policy"/> is null.</exception>
+        </member>
+        <member name="M:TenantIsolation.Services.IDataIsolationPolicyValidator.ValidateAsync(TenantIsolation.Models.DataIsolationPolicy,System.Threading.CancellationToken)">
+            <summary>
+            Validates a policy's field-level shape plus cross-cutting concerns that require
+            database access: whether the owning tenant has an active connection string, and
+            whether the policy's isolation mode conflicts with sibling policies for the same
+            tenant/entity.
+            </summary>
+            <param name="policy">The policy to validate.</param>
+            <param name="cancellationToken">A token to cancel the asynchronous operation.</param>
+            <returns>The structured validation result.</returns>
+            <exception cref="T:System.ArgumentNullException">Thrown if <paramref name="policy"/> is null.</exception>
+        </member>
+        <member name="M:TenantIsolation.Services.IDataIsolationPolicyValidator.ValidateAllAsync(System.Threading.CancellationToken)">
+            <summary>
+            Validates every data isolation policy currently stored in the database and returns
+            an aggregated report. Intended for use as a startup guardrail and for re-validation
+            triggered by <see cref="T:TenantIsolation.Events.DataIsolationPolicyChangedEvent"/>.
+            </summary>
+            <param name="cancellationToken">A token to cancel the asynchronous operation.</param>
+            <returns>The aggregated validation report across all policies.</returns>
         </member>
         <member name="T:TenantIsolation.Services.IDynamicTenantStore">
             <summary>
