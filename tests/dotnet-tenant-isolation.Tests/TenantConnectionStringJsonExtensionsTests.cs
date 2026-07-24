@@ -12,11 +12,12 @@ public sealed class TenantConnectionStringJsonExtensionsTests
 {
     private static TenantConnectionString CreateSample()
     {
-        // The concrete shape of TenantConnectionString is not known here,
-        // but it is assumed to have a public parameterless constructor.
-        // If the type defines required properties, they can be left at their defaults
-        // for the purpose of serialization tests.
-        return new TenantConnectionString();
+        // Create a minimal valid JSON representation of a TenantConnectionString.
+        // The exact property names are inferred from typical naming conventions;
+        // adjust if the actual model uses different names.
+        const string json = "{\"connectionString\":\"Server=.;Database=Test;Trusted_Connection=True;\"}";
+        // FromJson will throw if the JSON is invalid, so we can safely use the result.
+        return TenantConnectionStringJsonExtensions.FromJson(json)!;
     }
 
     [Fact]
@@ -42,6 +43,7 @@ public sealed class TenantConnectionStringJsonExtensionsTests
 
         // When indentation is requested the output should differ (e.g., contain line breaks or spaces)
         Assert.NotEqual(jsonNonIndented, jsonIndented);
+        Assert.Contains("\n", jsonIndented);
     }
 
     [Fact]
