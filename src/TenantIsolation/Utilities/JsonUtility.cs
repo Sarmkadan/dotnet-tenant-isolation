@@ -16,6 +16,9 @@ namespace TenantIsolation.Utilities;
 /// </summary>
 public static class JsonUtility
 {
+    // ------------------------------------------------------------------------
+    // Static readonly JsonSerializerOptions – never instantiated per call
+    // ------------------------------------------------------------------------
     private static readonly JsonSerializerOptions DefaultOptions = new()
     {
         PropertyNameCaseInsensitive = true,
@@ -31,6 +34,25 @@ public static class JsonUtility
         PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
         WriteIndented = true,
         DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
+        ReferenceHandler = ReferenceHandler.IgnoreCycles
+    };
+
+    // Options for when null values should be written (ignoreNulls = false)
+    private static readonly JsonSerializerOptions NonIndentedIncludeNullsOptions = new()
+    {
+        PropertyNameCaseInsensitive = true,
+        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+        WriteIndented = false,
+        DefaultIgnoreCondition = JsonIgnoreCondition.Never,
+        ReferenceHandler = ReferenceHandler.IgnoreCycles
+    };
+
+    private static readonly JsonSerializerOptions IndentedIncludeNullsOptions = new()
+    {
+        PropertyNameCaseInsensitive = true,
+        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+        WriteIndented = true,
+        DefaultIgnoreCondition = JsonIgnoreCondition.Never,
         ReferenceHandler = ReferenceHandler.IgnoreCycles
     };
 
@@ -250,13 +272,14 @@ public static class JsonUtility
     /// </summary>
     public static JsonSerializerOptions CreateCustomOptions(bool indented = false, bool ignoreNulls = true)
     {
-        return new JsonSerializerOptions
+        // Return pre‑created static options – no per‑call instantiation
+        if (indented)
         {
-            PropertyNameCaseInsensitive = true,
-            PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-            WriteIndented = indented,
-            DefaultIgnoreCondition = ignoreNulls ? JsonIgnoreCondition.WhenWritingNull : JsonIgnoreCondition.Never,
-            ReferenceHandler = ReferenceHandler.IgnoreCycles
-        };
+            return ignoreNulls ? PrettyOptions : IndentedIncludeNullsOptions;
+        }
+        else
+        {
+            return ignoreNulls ? DefaultOptions : NonIndentedIncludeNullsOptions;
+        }
     }
 }
