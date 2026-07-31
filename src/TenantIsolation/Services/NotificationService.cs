@@ -112,9 +112,7 @@ public class NotificationService : INotificationService
                 });
         }
 
-        _logger.LogInformation(
-            "Notification sent to user {UserId}: {Title}",
-            notification.RecipientUserId, notification.Title);
+        _logger.LogInformation(NotificationTemplates.NotificationSent, notification.RecipientUserId, notification.Title);
 
         return await Task.FromResult(notification);
     }
@@ -170,7 +168,7 @@ public class NotificationService : INotificationService
             userNotifs.Remove(notificationId);
         }
 
-        _logger.LogInformation("Deleted notification {NotificationId}", notificationId);
+        _logger.LogInformation(NotificationTemplates.NotificationDeleted, notificationId);
         return await Task.FromResult(true);
     }
 
@@ -199,4 +197,10 @@ public static class NotificationServiceExtensions
         services.AddSingleton<INotificationService, NotificationService>();
         return services;
     }
+}
+
+public static class NotificationTemplates
+{
+    public const string NotificationSent = "Notification sent to user {0}: {1}";
+    public const string NotificationDeleted = "Deleted notification {0}";
 }
