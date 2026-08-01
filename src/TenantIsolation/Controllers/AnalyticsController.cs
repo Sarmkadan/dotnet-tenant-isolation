@@ -21,7 +21,7 @@ namespace TenantIsolation.Controllers;
 /// </summary>
 [ApiController]
 [Route("api/analytics")]
-public class AnalyticsController : ControllerBase
+public class AnalyticsController : ControllerBase, IEquatable<AnalyticsController>
 {
     private readonly IResponseFormatter _formatter;
     private readonly ILogger<AnalyticsController> _logger;
@@ -39,6 +39,29 @@ public class AnalyticsController : ControllerBase
         _usageMeteringService = usageMeteringService;
         _exportService = exportService;
     }
+
+    public bool Equals(AnalyticsController? other)
+    {
+        if (other is null)
+            return false;
+
+        return EqualityComparer<IResponseFormatter>.Default.Equals(_formatter, other._formatter)
+            && EqualityComparer<ILogger<AnalyticsController>>.Default.Equals(_logger, other._logger)
+            && EqualityComparer<ITenantUsageMeteringService>.Default.Equals(_usageMeteringService, other._usageMeteringService)
+            && EqualityComparer<IExportService>.Default.Equals(_exportService, other._exportService);
+    }
+
+    public override bool Equals(object? obj) =>
+        obj is AnalyticsController controller && Equals(controller);
+
+    public override int GetHashCode() =>
+        HashCode.Combine(_formatter, _logger, _usageMeteringService, _exportService);
+
+    public static bool operator ==(AnalyticsController? left, AnalyticsController? right) =>
+        EqualityComparer<AnalyticsController>.Default.Equals(left, right);
+
+    public static bool operator !=(AnalyticsController? left, AnalyticsController? right) =>
+        !(left == right);
 
     /// <summary>
     /// Get system health status
