@@ -11,12 +11,19 @@ using TenantIsolation.Exceptions;
 
 namespace TenantIsolation.Tests;
 
+/// <summary>
+/// Contains unit tests for the DataIsolationService class, which manages data isolation policies for multi-tenancy.
+/// </summary>
 public class DataIsolationServiceTests
 {
     private readonly TenantDbContext _dbContext;
     private readonly Mock<ILogger<DataIsolationService>> _mockLogger;
     private readonly DataIsolationService _sut;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="DataIsolationServiceTests"/> class.
+    /// Sets up an in-memory database and mock logger for testing.
+    /// </summary>
     public DataIsolationServiceTests()
     {
         var options = new DbContextOptionsBuilder<TenantDbContext>()
@@ -29,6 +36,9 @@ public class DataIsolationServiceTests
         _sut = new DataIsolationService(_dbContext, _mockLogger.Object);
     }
 
+    /// <summary>
+    /// Tests that creating a policy with valid parameters returns the created policy.
+    /// </summary>
     [Fact]
     public async Task CreatePolicyAsync_WithValidPolicy_ReturnsPolicy()
     {
@@ -45,6 +55,9 @@ public class DataIsolationServiceTests
         result.PolicyType.Should().Be(DataIsolationPolicyType.Strict);
     }
 
+    /// <summary>
+    /// Tests that retrieving an existing policy returns the policy.
+    /// </summary>
     [Fact]
     public async Task GetPolicyAsync_WithExistingPolicy_ReturnsPolicy()
     {
@@ -70,6 +83,9 @@ public class DataIsolationServiceTests
         result.EntityType.Should().Be("Customer");
     }
 
+    /// <summary>
+    /// Tests that retrieving a non-existing policy returns null.
+    /// </summary>
     [Fact]
     public async Task GetPolicyAsync_WithNonExistingPolicy_ReturnsNull()
     {
@@ -83,6 +99,9 @@ public class DataIsolationServiceTests
         result.Should().BeNull();
     }
 
+    /// <summary>
+    /// Tests that field access is allowed when no policy exists for the entity type.
+    /// </summary>
     [Fact]
     public async Task IsFieldAccessAllowedAsync_WithNoPolicy_ReturnsTrue()
     {
@@ -96,6 +115,9 @@ public class DataIsolationServiceTests
         result.Should().BeTrue();
     }
 
+    /// <summary>
+    /// Tests that field access is denied when the field is explicitly denied in the policy.
+    /// </summary>
     [Fact]
     public async Task IsFieldAccessAllowedAsync_WithDeniedField_ReturnsFalse()
     {
@@ -120,6 +142,9 @@ public class DataIsolationServiceTests
         result.Should().BeFalse();
     }
 
+    /// <summary>
+    /// Tests that field access is allowed when the field is explicitly allowed in the policy.
+    /// </summary>
     [Fact]
     public async Task IsFieldAccessAllowedAsync_WithAllowedField_ReturnsTrue()
     {
@@ -144,6 +169,9 @@ public class DataIsolationServiceTests
         result.Should().BeTrue();
     }
 
+    /// <summary>
+    /// Tests that verifying field access does not throw when access is allowed.
+    /// </summary>
     [Fact]
     public async Task VerifyFieldAccessAsync_WithAllowedAccess_DoesNotThrow()
     {
@@ -168,6 +196,9 @@ public class DataIsolationServiceTests
         await act.Should().NotThrowAsync();
     }
 
+    /// <summary>
+    /// Tests that verifying field access throws DataIsolationViolationException when access is denied.
+    /// </summary>
     [Fact]
     public async Task VerifyFieldAccessAsync_WithDeniedAccess_ThrowsDataIsolationViolationException()
     {
@@ -194,6 +225,9 @@ public class DataIsolationServiceTests
             .Where(e => e.EntityType == "Order");
     }
 
+    /// <summary>
+    /// Tests that cross-tenant access is denied when the policy is strict.
+    /// </summary>
     [Fact]
     public async Task CanAccessCrossTenantAsync_WithStrictPolicy_ReturnsFalse()
     {
@@ -218,6 +252,9 @@ public class DataIsolationServiceTests
         result.Should().BeFalse();
     }
 
+    /// <summary>
+    /// Tests that cross-tenant access is denied when the policy is relaxed but no tenants are allowed.
+    /// </summary>
     [Fact]
     public async Task CanAccessCrossTenantAsync_WithRelaxedPolicyAndNoAllowedTenants_ReturnsFalse()
     {
@@ -242,6 +279,9 @@ public class DataIsolationServiceTests
         result.Should().BeFalse();
     }
 
+    /// <summary>
+    /// Tests that cross-tenant access is allowed when the policy is relaxed and the target tenant is explicitly allowed.
+    /// </summary>
     [Fact]
     public async Task CanAccessCrossTenantAsync_WithRelaxedPolicyAndAllowedTenant_ReturnsTrue()
     {
@@ -267,6 +307,9 @@ public class DataIsolationServiceTests
         result.Should().BeTrue();
     }
 
+    /// <summary>
+    /// Tests that updating a policy with valid changes returns the updated policy.
+    /// </summary>
     [Fact]
     public async Task UpdatePolicyAsync_WithValidUpdate_ReturnsUpdatedPolicy()
     {
@@ -292,6 +335,9 @@ public class DataIsolationServiceTests
         savedPolicy!.UpdatedAt.Should().BeAfter(savedPolicy.CreatedAt);
     }
 
+    /// <summary>
+    /// Tests that deleting an existing policy returns true and removes the policy from the database.
+    /// </summary>
     [Fact]
     public async Task DeletePolicyAsync_WithExistingPolicy_ReturnsTrueAndRemovesPolicy()
     {
@@ -316,6 +362,9 @@ public class DataIsolationServiceTests
         deletedPolicy.Should().BeNull();
     }
 
+    /// <summary>
+    /// Tests that getting active policies returns only the active policies for a tenant.
+    /// </summary>
     [Fact]
     public async Task GetActivePoliciesAsync_WithMultiplePolicies_ReturnsOnlyActivePolicies()
     {
@@ -358,6 +407,9 @@ public class DataIsolationServiceTests
         result.Should().NotContain(p => p.Id == inactivePolicy.Id);
     }
 
+    /// <summary>
+    /// Tests that setting a policy's active status updates the status correctly.
+    /// </summary>
     [Fact]
     public async Task SetPolicyActiveAsync_WithExistingPolicy_UpdatesActiveStatus()
     {
@@ -382,6 +434,9 @@ public class DataIsolationServiceTests
         savedPolicy!.IsActive.Should().BeFalse();
     }
 
+    /// <summary>
+    /// Tests that setting a policy's priority updates the priority correctly.
+    /// </summary>
     [Fact]
     public async Task SetPolicyPriorityAsync_WithValidPriority_UpdatesPriority()
     {
@@ -407,6 +462,9 @@ public class DataIsolationServiceTests
         savedPolicy!.Priority.Should().Be(50);
     }
 
+    /// <summary>
+    /// Tests that checking policy violations returns an empty list when no policy exists.
+    /// </summary>
     [Fact]
     public async Task CheckPolicyViolationsAsync_WithNoPolicy_ReturnsEmptyList()
     {
@@ -421,6 +479,9 @@ public class DataIsolationServiceTests
         result.Should().BeEmpty();
     }
 
+    /// <summary>
+    /// Tests that checking policy violations returns violations for denied fields.
+    /// </summary>
     [Fact]
     public async Task CheckPolicyViolationsAsync_WithDeniedField_ReturnsViolation()
     {
@@ -449,6 +510,9 @@ public class DataIsolationServiceTests
         result.Should().Contain(item => item.Contains("Total"));
     }
 
+    /// <summary>
+    /// Tests that exporting an existing policy returns a JSON representation of the policy.
+    /// </summary>
     [Fact]
     public async Task ExportPolicyAsync_WithExistingPolicy_ReturnsJson()
     {
