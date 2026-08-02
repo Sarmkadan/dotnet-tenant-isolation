@@ -4,8 +4,14 @@ using TenantIsolation.Exceptions;
 
 namespace TenantIsolation.Tests.Exceptions;
 
+/// <summary>
+/// Validation tests for TenantIsolationException and related exception types.
+/// </summary>
 public class TenantIsolationExceptionValidationTests
 {
+    /// <summary>
+    /// Validates that a valid TenantIsolationException returns an empty validation result.
+    /// </summary>
     [Fact]
     public void Validate_TenantIsolationException_WithValidException_ReturnsEmptyList()
     {
@@ -22,6 +28,9 @@ public class TenantIsolationExceptionValidationTests
         result.Should().BeEmpty();
     }
 
+    /// <summary>
+    /// Validates that a TenantIsolationException with null error code returns an empty validation result.
+    /// </summary>
     [Fact]
     public void Validate_TenantIsolationException_WithNullErrorCode_ReturnsEmptyList()
     {
@@ -39,6 +48,9 @@ public class TenantIsolationExceptionValidationTests
         result.Should().BeEmpty();
     }
 
+    /// <summary>
+    /// Validates that a TenantIsolationException with an empty error code returns a validation error.
+    /// </summary>
     [Fact]
     public void Validate_TenantIsolationException_WithEmptyErrorCode_ReturnsError()
     {
@@ -57,6 +69,9 @@ public class TenantIsolationExceptionValidationTests
         result.Should().Contain("ErrorCode cannot be an empty string");
     }
 
+    /// <summary>
+    /// Validates that a TenantIsolationException with an empty error details dictionary returns a validation error.
+    /// </summary>
     [Fact]
     public void Validate_TenantIsolationException_WithEmptyErrorDetailsDictionary_ReturnsError()
     {
@@ -74,6 +89,9 @@ public class TenantIsolationExceptionValidationTests
         result.Should().Contain("ErrorDetails dictionary cannot be empty");
     }
 
+    /// <summary>
+    /// Validates that a TenantIsolationException with an empty key in error details returns a validation error.
+    /// </summary>
     [Fact]
     public void Validate_TenantIsolationException_WithEmptyKeyInErrorDetails_ReturnsError()
     {
@@ -91,6 +109,9 @@ public class TenantIsolationExceptionValidationTests
         result.Should().Contain("ErrorDetails contains an entry with null or empty key");
     }
 
+    /// <summary>
+    /// Validates that a TenantIsolationException with a null key in error details returns a validation error.
+    /// </summary>
     [Fact]
     public void Validate_TenantIsolationException_WithNullKeyInErrorDetails_ReturnsError()
     {
@@ -108,6 +129,9 @@ public class TenantIsolationExceptionValidationTests
         result.Should().Contain("ErrorDetails contains an entry with null or empty key");
     }
 
+    /// <summary>
+    /// Validates that passing a null TenantIsolationException to the Validate method throws an ArgumentNullException.
+    /// </summary>
     [Fact]
     public void Validate_TenantIsolationException_WithNullInput_ThrowsArgumentNullException()
     {
@@ -121,6 +145,9 @@ public class TenantIsolationExceptionValidationTests
         act.Should().Throw<ArgumentNullException>();
     }
 
+    /// <summary>
+    /// Validates that the IsValid method returns true for a valid TenantIsolationException.
+    /// </summary>
     [Fact]
     public void IsValid_TenantIsolationException_WithValidException_ReturnsTrue()
     {
@@ -134,6 +161,9 @@ public class TenantIsolationExceptionValidationTests
         result.Should().BeTrue();
     }
 
+    /// <summary>
+    /// Validates that the IsValid method returns false for an invalid TenantIsolationException.
+    /// </summary>
     [Fact]
     public void IsValid_TenantIsolationException_WithInvalidException_ReturnsFalse()
     {
@@ -150,6 +180,9 @@ public class TenantIsolationExceptionValidationTests
         result.Should().BeFalse();
     }
 
+    /// <summary>
+    /// Validates that the IsValid method returns false for a null TenantIsolationException.
+    /// </summary>
     [Fact]
     public void IsValid_TenantIsolationException_WithNullInput_ReturnsFalse()
     {
@@ -163,6 +196,9 @@ public class TenantIsolationExceptionValidationTests
         result.Should().BeFalse();
     }
 
+    /// <summary>
+    /// Validates that calling EnsureValid on a valid TenantIsolationException does not throw an exception.
+    /// </summary>
     [Fact]
     public void EnsureValid_TenantIsolationException_WithValidException_DoesNotThrow()
     {
@@ -176,6 +212,9 @@ public class TenantIsolationExceptionValidationTests
         act.Should().NotThrow();
     }
 
+    /// <summary>
+    /// Validates that calling EnsureValid on an invalid TenantIsolationException throws an ArgumentException.
+    /// </summary>
     [Fact]
     public void EnsureValid_TenantIsolationException_WithInvalidException_ThrowsArgumentException()
     {
@@ -193,6 +232,9 @@ public class TenantIsolationExceptionValidationTests
             .WithMessage("*ErrorCode cannot be an empty string*");
     }
 
+    /// <summary>
+    /// Validates that calling EnsureValid on a null TenantIsolationException throws an ArgumentNullException.
+    /// </summary>
     [Fact]
     public void EnsureValid_TenantIsolationException_WithNullInput_ThrowsArgumentNullException()
     {
@@ -206,6 +248,12 @@ public class TenantIsolationExceptionValidationTests
         act.Should().Throw<ArgumentNullException>();
     }
 
+    /// <summary>
+    /// Validates that a valid TenantNotResolvedException returns an empty validation result.
+    /// </summary>
+    /// <summary>
+    /// Validates that a valid TenantNotResolvedException returns an empty validation result.
+    /// </summary>
     [Fact]
     public void Validate_TenantNotResolvedException_WithValidException_ReturnsEmptyList()
     {
@@ -219,6 +267,9 @@ public class TenantIsolationExceptionValidationTests
         result.Should().BeEmpty();
     }
 
+    /// <summary>
+    /// Validates that passing a null TenantNotResolvedException to the Validate method throws an ArgumentNullException.
+    /// </summary>
     [Fact]
     public void Validate_TenantNotResolvedException_WithNullInput_ThrowsArgumentNullException()
     {
@@ -232,6 +283,9 @@ public class TenantIsolationExceptionValidationTests
         act.Should().Throw<ArgumentNullException>();
     }
 
+    /// <summary>
+    /// Validates that the IsValid method returns true for a valid TenantNotResolvedException.
+    /// </summary>
     [Fact]
     public void IsValid_TenantNotResolvedException_WithValidException_ReturnsTrue()
     {
@@ -245,6 +299,9 @@ public class TenantIsolationExceptionValidationTests
         result.Should().BeTrue();
     }
 
+    /// <summary>
+    /// Validates that the IsValid method returns false for a null TenantNotResolvedException.
+    /// </summary>
     [Fact]
     public void IsValid_TenantNotResolvedException_WithNullInput_ReturnsFalse()
     {
@@ -258,6 +315,9 @@ public class TenantIsolationExceptionValidationTests
         result.Should().BeFalse();
     }
 
+    /// <summary>
+    /// Validates that calling EnsureValid on a valid TenantNotResolvedException does not throw an exception.
+    /// </summary>
     [Fact]
     public void EnsureValid_TenantNotResolvedException_WithValidException_DoesNotThrow()
     {
@@ -271,6 +331,9 @@ public class TenantIsolationExceptionValidationTests
         act.Should().NotThrow();
     }
 
+    /// <summary>
+    /// Validates that calling EnsureValid on a null TenantNotResolvedException throws an ArgumentNullException.
+    /// </summary>
     [Fact]
     public void EnsureValid_TenantNotResolvedException_WithNullInput_ThrowsArgumentNullException()
     {
