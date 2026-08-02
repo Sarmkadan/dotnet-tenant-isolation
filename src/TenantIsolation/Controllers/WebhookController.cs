@@ -61,6 +61,32 @@ public class WebhookController : ControllerBase
     public async Task<ActionResult<ApiResponse<WebhookSubscription>>> RegisterWebhook(
         [FromBody] RegisterWebhookRequest request)
     {
+        // Validate request payload
+        if (request == null)
+        {
+            var problem = new ProblemDetails
+            {
+                Title = "Invalid request",
+                Detail = "Request body cannot be null."
+            };
+            return BadRequest(problem);
+        }
+
+        if (string.IsNullOrWhiteSpace(request.TenantId))
+            ModelState.AddModelError(nameof(request.TenantId), "TenantId is required.");
+
+        if (string.IsNullOrWhiteSpace(request.EventType))
+            ModelState.AddModelError(nameof(request.EventType), "EventType is required.");
+
+        if (string.IsNullOrWhiteSpace(request.Url))
+            ModelState.AddModelError(nameof(request.Url), "Url is required.");
+
+        if (!ModelState.IsValid)
+        {
+            var validationProblem = new ValidationProblemDetails(ModelState);
+            return BadRequest(validationProblem);
+        }
+
         try
         {
             if (!Guid.TryParse(request.TenantId, out var tenantId))
