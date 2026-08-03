@@ -1991,6 +1991,40 @@ public class ConfigurationExample
 
 This example demonstrates creating a `ConfigurationService` instance and using its public members to manage configuration settings.
 
+## TenantResolutionOptions
+
+The `TenantResolutionOptions` class defines the configuration for tenant resolution strategies, controlling the ordered chain of strategies used to identify the tenant and determining default behavior when resolution fails. It allows customization of resolution priorities and ensures valid configuration of default tenant fallbacks.
+
+Here's an example usage:
+
+```csharp
+using TenantIsolation.Configuration;
+using TenantIsolation.Constants;
+
+public class TenantResolutionSetup
+{
+    public static void ConfigureOptions()
+    {
+        // Create default options
+        var options = TenantResolutionOptions.CreateDefault();
+        
+        // Customize strategies
+        options.ResolutionStrategies = new List<TenantResolutionStrategy>
+        {
+            TenantResolutionStrategy.Header,
+            TenantResolutionStrategy.Default
+        };
+        
+        // Set default tenant
+        options.DefaultTenantId = Guid.Parse("3fa85f64-5717-4562-b3fc-2c963f66afa6");
+        options.ThrowOnResolutionFailure = true;
+        
+        // Validate configuration
+        options.Validate();
+    }
+}
+```
+
 ## Controllers
 
 ### CompaniesController
