@@ -12,89 +12,90 @@ using TenantIsolation.Constants;
 namespace TenantIsolation.Models;
 
 /// <summary>
-/// Defines data isolation policies for a tenant
+/// Defines data isolation policies for a tenant.
 /// </summary>
 public class DataIsolationPolicy
 {
     /// <summary>
-    /// Unique identifier
+    /// Gets or sets the unique identifier.
     /// </summary>
     [Key]
     public Guid Id { get; set; }
 
     /// <summary>
-    /// Associated tenant identifier
+    /// Gets or sets the associated tenant identifier.
     /// </summary>
     [Required]
     public Guid TenantId { get; set; }
 
     /// <summary>
-    /// Policy type (Strict, Relaxed, Custom)
+    /// Gets or sets the policy type (Strict, Relaxed, Custom).
     /// </summary>
     public DataIsolationPolicyType PolicyType { get; set; } = DataIsolationPolicyType.Strict;
 
     /// <summary>
-    /// Entity type this policy applies to (e.g., "Order", "Customer")
+    /// Gets or sets the entity type this policy applies to (e.g., "Order", "Customer").
     /// </summary>
     [Required]
     [StringLength(100)]
     public string EntityType { get; set; } = null!;
 
     /// <summary>
-    /// Policy description
+    /// Gets or sets the policy description.
     /// </summary>
     [StringLength(1000)]
     public string? Description { get; set; }
 
     /// <summary>
-    /// Filter rule in SQL/LINQ format
+    /// Gets or sets the filter rule in SQL/LINQ format.
     /// </summary>
     public string? FilterRule { get; set; }
 
     /// <summary>
-    /// Allowed field access list (comma-separated)
+    /// Gets or sets the allowed field access list (comma-separated).
     /// </summary>
     public string? AllowedFields { get; set; }
 
     /// <summary>
-    /// Denied field access list (comma-separated)
+    /// Gets or sets the denied field access list (comma-separated).
     /// </summary>
     public string? DeniedFields { get; set; }
 
     /// <summary>
-    /// Allowed cross-tenant access list (comma-separated tenant IDs)
+    /// Gets or sets the allowed cross-tenant access list (comma-separated tenant IDs).
     /// </summary>
     public string? AllowedCrossTenantAccess { get; set; }
 
     /// <summary>
-    /// Is this policy active
+    /// Gets or sets a value indicating whether this policy is active.
     /// </summary>
     public bool IsActive { get; set; } = true;
 
     /// <summary>
-    /// Policy priority (lower = higher priority)
+    /// Gets or sets the policy priority (lower = higher priority).
     /// </summary>
     public int Priority { get; set; } = 100;
 
     /// <summary>
-    /// When policy was created
+    /// Gets or sets the date and time when the policy was created.
     /// </summary>
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
     /// <summary>
-    /// When policy was last updated
+    /// Gets or sets the date and time when the policy was last updated.
     /// </summary>
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
 
     /// <summary>
-    /// Navigation property to tenant
+    /// Gets or sets the navigation property to the associated tenant.
     /// </summary>
     [ForeignKey(nameof(TenantId))]
     public virtual Tenant? Tenant { get; set; }
 
     /// <summary>
-    /// Parse allowed fields into list
+    /// Parses the allowed fields string into a list of field names.
     /// </summary>
+    /// <returns>A list of allowed field names.</returns>
     public List<string> GetAllowedFields()
     {
         if (string.IsNullOrWhiteSpace(AllowedFields))
@@ -107,8 +108,9 @@ public class DataIsolationPolicy
     }
 
     /// <summary>
-    /// Parse denied fields into list
+    /// Parses the denied fields string into a list of field names.
     /// </summary>
+    /// <returns>A list of denied field names.</returns>
     public List<string> GetDeniedFields()
     {
         if (string.IsNullOrWhiteSpace(DeniedFields))
@@ -121,8 +123,10 @@ public class DataIsolationPolicy
     }
 
     /// <summary>
-    /// Check if field access is allowed
+    /// Checks if access to the specified field is allowed based on the policy.
     /// </summary>
+    /// <param name="fieldName">The name of the field to check.</param>
+    /// <returns><c>true</c> if access is allowed; otherwise, <c>false</c>.</returns>
     public bool IsFieldAccessAllowed(string fieldName)
     {
         var deniedFields = GetDeniedFields();
@@ -137,8 +141,10 @@ public class DataIsolationPolicy
     }
 
     /// <summary>
-    /// Check if cross-tenant access is allowed
+    /// Checks if cross-tenant access to the specified tenant is allowed.
     /// </summary>
+    /// <param name="otherTenantId">The unique identifier of the target tenant.</param>
+    /// <returns><c>true</c> if access is allowed; otherwise, <c>false</c>.</returns>
     public bool IsCrossTenantAccessAllowed(Guid otherTenantId)
     {
         if (PolicyType == DataIsolationPolicyType.Strict)
@@ -156,8 +162,10 @@ public class DataIsolationPolicy
     }
 
     /// <summary>
-    /// Validate policy configuration
+    /// Validates the policy configuration.
     /// </summary>
+    /// <param name="errorMessage">When this method returns, contains an error message if the policy is invalid; otherwise, <c>null</c>.</param>
+    /// <returns><c>true</c> if the policy is valid; otherwise, <c>false</c>.</returns>
     public bool IsValidPolicy(out string? errorMessage)
     {
         errorMessage = null;
