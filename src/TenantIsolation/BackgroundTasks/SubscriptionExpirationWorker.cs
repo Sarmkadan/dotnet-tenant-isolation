@@ -83,6 +83,8 @@ public class SubscriptionExpirationWorker : BackgroundService
             // Handle expired subscriptions
             foreach (var tenant in expiredTenants)
             {
+                cancellationToken.ThrowIfCancellationRequested();
+
                 try
                 {
                     _logger.LogWarning("Subscription expired for tenant {TenantId}. Suspending...",
@@ -108,8 +110,21 @@ public class SubscriptionExpirationWorker : BackgroundService
 
             if (soonToExpire.Count > 0)
             {
-                _logger.LogWarning("Found {Count} tenants with subscriptions expiring soon",
-                    soonToExpire.Count);
+                // Wrap per-tenant notification logic in try/catch to avoid one failure breaking the loop
+                foreach (var tenant in soonToExpire)
+                {
+                    cancellationToken.ThrowIfCancellationRequested();
+
+                    try
+                    {
+                        _logger.LogWarning("Tenant {TenantId} subscription expires soon", tenant.Id);
+                        // Placeholder for notification logic (e.g., email, webhook) could be added here.
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogError(ex, "Error handling soon-to-expire notification for tenant {TenantId}", tenant.Id);
+                    }
+                }
             }
         }
         catch (Exception ex)
