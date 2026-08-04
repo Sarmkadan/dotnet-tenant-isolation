@@ -119,15 +119,29 @@ public class TenantCleanupWorker : BackgroundService
 
             if (tenantsToDelete.Any())
             {
-                dbContext.Tenants.RemoveRange(tenantsToDelete);
-                deletedCount = await dbContext.SaveChangesAsync(cancellationToken);
+                // Delete each tenant individually so that a failure for one does not stop the whole cleanup
+                foreach (var tenant in tenantsToDelete)
+                {
+                    cancellationToken.ThrowIfCancellationRequested();
+
+                    try
+                    {
+                        dbContext.Tenants.Remove(tenant);
+                        await dbContext.SaveChangesAsync(cancellationToken);
+                        deletedCount++;
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogError(ex, "Error deleting tenant {TenantId}", tenant.Id);
+                    }
+                }
 
                 _logger.LogInformation("Permanently deleted {Count} old tenant records", deletedCount);
             }
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error deleting expired tenant records");
+            _logger.LogError(ex, "Error retrieving or deleting expired tenant records");
         }
 
         // Clean up orphaned users without valid tenants
