@@ -179,6 +179,7 @@ internal sealed class InMemoryTenantStore : IDynamicTenantStore
 
     public InMemoryTenantStore(List<Tenant> tenants)
     {
+        ArgumentNullException.ThrowIfNull(tenants);
         _tenants = tenants;
         _tenantDict = tenants.ToDictionary(t => t.Id);
         _tenantSlugDict = tenants.ToDictionary(t => t.Slug, StringComparer.OrdinalIgnoreCase);
@@ -192,6 +193,7 @@ internal sealed class InMemoryTenantStore : IDynamicTenantStore
 
     public Task<Tenant?> GetTenantBySlugAsync(string slug, CancellationToken cancellationToken = default)
     {
+        ArgumentException.ThrowIfNullOrEmpty(slug);
         _tenantSlugDict.TryGetValue(slug, out var tenant);
         return Task.FromResult(tenant);
     }
@@ -214,11 +216,13 @@ internal sealed class InMemoryTenantStore : IDynamicTenantStore
 
     public Task<bool> TenantExistsBySlugAsync(string slug, CancellationToken cancellationToken = default)
     {
+        ArgumentException.ThrowIfNullOrEmpty(slug);
         return Task.FromResult(_tenantSlugDict.ContainsKey(slug));
     }
 
     public Task AddTenantAsync(Tenant tenant, CancellationToken cancellationToken = default)
     {
+        ArgumentNullException.ThrowIfNull(tenant);
         _tenants.Add(tenant);
         _tenantDict[tenant.Id] = tenant;
         _tenantSlugDict[tenant.Slug] = tenant;
@@ -228,6 +232,7 @@ internal sealed class InMemoryTenantStore : IDynamicTenantStore
 
     public Task UpdateTenantAsync(Tenant tenant, CancellationToken cancellationToken = default)
     {
+        ArgumentNullException.ThrowIfNull(tenant);
         if (_tenantDict.TryGetValue(tenant.Id, out var existing))
         {
             _tenants.Remove(existing);
