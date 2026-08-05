@@ -40,6 +40,8 @@ public class TenantDbContextFactory : ITenantDbContextFactory<TenantDbContext>
         _tenantResolutionService = tenantResolutionService;
         _tenantIsolationOptions = tenantIsolationOptions;
         _masterDbContextOptions = masterDbContextOptions;
+
+        _logger.LogInformation("Initializing TenantDbContextFactory");
     }
 
     /// <summary>
@@ -47,6 +49,8 @@ public class TenantDbContextFactory : ITenantDbContextFactory<TenantDbContext>
     /// </summary>
     public TenantDbContext Create(Guid tenantId)
     {
+        _logger.LogInformation("Creating DbContext for TenantId: {TenantId}", tenantId);
+
         // For dedicated database per tenant or schema per tenant, you'd typically build
         // new options here with the tenant-specific connection string.
         // For row-level security, we apply a query filter.
@@ -76,7 +80,9 @@ public class TenantDbContextFactory : ITenantDbContextFactory<TenantDbContext>
         // for each tenant context switch. The removal of _currentTenantId and the introduction of
         // this factory supports that.
 
-        return new TenantDbContext(optionsBuilder.Options);
+        var context = new TenantDbContext(optionsBuilder.Options);
+        _logger.LogInformation("Successfully created DbContext for TenantId: {TenantId}", tenantId);
+        return context;
     }
 
     /// <summary>
@@ -84,6 +90,8 @@ public class TenantDbContextFactory : ITenantDbContextFactory<TenantDbContext>
     /// </summary>
     public TenantDbContext Create()
     {
+        _logger.LogInformation("Creating DbContext for current HTTP context");
+
         var currentTenant = _tenantResolutionService.GetCurrentTenant();
 
         if (currentTenant?.Id == null)
@@ -94,7 +102,9 @@ public class TenantDbContextFactory : ITenantDbContextFactory<TenantDbContext>
             return new TenantDbContext(_masterDbContextOptions);
         }
 
-        return Create(currentTenant.Id);
+        var context = Create(currentTenant.Id);
+        _logger.LogInformation("Successfully created DbContext for current HTTP context");
+        return context;
     }
 
     /// <summary>
