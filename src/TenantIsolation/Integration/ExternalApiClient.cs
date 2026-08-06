@@ -64,11 +64,13 @@ public class ExternalApiClient : IExternalApiClient
 
     public async Task<ApiCallResult<T>> GetAsync<T>(string url, Dictionary<string, string>? headers = null)
     {
+        ArgumentException.ThrowIfNullOrEmpty(url);
         return await MakeRequestAsync<T>(HttpMethod.Get, url, null, headers);
     }
 
     public async Task<ApiCallResult<T>> PostAsync<T>(string url, object payload, Dictionary<string, string>? headers = null)
     {
+        ArgumentNullException.ThrowIfNull(payload);
         var json = System.Text.Json.JsonSerializer.Serialize(payload);
         var content = new StringContent(json, System.Text.Encoding.UTF8, "application/json");
         return await MakeRequestAsync<T>(HttpMethod.Post, url, content, headers);
@@ -76,6 +78,7 @@ public class ExternalApiClient : IExternalApiClient
 
     public async Task<ApiCallResult<T>> PutAsync<T>(string url, object payload, Dictionary<string, string>? headers = null)
     {
+        ArgumentNullException.ThrowIfNull(payload);
         var json = System.Text.Json.JsonSerializer.Serialize(payload);
         var content = new StringContent(json, System.Text.Encoding.UTF8, "application/json");
         return await MakeRequestAsync<T>(HttpMethod.Put, url, content, headers);
@@ -83,6 +86,7 @@ public class ExternalApiClient : IExternalApiClient
 
     public async Task<ApiCallResult<bool>> DeleteAsync(string url, Dictionary<string, string>? headers = null)
     {
+        ArgumentException.ThrowIfNullOrEmpty(url);
         var result = await MakeRequestAsync<object>(HttpMethod.Delete, url, null, headers);
         return new ApiCallResult<bool>
         {
