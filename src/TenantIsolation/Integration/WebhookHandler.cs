@@ -131,6 +131,8 @@ public class WebhookHandler : IWebhookHandler
 
     public async Task<WebhookSubscription> RegisterWebhookAsync(Guid tenantId, string eventType, string url, string? secret = null)
     {
+        ArgumentException.ThrowIfNullOrEmpty(eventType);
+        ArgumentException.ThrowIfNullOrEmpty(url);
         ValidationUtility.RequireValidUrl(url, nameof(url));
 
         var subscription = new WebhookSubscription
@@ -167,19 +169,17 @@ public class WebhookHandler : IWebhookHandler
 
     public async Task SendWebhookAsync(TenantEvent @event)
     {
+        if (@event == null)
+            throw new ArgumentNullException(nameof(@event));
         var webhooks = _subscriptions.Values
-            .Where(w => w.TenantId == @event.TenantId &&
-                       w.EventType == @event.GetType().Name &&
-                       w.IsActive)
+            .Where(w => w.TenantId == @event.TenantId && w.EventType == @event.GetType().Name && w.IsActive)
             .ToList();
-
         if (!webhooks.Any())
         {
             _logger.LogDebug("No active webhooks for event {EventType}",
                 @event.GetType().Name);
             return;
         }
-
         var tasks = webhooks.Select(w => DeliverWebhookWithEnhancedResilienceAsync(@event, w));
         await Task.WhenAll(tasks);
     }
