@@ -5,6 +5,7 @@
 // CTO & Software Architect
 // =============================================================================
 
+using System;
 using Microsoft.Extensions.Logging;
 
 namespace TenantIsolation.Integration;
@@ -54,6 +55,8 @@ public class TenantIsolationHttpClientFactory : IHttpClientFactory
 
     public HttpClient CreateClient(string clientName, string? baseUrl = null)
     {
+        ArgumentException.ThrowIfNullOrEmpty(clientName);
+
         var client = _httpClientFactory.CreateClient(clientName);
 
         // Set standard headers
@@ -77,6 +80,9 @@ public class TenantIsolationHttpClientFactory : IHttpClientFactory
 
     public HttpClient CreateAuthenticatedClient(string clientName, string? baseUrl, string token)
     {
+        ArgumentException.ThrowIfNullOrEmpty(clientName);
+        ArgumentException.ThrowIfNullOrEmpty(token);
+
         var client = CreateClient(clientName, baseUrl);
         client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
         return client;
@@ -84,6 +90,8 @@ public class TenantIsolationHttpClientFactory : IHttpClientFactory
 
     public HttpClient GetNamedClient(string clientName)
     {
+        ArgumentException.ThrowIfNullOrEmpty(clientName);
+
         if (_clients.TryGetValue(clientName, out var existingClient))
             return existingClient;
 
