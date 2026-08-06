@@ -27,16 +27,30 @@ public class NotificationServiceTests
     [Fact]
     public async Task SendNotificationAsync_ValidNotification_AddsNotification()
     {
-        // Arrange
-        var notification = new Notification { Title = "Test", Message = "Msg", RecipientUserId = "user1" };
+        const string testName = nameof(SendNotificationAsync_ValidNotification_AddsNotification);
+        _loggerMock.Object.LogInformation("Starting {TestName}", testName);
+        try
+        {
+            // Arrange
+            var notification = new Notification { Title = "Test", Message = "Msg", RecipientUserId = "user1" };
 
-        // Act
-        var result = await _notificationService.SendNotificationAsync(notification);
+            // Act
+            var result = await _notificationService.SendNotificationAsync(notification);
 
-        // Assert
-        result.Should().Be(notification);
-        var unread = await _notificationService.GetUnreadNotificationsAsync("user1");
-        unread.Should().ContainSingle().Which.Id.Should().Be(notification.Id);
+            // Assert
+            result.Should().Be(notification);
+            var unread = await _notificationService.GetUnreadNotificationsAsync("user1");
+            unread.Should().ContainSingle().Which.Id.Should().Be(notification.Id);
+        }
+        catch (Exception ex)
+        {
+            _loggerMock.Object.LogError(ex, "Error in {TestName}", testName);
+            throw;
+        }
+        finally
+        {
+            _loggerMock.Object.LogInformation("Finished {TestName}", testName);
+        }
     }
 
     /// <summary>
@@ -45,11 +59,25 @@ public class NotificationServiceTests
     [Fact]
     public async Task SendNotificationAsync_NullNotification_ThrowsArgumentNullException()
     {
-        // Act
-        Func<Task> act = async () => await _notificationService.SendNotificationAsync(null!);
+        const string testName = nameof(SendNotificationAsync_NullNotification_ThrowsArgumentNullException);
+        _loggerMock.Object.LogInformation("Starting {TestName}", testName);
+        try
+        {
+            // Act
+            Func<Task> act = async () => await _notificationService.SendNotificationAsync(null!);
 
-        // Assert
-        await act.Should().ThrowAsync<ArgumentNullException>();
+            // Assert
+            await act.Should().ThrowAsync<ArgumentNullException>();
+        }
+        catch (Exception ex)
+        {
+            _loggerMock.Object.LogError(ex, "Error in {TestName}", testName);
+            throw;
+        }
+        finally
+        {
+            _loggerMock.Object.LogInformation("Finished {TestName}", testName);
+        }
     }
 
     /// <summary>
@@ -58,19 +86,33 @@ public class NotificationServiceTests
     [Fact]
     public async Task GetUnreadNotificationsAsync_WithMultipleNotifications_ReturnsOnlyUnread()
     {
-        // Arrange
-        var userId = "user1";
-        var n1 = new Notification { RecipientUserId = userId, Title = "N1" };
-        var n2 = new Notification { RecipientUserId = userId, Title = "N2" };
-        await _notificationService.SendNotificationAsync(n1);
-        await _notificationService.SendNotificationAsync(n2);
-        await _notificationService.MarkAsReadAsync(n1.Id);
+        const string testName = nameof(GetUnreadNotificationsAsync_WithMultipleNotifications_ReturnsOnlyUnread);
+        _loggerMock.Object.LogInformation("Starting {TestName}", testName);
+        try
+        {
+            // Arrange
+            var userId = "user1";
+            var n1 = new Notification { RecipientUserId = userId, Title = "N1" };
+            var n2 = new Notification { RecipientUserId = userId, Title = "N2" };
+            await _notificationService.SendNotificationAsync(n1);
+            await _notificationService.SendNotificationAsync(n2);
+            await _notificationService.MarkAsReadAsync(n1.Id);
 
-        // Act
-        var unread = await _notificationService.GetUnreadNotificationsAsync(userId);
+            // Act
+            var unread = await _notificationService.GetUnreadNotificationsAsync(userId);
 
-        // Assert
-        unread.Should().ContainSingle().Which.Id.Should().Be(n2.Id);
+            // Assert
+            unread.Should().ContainSingle().Which.Id.Should().Be(n2.Id);
+        }
+        catch (Exception ex)
+        {
+            _loggerMock.Object.LogError(ex, "Error in {TestName}", testName);
+            throw;
+        }
+        finally
+        {
+            _loggerMock.Object.LogInformation("Finished {TestName}", testName);
+        }
     }
 
     /// <summary>
@@ -79,17 +121,31 @@ public class NotificationServiceTests
     [Fact]
     public async Task MarkAsReadAsync_ExistingNotification_MarksAsRead()
     {
-        // Arrange
-        var n = new Notification { RecipientUserId = "u1", Title = "N" };
-        await _notificationService.SendNotificationAsync(n);
+        const string testName = nameof(MarkAsReadAsync_ExistingNotification_MarksAsRead);
+        _loggerMock.Object.LogInformation("Starting {TestName}", testName);
+        try
+        {
+            // Arrange
+            var n = new Notification { RecipientUserId = "u1", Title = "N" };
+            await _notificationService.SendNotificationAsync(n);
 
-        // Act
-        var result = await _notificationService.MarkAsReadAsync(n.Id);
+            // Act
+            var result = await _notificationService.MarkAsReadAsync(n.Id);
 
-        // Assert
-        result.Should().BeTrue();
-        var unread = await _notificationService.GetUnreadNotificationsAsync("u1");
-        unread.Should().BeEmpty();
+            // Assert
+            result.Should().BeTrue();
+            var unread = await _notificationService.GetUnreadNotificationsAsync("u1");
+            unread.Should().BeEmpty();
+        }
+        catch (Exception ex)
+        {
+            _loggerMock.Object.LogError(ex, "Error in {TestName}", testName);
+            throw;
+        }
+        finally
+        {
+            _loggerMock.Object.LogInformation("Finished {TestName}", testName);
+        }
     }
 
     /// <summary>
@@ -98,16 +154,30 @@ public class NotificationServiceTests
     [Fact]
     public async Task DeleteNotificationAsync_ExistingNotification_RemovesIt()
     {
-        // Arrange
-        var n = new Notification { RecipientUserId = "u1", Title = "N" };
-        await _notificationService.SendNotificationAsync(n);
+        const string testName = nameof(DeleteNotificationAsync_ExistingNotification_RemovesIt);
+        _loggerMock.Object.LogInformation("Starting {TestName}", testName);
+        try
+        {
+            // Arrange
+            var n = new Notification { RecipientUserId = "u1", Title = "N" };
+            await _notificationService.SendNotificationAsync(n);
 
-        // Act
-        var result = await _notificationService.DeleteNotificationAsync(n.Id);
+            // Act
+            var result = await _notificationService.DeleteNotificationAsync(n.Id);
 
-        // Assert
-        result.Should().BeTrue();
-        var history = await _notificationService.GetNotificationHistoryAsync("u1");
-        history.Should().BeEmpty();
+            // Assert
+            result.Should().BeTrue();
+            var history = await _notificationService.GetNotificationHistoryAsync("u1");
+            history.Should().BeEmpty();
+        }
+        catch (Exception ex)
+        {
+            _loggerMock.Object.LogError(ex, "Error in {TestName}", testName);
+            throw;
+        }
+        finally
+        {
+            _loggerMock.Object.LogInformation("Finished {TestName}", testName);
+        }
     }
 }
