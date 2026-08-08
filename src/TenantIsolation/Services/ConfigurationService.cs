@@ -41,8 +41,9 @@ public class ConfigurationService
         string valueType = "string",
         bool isEncrypted = false)
     {
-        if (string.IsNullOrWhiteSpace(key))
-            throw new TenantConfigurationException(key, "Configuration key cannot be empty");
+        ArgumentException.ThrowIfNullOrEmpty(key);
+        ArgumentNullException.ThrowIfNull(value);
+        ArgumentNullException.ThrowIfNull(valueType);
 
         var config = await _context.TenantConfigurations
             .FirstOrDefaultAsync(c => c.TenantId == tenantId && c.Key == key);
@@ -89,6 +90,7 @@ public class ConfigurationService
     /// </summary>
     public async Task<TenantConfiguration?> GetConfigurationAsync(Guid tenantId, string key)
     {
+        ArgumentException.ThrowIfNullOrEmpty(key);
         var cacheKey = $"config_{tenantId}_{key}";
 
         if (_cache.TryGetValue(cacheKey, out TenantConfiguration? cached))
@@ -108,6 +110,7 @@ public class ConfigurationService
     /// </summary>
     public async Task<T?> GetConfigurationAsync<T>(Guid tenantId, string key)
     {
+        ArgumentException.ThrowIfNullOrEmpty(key);
         var config = await GetConfigurationAsync(tenantId, key);
         if (config == null)
             return default;
@@ -128,6 +131,7 @@ public class ConfigurationService
     /// </summary>
     public async Task<T> GetConfigurationAsync<T>(Guid tenantId, string key, T defaultValue)
     {
+        ArgumentException.ThrowIfNullOrEmpty(key);
         var config = await GetConfigurationAsync(tenantId, key);
         if (config == null)
             return defaultValue;
@@ -147,6 +151,7 @@ public class ConfigurationService
     /// </summary>
     public async Task<bool> DeleteConfigurationAsync(Guid tenantId, string key)
     {
+        ArgumentException.ThrowIfNullOrEmpty(key);
         var config = await _context.TenantConfigurations
             .FirstOrDefaultAsync(c => c.TenantId == tenantId && c.Key == key);
 
@@ -187,6 +192,7 @@ public class ConfigurationService
     /// </summary>
     public async Task<bool> HasConfigurationAsync(Guid tenantId, string key)
     {
+        ArgumentException.ThrowIfNullOrEmpty(key);
         return await _context.TenantConfigurations
             .AnyAsync(c => c.TenantId == tenantId && c.Key == key);
     }
@@ -196,6 +202,7 @@ public class ConfigurationService
     /// </summary>
     public async Task<List<string>> GetConfigurationKeysAsync(Guid tenantId, string pattern = "*")
     {
+        ArgumentException.ThrowIfNullOrEmpty(pattern);
         var allConfigs = await GetAllConfigurationsAsync(tenantId);
 
         if (pattern == "*")
@@ -214,6 +221,7 @@ public class ConfigurationService
         Guid tenantId,
         Dictionary<string, (string value, string type, bool encrypted)> configurations)
     {
+        ArgumentNullException.ThrowIfNull(configurations);
         int count = 0;
 
         foreach (var (key, (value, type, encrypted)) in configurations)
@@ -240,6 +248,7 @@ public class ConfigurationService
     /// </summary>
     public async Task<int> ImportConfigurationAsync(Guid tenantId, string jsonConfig)
     {
+        ArgumentException.ThrowIfNullOrEmpty(jsonConfig);
         try
         {
             var imported = System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, string>>(jsonConfig)
