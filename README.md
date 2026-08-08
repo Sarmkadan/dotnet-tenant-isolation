@@ -1991,13 +1991,45 @@ public class ConfigurationExample
 
 This example demonstrates creating a `ConfigurationService` instance and using its public members to manage configuration settings.
 
-## TenantResolutionOptions
+## CachingServiceTests
 
-The `TenantResolutionOptions` class defines the configuration for tenant resolution strategies, controlling the ordered chain of strategies used to identify the tenant and determining default behavior when resolution fails. It allows customization of resolution priorities and ensures valid configuration of default tenant fallbacks.
+The `CachingServiceTests` class provides comprehensive unit test coverage for the `CachingService` and `TenantAwareCachingService` implementations. It validates core functionality, including cache operations, key scoping, and statistics retrieval, ensuring consistent behavior across different tenant contexts.
 
-Here's an example usage:
+### Usage Example
 
 ```csharp
+using FluentAssertions;
+using Microsoft.Extensions.Caching.Memory;
+using Moq;
+using System.Threading.Tasks;
+using TenantIsolation.Services;
+using TenantIsolation.Tests;
+using Xunit;
+
+public class CachingServiceTestsExample
+{
+    private readonly CachingService _cachingService;
+    private readonly Mock<ICacheProvider> _mockCacheProvider;
+
+    public CachingServiceTestsExample()
+    {
+        _mockCacheProvider = new Mock<ICacheProvider>();
+        _cachingService = new CachingService(_mockCacheProvider.Object);
+    }
+
+    [Fact]
+    public async Task GetAsync_DelegatesToCacheProvider_Example()
+    {
+        // Act: Perform the action
+        await _cachingService.GetAsync<string>("test_key");
+
+        // Assert: Verify interaction with the provider
+        _mockCacheProvider.Verify(p => p.GetAsync<string>("test_key"), Times.Once);
+    }
+}
+```
+
+
 using TenantIsolation.Configuration;
 using TenantIsolation.Constants;
 
