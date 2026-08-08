@@ -29,6 +29,8 @@ public class DataIsolationService
     /// <param name="logger">The logger instance.</param>
     public DataIsolationService(TenantDbContext context, ILogger<DataIsolationService> logger)
     {
+        ArgumentNullException.ThrowIfNull(context);
+        ArgumentNullException.ThrowIfNull(logger);
         _context = context;
         _logger = logger;
     }
@@ -46,6 +48,8 @@ public class DataIsolationService
         string entityType,
         DataIsolationPolicyType policyType = DataIsolationPolicyType.Strict)
     {
+        ArgumentException.ThrowIfNullOrEmpty(entityType);
+
         var policy = new DataIsolationPolicy
         {
             Id = Guid.NewGuid(),
@@ -75,6 +79,8 @@ public class DataIsolationService
     /// <returns>The <see cref="DataIsolationPolicy"/> if found; otherwise, <c>null</c>.</returns>
     public async Task<DataIsolationPolicy?> GetPolicyAsync(Guid tenantId, string entityType)
     {
+        ArgumentException.ThrowIfNullOrEmpty(entityType);
+
         return await _context.DataIsolationPolicies
             .Where(p => p.TenantId == tenantId && p.EntityType == entityType && p.IsActive)
             .OrderBy(p => p.Priority)
@@ -90,6 +96,9 @@ public class DataIsolationService
     /// <returns><c>true</c> if access is allowed; otherwise, <c>false</c>.</returns>
     public async Task<bool> IsFieldAccessAllowedAsync(Guid tenantId, string entityType, string fieldName)
     {
+        ArgumentException.ThrowIfNullOrEmpty(entityType);
+        ArgumentException.ThrowIfNullOrEmpty(fieldName);
+
         var policy = await GetPolicyAsync(tenantId, entityType);
         if (policy == null)
             return true; // No policy = full access
@@ -106,6 +115,9 @@ public class DataIsolationService
     /// <exception cref="DataIsolationViolationException">Thrown when field access is denied.</exception>
     public async Task VerifyFieldAccessAsync(Guid tenantId, string entityType, string fieldName)
     {
+        ArgumentException.ThrowIfNullOrEmpty(entityType);
+        ArgumentException.ThrowIfNullOrEmpty(fieldName);
+
         if (!await IsFieldAccessAllowedAsync(tenantId, entityType, fieldName))
             throw new DataIsolationViolationException(tenantId, entityType,
                 $"Access to field '{fieldName}' is denied");
@@ -120,6 +132,8 @@ public class DataIsolationService
     /// <returns><c>true</c> if cross-tenant access is allowed; otherwise, <c>false</c>.</returns>
     public async Task<bool> CanAccessCrossTenantAsync(Guid currentTenantId, Guid targetTenantId, string entityType)
     {
+        ArgumentException.ThrowIfNullOrEmpty(entityType);
+
         var policy = await GetPolicyAsync(currentTenantId, entityType);
         if (policy == null)
             return false; // No policy = strict isolation
