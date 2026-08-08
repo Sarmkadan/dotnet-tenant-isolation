@@ -65,6 +65,9 @@ public sealed class TenantUsageMeteringService : ITenantUsageMeteringService
     public Task<TenantUsageRecord> RecordUsageAsync(
         Guid tenantId, string metricKey, long amount = 1, CancellationToken cancellationToken = default)
     {
+        ArgumentNullException.ThrowIfNull(nameof(cancellationToken));
+        ArgumentException.ThrowIfNullOrEmpty(nameof(metricKey));
+
         cancellationToken.ThrowIfCancellationRequested();
 
         if (amount <= 0)
@@ -109,6 +112,9 @@ public sealed class TenantUsageMeteringService : ITenantUsageMeteringService
     public Task<TenantUsageRecord?> GetUsageAsync(
         Guid tenantId, string metricKey, CancellationToken cancellationToken = default)
     {
+        ArgumentNullException.ThrowIfNull(nameof(cancellationToken));
+        ArgumentException.ThrowIfNullOrEmpty(nameof(metricKey));
+
         cancellationToken.ThrowIfCancellationRequested();
         _store.TryGetValue(StoreKey(tenantId, metricKey), out var record);
         return Task.FromResult(record);
@@ -117,6 +123,9 @@ public sealed class TenantUsageMeteringService : ITenantUsageMeteringService
     /// <inheritdoc/>
     public async Task<bool> IsWithinQuotaAsync(Guid tenantId, string metricKey, CancellationToken cancellationToken = default)
     {
+        ArgumentNullException.ThrowIfNull(nameof(cancellationToken));
+        ArgumentException.ThrowIfNullOrEmpty(nameof(metricKey));
+
         cancellationToken.ThrowIfCancellationRequested();
 
         // Get quota limit from TenantConfiguration
@@ -138,6 +147,9 @@ public sealed class TenantUsageMeteringService : ITenantUsageMeteringService
     public Task<QuotaCheckResult> CheckQuotaAsync(
         Guid tenantId, string metricKey, CancellationToken cancellationToken = default)
     {
+        ArgumentNullException.ThrowIfNull(nameof(cancellationToken));
+        ArgumentException.ThrowIfNullOrEmpty(nameof(metricKey));
+
         cancellationToken.ThrowIfCancellationRequested();
 
         // Get quota limit from TenantConfiguration
@@ -162,6 +174,9 @@ public sealed class TenantUsageMeteringService : ITenantUsageMeteringService
     public async Task EnforceQuotaAsync(
         Guid tenantId, string metricKey, CancellationToken cancellationToken = default)
     {
+        ArgumentNullException.ThrowIfNull(nameof(cancellationToken));
+        ArgumentException.ThrowIfNullOrEmpty(nameof(metricKey));
+
         var result = await CheckQuotaAsync(tenantId, metricKey, cancellationToken).ConfigureAwait(false);
         if (!result.IsAllowed)
             throw new TenantIsolationException(result.ViolationMessage!, "QUOTA_EXCEEDED",
@@ -173,6 +188,8 @@ public sealed class TenantUsageMeteringService : ITenantUsageMeteringService
     public Task<IReadOnlyList<TenantUsageRecord>> GetAllMetricsAsync(
         Guid tenantId, CancellationToken cancellationToken = default)
     {
+        ArgumentNullException.ThrowIfNull(nameof(cancellationToken));
+
         cancellationToken.ThrowIfCancellationRequested();
         var prefix = $"{tenantId}:";
         var records = _store
@@ -187,6 +204,9 @@ public sealed class TenantUsageMeteringService : ITenantUsageMeteringService
     public Task ResetUsageAsync(
         Guid tenantId, string metricKey, CancellationToken cancellationToken = default)
     {
+        ArgumentNullException.ThrowIfNull(nameof(cancellationToken));
+        ArgumentException.ThrowIfNullOrEmpty(nameof(metricKey));
+
         cancellationToken.ThrowIfCancellationRequested();
         if (_store.TryGetValue(StoreKey(tenantId, metricKey), out var record))
         {
@@ -203,6 +223,9 @@ public sealed class TenantUsageMeteringService : ITenantUsageMeteringService
     public Task SetQuotaAsync(
         Guid tenantId, string metricKey, long? quotaLimit, CancellationToken cancellationToken = default)
     {
+        ArgumentNullException.ThrowIfNull(nameof(cancellationToken));
+        ArgumentException.ThrowIfNullOrEmpty(nameof(metricKey));
+
         cancellationToken.ThrowIfCancellationRequested();
         var record = _store.GetOrAdd(StoreKey(tenantId, metricKey), _ => new TenantUsageRecord
         {
