@@ -116,6 +116,7 @@ public class ResponseFormatter : IResponseFormatter
 
     public ApiResponse<T> Success<T>(T data, string? message = null)
     {
+        ArgumentNullException.ThrowIfNull(data);
         return new ApiResponse<T>
         {
             Success = true,
@@ -128,6 +129,7 @@ public class ResponseFormatter : IResponseFormatter
 
     public ApiResponse<object?> Success(string? message = null)
     {
+        ArgumentException.ThrowIfNullOrEmpty(message);
         return new ApiResponse<object?>
         {
             Success = true,
@@ -140,6 +142,7 @@ public class ResponseFormatter : IResponseFormatter
 
     public ApiResponse<object?> Error(string message, Dictionary<string, string[]>? errors = null)
     {
+        ArgumentException.ThrowIfNullOrEmpty(message);
         return new ApiResponse<object?>
         {
             Success = false,
