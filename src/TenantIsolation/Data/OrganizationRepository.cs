@@ -23,6 +23,7 @@ public class OrganizationRepository : Repository<Organization>
     /// </summary>
     public async Task<Organization?> GetBySlugAsync(Guid tenantId, string slug)
     {
+        ArgumentException.ThrowIfNullOrEmpty(slug);
         return await DbSet.FirstOrDefaultAsync(o => o.TenantId == tenantId &&
                                                      o.Slug == slug &&
                                                      !o.IsDeleted);
@@ -33,6 +34,8 @@ public class OrganizationRepository : Repository<Organization>
     /// </summary>
     public async Task<List<Organization>> GetActiveOrganizationsAsync(Guid tenantId)
     {
+        if (tenantId == Guid.Empty)
+            throw new ArgumentNullException(nameof(tenantId));
         return await DbSet
             .Where(o => o.TenantId == tenantId &&
                        o.IsActive &&
@@ -46,6 +49,8 @@ public class OrganizationRepository : Repository<Organization>
     /// </summary>
     public async Task<Organization?> GetWithUsersAsync(Guid id)
     {
+        if (id == Guid.Empty)
+            throw new ArgumentNullException(nameof(id));
         return await DbSet
             .Include(o => o.Users.Where(u => !u.IsDeleted))
             .FirstOrDefaultAsync(o => o.Id == id && !o.IsDeleted);
@@ -56,6 +61,9 @@ public class OrganizationRepository : Repository<Organization>
     /// </summary>
     public async Task<List<Organization>> GetByIndustryAsync(Guid tenantId, string industry)
     {
+        if (tenantId == Guid.Empty)
+            throw new ArgumentNullException(nameof(tenantId));
+        ArgumentException.ThrowIfNullOrEmpty(industry);
         return await DbSet
             .Where(o => o.TenantId == tenantId &&
                        o.Industry == industry &&
@@ -69,6 +77,9 @@ public class OrganizationRepository : Repository<Organization>
     /// </summary>
     public async Task<List<Organization>> GetByCountryAsync(Guid tenantId, string countryCode)
     {
+        if (tenantId == Guid.Empty)
+            throw new ArgumentNullException(nameof(tenantId));
+        ArgumentException.ThrowIfNullOrEmpty(countryCode);
         return await DbSet
             .Where(o => o.TenantId == tenantId &&
                        o.CountryCode == countryCode &&
@@ -82,6 +93,9 @@ public class OrganizationRepository : Repository<Organization>
     /// </summary>
     public async Task<List<Organization>> SearchAsync(Guid tenantId, string query)
     {
+        if (tenantId == Guid.Empty)
+            throw new ArgumentNullException(nameof(tenantId));
+        ArgumentException.ThrowIfNullOrEmpty(query);
         var searchTerm = query.ToLower();
         return await DbSet
             .Where(o => o.TenantId == tenantId &&
@@ -98,6 +112,8 @@ public class OrganizationRepository : Repository<Organization>
     /// </summary>
     public async Task<int> GetOrganizationCountAsync(Guid tenantId)
     {
+        if (tenantId == Guid.Empty)
+            throw new ArgumentNullException(nameof(tenantId));
         return await DbSet.CountAsync(o => o.TenantId == tenantId &&
                                            o.IsActive &&
                                            !o.IsDeleted);
@@ -108,6 +124,9 @@ public class OrganizationRepository : Repository<Organization>
     /// </summary>
     public async Task<bool> IsSlugUniqueAsync(Guid tenantId, string slug, Guid? excludeId = null)
     {
+        if (tenantId == Guid.Empty)
+            throw new ArgumentNullException(nameof(tenantId));
+        ArgumentException.ThrowIfNullOrEmpty(slug);
         var query = DbSet.Where(o => o.TenantId == tenantId &&
                                      o.Slug == slug &&
                                      !o.IsDeleted);
@@ -122,6 +141,8 @@ public class OrganizationRepository : Repository<Organization>
     /// </summary>
     public async Task<List<dynamic>> GetOrganizationsWithUserCountAsync(Guid tenantId)
     {
+        if (tenantId == Guid.Empty)
+            throw new ArgumentNullException(nameof(tenantId));
         var organizations = await DbSet
             .Where(o => o.TenantId == tenantId && !o.IsDeleted)
             .Select(o => new
@@ -141,6 +162,9 @@ public class OrganizationRepository : Repository<Organization>
     /// </summary>
     public async Task<Organization?> GetByRegistrationNumberAsync(Guid tenantId, string registrationNumber)
     {
+        if (tenantId == Guid.Empty)
+            throw new ArgumentNullException(nameof(tenantId));
+        ArgumentException.ThrowIfNullOrEmpty(registrationNumber);
         return await DbSet
             .FirstOrDefaultAsync(o => o.TenantId == tenantId &&
                                       o.RegistrationNumber == registrationNumber &&
@@ -152,6 +176,8 @@ public class OrganizationRepository : Repository<Organization>
     /// </summary>
     public async Task<bool> DeactivateAsync(Guid id)
     {
+        if (id == Guid.Empty)
+            throw new ArgumentNullException(nameof(id));
         var org = await GetByIdAsync(id);
         if (org == null)
             return false;
@@ -167,6 +193,8 @@ public class OrganizationRepository : Repository<Organization>
     /// </summary>
     public async Task<object> GetStatisticsAsync(Guid tenantId)
     {
+        if (tenantId == Guid.Empty)
+            throw new ArgumentNullException(nameof(tenantId));
         return await DbSet
             .Where(o => o.TenantId == tenantId && !o.IsDeleted)
             .Select(o => new
