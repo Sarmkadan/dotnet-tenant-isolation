@@ -73,6 +73,7 @@ public static class CryptographyUtility
     /// </summary>
     public static bool VerifyHmacSha256(string message, string signature, string secretKey)
     {
+        System.ArgumentException.ThrowIfNullOrEmpty(signature, nameof(signature));
         var expectedSignature = GenerateHmacSha256(message, secretKey);
         return CryptographicOperations.FixedTimeEquals(
             Encoding.UTF8.GetBytes(expectedSignature),
@@ -212,6 +213,7 @@ public static class CryptographyUtility
     /// </summary>
     public static string ComputeFingerprint(params string[] inputs)
     {
+        System.ArgumentNullException.ThrowIfNull(inputs, nameof(inputs));
         var combined = string.Concat(inputs);
         return GenerateSha256Hash(combined);
     }
@@ -222,6 +224,7 @@ public static class CryptographyUtility
     /// </summary>
     public static (string Hash, string Salt) HashPassword(string password)
     {
+        System.ArgumentException.ThrowIfNullOrEmpty(password, nameof(password));
         using var rng = RandomNumberGenerator.Create();
         var salt = new byte[16];
         rng.GetBytes(salt);
@@ -241,6 +244,9 @@ public static class CryptographyUtility
     /// </summary>
     public static bool VerifyPassword(string password, string hash, string salt)
     {
+        System.ArgumentException.ThrowIfNullOrEmpty(password, nameof(password));
+        System.ArgumentException.ThrowIfNullOrEmpty(hash, nameof(hash));
+        System.ArgumentException.ThrowIfNullOrEmpty(salt, nameof(salt));
         var saltBytes = Convert.FromBase64String(salt);
 
         using var pbkdf2 = new Rfc2898DeriveBytes(password, saltBytes, 10000, HashAlgorithmName.SHA256);
