@@ -23,6 +23,7 @@ public class UserRepository : Repository<User>
     /// </summary>
     public async Task<User?> GetByEmailAsync(string email, Guid tenantId)
     {
+        ArgumentException.ThrowIfNullOrEmpty(email);
         return await DbSet.FirstOrDefaultAsync(u => u.Email == email &&
                                                      u.TenantId == tenantId &&
                                                      !u.IsDeleted);
@@ -47,6 +48,7 @@ public class UserRepository : Repository<User>
     /// </summary>
     public async Task<List<User>> GetByRoleAsync(Guid tenantId, string role)
     {
+        ArgumentException.ThrowIfNullOrEmpty(role);
         return await DbSet
             .Where(u => u.TenantId == tenantId &&
                        u.Role == role &&
@@ -120,6 +122,7 @@ public class UserRepository : Repository<User>
     /// </summary>
     public async Task<List<User>> SearchAsync(Guid tenantId, string query)
     {
+        ArgumentException.ThrowIfNullOrEmpty(query);
         var searchTerm = query.ToLower();
         return await DbSet
             .Where(u => u.TenantId == tenantId &&
@@ -137,6 +140,7 @@ public class UserRepository : Repository<User>
     /// </summary>
     public async Task<bool> IsEmailUniqueAsync(string email, Guid tenantId, Guid? excludeUserId = null)
     {
+        ArgumentException.ThrowIfNullOrEmpty(email);
         var query = DbSet.Where(u => u.Email == email &&
                                      u.TenantId == tenantId &&
                                      !u.IsDeleted);
