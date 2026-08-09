@@ -106,6 +106,8 @@ public class AdminController : ControllerBase
         Guid tenantId,
         [FromBody] SuspensionRequest request)
     {
+        ArgumentNullException.ThrowIfNull(request);
+
         try
         {
             var result = await _tenantService.SuspendTenantAsync(tenantId, request.Reason);
@@ -173,6 +175,8 @@ public class AdminController : ControllerBase
     [HttpPost("queue-task")]
     public ActionResult<ApiResponse<object>> EnqueueTask([FromBody] TaskRequest request)
     {
+        ArgumentNullException.ThrowIfNull(request);
+
         try
         {
             var task = new BackgroundTask
