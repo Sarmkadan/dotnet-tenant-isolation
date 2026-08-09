@@ -74,6 +74,7 @@ public abstract class Repository<TEntity> where TEntity : class
     /// </summary>
     public virtual async Task<List<TEntity>> FindAsync(Expression<Func<TEntity, bool>> predicate)
     {
+        ArgumentNullException.ThrowIfNull(predicate);
         return await DbSet.Where(predicate).ToListAsync();
     }
 
@@ -82,6 +83,7 @@ public abstract class Repository<TEntity> where TEntity : class
     /// </summary>
     public virtual async Task<TEntity?> FindFirstAsync(Expression<Func<TEntity, bool>> predicate)
     {
+        ArgumentNullException.ThrowIfNull(predicate);
         return await DbSet.FirstOrDefaultAsync(predicate);
     }
 
@@ -90,6 +92,7 @@ public abstract class Repository<TEntity> where TEntity : class
     /// </summary>
     public virtual async Task<TEntity> AddAsync(TEntity entity)
     {
+        ArgumentNullException.ThrowIfNull(entity);
         await DbSet.AddAsync(entity);
         await Context.SaveChangesAsync();
         return entity;
@@ -100,6 +103,7 @@ public abstract class Repository<TEntity> where TEntity : class
     /// </summary>
     public virtual async Task<IEnumerable<TEntity>> AddRangeAsync(IEnumerable<TEntity> entities)
     {
+        ArgumentNullException.ThrowIfNull(entities);
         await DbSet.AddRangeAsync(entities);
         await Context.SaveChangesAsync();
         return entities;
@@ -110,6 +114,7 @@ public abstract class Repository<TEntity> where TEntity : class
     /// </summary>
     public virtual async Task<TEntity> UpdateAsync(TEntity entity)
     {
+        ArgumentNullException.ThrowIfNull(entity);
         DbSet.Update(entity);
         await Context.SaveChangesAsync();
         return entity;
@@ -134,6 +139,7 @@ public abstract class Repository<TEntity> where TEntity : class
     /// </summary>
     public virtual async Task<bool> DeleteAsync(TEntity entity)
     {
+        ArgumentNullException.ThrowIfNull(entity);
         DbSet.Remove(entity);
         await Context.SaveChangesAsync();
         return true;
@@ -144,6 +150,7 @@ public abstract class Repository<TEntity> where TEntity : class
     /// </summary>
     public virtual async Task<int> DeleteRangeAsync(IEnumerable<TEntity> entities)
     {
+        ArgumentNullException.ThrowIfNull(entities);
         DbSet.RemoveRange(entities);
         return await Context.SaveChangesAsync();
     }
@@ -153,6 +160,7 @@ public abstract class Repository<TEntity> where TEntity : class
     /// </summary>
     public virtual async Task<bool> ExistsAsync(Expression<Func<TEntity, bool>> predicate)
     {
+        ArgumentNullException.ThrowIfNull(predicate);
         return await DbSet.AnyAsync(predicate);
     }
 
@@ -181,6 +189,8 @@ public abstract class Repository<TEntity> where TEntity : class
         Expression<Func<TEntity, bool>> predicate,
         Action<UpdateSettersBuilder<TEntity>> setPropertyCalls)
     {
+        ArgumentNullException.ThrowIfNull(predicate);
+        ArgumentNullException.ThrowIfNull(setPropertyCalls);
         return await DbSet.Where(predicate).ExecuteUpdateAsync(setPropertyCalls);
     }
 
@@ -189,6 +199,7 @@ public abstract class Repository<TEntity> where TEntity : class
     /// </summary>
     public virtual async Task<int> BulkDeleteAsync(Expression<Func<TEntity, bool>> predicate)
     {
+        ArgumentNullException.ThrowIfNull(predicate);
         return await DbSet.Where(predicate).ExecuteDeleteAsync();
     }
 }
