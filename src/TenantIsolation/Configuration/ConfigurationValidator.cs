@@ -19,8 +19,17 @@ public class ValidationResult
     public List<string> Errors { get; set; } = new();
     public List<string> Warnings { get; set; } = new();
 
-    public void AddError(string error) => Errors.Add(error);
-    public void AddWarning(string warning) => Warnings.Add(warning);
+    public void AddError(string error)
+    {
+        ArgumentException.ThrowIfNullOrEmpty(error);
+        Errors.Add(error);
+    }
+
+    public void AddWarning(string warning)
+    {
+        ArgumentException.ThrowIfNullOrEmpty(warning);
+        Warnings.Add(warning);
+    }
 }
 
 /// <summary>
@@ -55,6 +64,8 @@ public class ConfigurationValidator : IConfigurationValidator
 
     public ConfigurationValidator(IConfiguration configuration, ILogger<ConfigurationValidator> logger)
     {
+        ArgumentNullException.ThrowIfNull(configuration);
+        ArgumentNullException.ThrowIfNull(logger);
         _configuration = configuration;
         _logger = logger;
     }
@@ -230,6 +241,7 @@ public static class ConfigurationValidatorExtensions
 {
     public static IServiceCollection AddConfigurationValidator(this IServiceCollection services)
     {
+        ArgumentNullException.ThrowIfNull(services);
         services.AddScoped<IConfigurationValidator, ConfigurationValidator>();
         return services;
     }
@@ -239,6 +251,7 @@ public static class ConfigurationValidatorExtensions
     /// </summary>
     public static IApplicationBuilder ValidateConfigurationOnStartup(this IApplicationBuilder app)
     {
+        ArgumentNullException.ThrowIfNull(app);
         using var scope = app.ApplicationServices.CreateScope();
         var validator = scope.ServiceProvider.GetRequiredService<IConfigurationValidator>();
         validator.ValidateAndThrow();
