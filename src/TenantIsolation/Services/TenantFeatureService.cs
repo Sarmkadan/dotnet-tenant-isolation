@@ -37,6 +37,7 @@ public class TenantFeatureService
     /// </summary>
     public async Task<bool> IsFeatureEnabledAsync(Guid tenantId, string featureKey)
     {
+        ArgumentException.ThrowIfNullOrEmpty(featureKey);
         var feature = await GetFeatureAsync(tenantId, featureKey);
         if (feature == null)
             return false;
@@ -49,6 +50,7 @@ public class TenantFeatureService
     /// </summary>
     public async Task<TenantFeature?> GetFeatureAsync(Guid tenantId, string featureKey)
     {
+        ArgumentException.ThrowIfNullOrEmpty(featureKey);
         var cacheKey = $"feature_{tenantId}_{featureKey}";
 
         if (_cache.TryGetValue(cacheKey, out TenantFeature? cached))
@@ -71,6 +73,8 @@ public class TenantFeatureService
         string featureKey,
         int? rolloutPercentage = null)
     {
+        ArgumentNullException.ThrowIfNull(tenantId);
+        ArgumentException.ThrowIfNullOrEmpty(featureKey);
         var feature = await GetFeatureAsync(tenantId, featureKey);
 
         if (feature == null)
@@ -111,6 +115,8 @@ public class TenantFeatureService
     /// </summary>
     public async Task<bool> DisableFeatureAsync(Guid tenantId, string featureKey)
     {
+        ArgumentNullException.ThrowIfNull(tenantId);
+        ArgumentException.ThrowIfNullOrEmpty(featureKey);
         var feature = await GetFeatureAsync(tenantId, featureKey);
         if (feature == null)
             return false;
@@ -133,6 +139,8 @@ public class TenantFeatureService
     /// </summary>
     public async Task<bool> SetRolloutPercentageAsync(Guid tenantId, string featureKey, int percentage)
     {
+        ArgumentNullException.ThrowIfNull(tenantId);
+        ArgumentException.ThrowIfNullOrEmpty(featureKey);
         if (percentage < 0 || percentage > 100)
             throw new TenantIsolationException("Rollout percentage must be between 0 and 100");
 
@@ -195,6 +203,7 @@ public class TenantFeatureService
     /// </summary>
     public async Task<List<TenantFeature>> GetFeaturesByCategoryAsync(Guid tenantId, string category)
     {
+        ArgumentException.ThrowIfNullOrEmpty(category);
         return await _context.TenantFeatures
             .Where(f => f.TenantId == tenantId && f.Category == category)
             .OrderBy(f => f.FeatureKey)
@@ -228,6 +237,8 @@ public class TenantFeatureService
     /// </summary>
     public async Task<bool> ResetFeatureUsageAsync(Guid tenantId, string featureKey)
     {
+        ArgumentNullException.ThrowIfNull(tenantId);
+        ArgumentException.ThrowIfNullOrEmpty(featureKey);
         var feature = await GetFeatureAsync(tenantId, featureKey);
         if (feature == null)
             return false;
@@ -246,6 +257,8 @@ public class TenantFeatureService
     /// </summary>
     public async Task<bool> CheckUsageLimitAsync(Guid tenantId, string featureKey)
     {
+        ArgumentNullException.ThrowIfNull(tenantId);
+        ArgumentException.ThrowIfNullOrEmpty(featureKey);
         var feature = await GetFeatureAsync(tenantId, featureKey);
         if (feature == null)
             return false;
@@ -258,6 +271,7 @@ public class TenantFeatureService
     /// </summary>
     public async Task InitializeDefaultFeaturesAsync(Guid tenantId)
     {
+        ArgumentNullException.ThrowIfNull(tenantId);
         var defaultFeatures = new[]
         {
             TenantFeatureFlags.MultiTenancy,
@@ -296,6 +310,7 @@ public class TenantFeatureService
     /// </summary>
     public async Task<object> GetStatisticsAsync(Guid tenantId)
     {
+        ArgumentNullException.ThrowIfNull(tenantId);
         var features = await GetAllFeaturesAsync(tenantId);
 
         return new
@@ -315,6 +330,7 @@ public class TenantFeatureService
     /// </summary>
     private void InvalidateCache(Guid tenantId, string? featureKey = null)
     {
+        ArgumentNullException.ThrowIfNull(tenantId);
         if (featureKey != null)
             _cache.Remove($"feature_{tenantId}_{featureKey}");
 
@@ -473,6 +489,8 @@ public class TenantFeatureService
         IEnumerable<Guid> tenantIds,
         string featureKey)
     {
+        ArgumentNullException.ThrowIfNull(tenantIds);
+        ArgumentException.ThrowIfNullOrEmpty(featureKey);
         var results = new Dictionary<Guid, bool>();
 
         foreach (var tenantId in tenantIds)
