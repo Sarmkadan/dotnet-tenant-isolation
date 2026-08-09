@@ -37,6 +37,7 @@ public class FeaturesController : ControllerBase
     [HttpGet("{featureKey}/enabled")]
     public async Task<IActionResult> IsFeatureEnabled(string featureKey)
     {
+        ArgumentException.ThrowIfNullOrEmpty(nameof(featureKey));
         try
         {
             var tenant = _resolutionService.GetCurrentTenant();
@@ -59,6 +60,7 @@ public class FeaturesController : ControllerBase
     [HttpGet("{featureKey}")]
     public async Task<IActionResult> GetFeature(string featureKey)
     {
+        ArgumentException.ThrowIfNullOrEmpty(nameof(featureKey));
         try
         {
             var tenant = _resolutionService.GetCurrentTenant();
@@ -84,6 +86,7 @@ public class FeaturesController : ControllerBase
     [HttpGet("enabled")]
     public async Task<IActionResult> GetEnabledFeatures()
     {
+        // No parameters to guard
         try
         {
             var tenant = _resolutionService.GetCurrentTenant();
@@ -106,6 +109,7 @@ public class FeaturesController : ControllerBase
     [HttpGet]
     public async Task<IActionResult> GetAllFeatures()
     {
+        // No parameters to guard
         try
         {
             var tenant = _resolutionService.GetCurrentTenant();
@@ -128,6 +132,7 @@ public class FeaturesController : ControllerBase
     [HttpPost("{featureKey}/enable")]
     public async Task<IActionResult> EnableFeature(string featureKey)
     {
+        ArgumentException.ThrowIfNullOrEmpty(nameof(featureKey));
         try
         {
             var tenant = _resolutionService.GetCurrentTenant();
@@ -150,6 +155,7 @@ public class FeaturesController : ControllerBase
     [HttpPost("{featureKey}/disable")]
     public async Task<IActionResult> DisableFeature(string featureKey)
     {
+        ArgumentException.ThrowIfNullOrEmpty(nameof(featureKey));
         try
         {
             var tenant = _resolutionService.GetCurrentTenant();
@@ -172,6 +178,8 @@ public class FeaturesController : ControllerBase
     [HttpPut("{featureKey}/rollout")]
     public async Task<IActionResult> SetRolloutPercentage(string featureKey, [FromBody] SetRolloutRequest request)
     {
+        ArgumentException.ThrowIfNullOrEmpty(nameof(featureKey));
+        ArgumentNullException.ThrowIfNull(nameof(request));
         try
         {
             var tenant = _resolutionService.GetCurrentTenant();
@@ -196,6 +204,8 @@ public class FeaturesController : ControllerBase
     [HttpPost("{featureKey}/usage")]
     public async Task<IActionResult> RecordUsage(string featureKey, [FromBody] RecordUsageRequest? request = null)
     {
+        ArgumentException.ThrowIfNullOrEmpty(nameof(featureKey));
+        // request is allowed to be null
         try
         {
             var tenant = _resolutionService.GetCurrentTenant();
@@ -220,6 +230,7 @@ public class FeaturesController : ControllerBase
     [HttpGet("{featureKey}/check-limit")]
     public async Task<IActionResult> CheckUsageLimit(string featureKey)
     {
+        ArgumentException.ThrowIfNullOrEmpty(nameof(featureKey));
         try
         {
             var tenant = _resolutionService.GetCurrentTenant();
@@ -242,6 +253,7 @@ public class FeaturesController : ControllerBase
     [HttpGet("statistics")]
     public async Task<IActionResult> GetStatistics()
     {
+        // No parameters to guard
         try
         {
             var tenant = _resolutionService.GetCurrentTenant();
@@ -264,6 +276,7 @@ public class FeaturesController : ControllerBase
     [HttpPost("init-defaults")]
     public async Task<IActionResult> InitializeDefaults()
     {
+        // No parameters to guard
         try
         {
             var tenant = _resolutionService.GetCurrentTenant();
@@ -286,6 +299,7 @@ public class FeaturesController : ControllerBase
     [HttpPost("bulk")]
     public async Task<IActionResult> BulkSetFeatureState([FromBody] BulkFeatureToggleRequest request)
     {
+        ArgumentNullException.ThrowIfNull(nameof(request));
         try
         {
             if (request?.TenantIds == null || !request.TenantIds.Any())
@@ -323,6 +337,7 @@ public class FeaturesController : ControllerBase
     [HttpPost("bulk/status")]
     public async Task<IActionResult> BulkGetFeatureStatus([FromBody] BulkFeatureStatusRequest request)
     {
+        ArgumentNullException.ThrowIfNull(nameof(request));
         try
         {
             if (request?.TenantIds == null || !request.TenantIds.Any())
@@ -354,6 +369,7 @@ public class FeaturesController : ControllerBase
     [HttpPost("bulk/features")]
     public async Task<IActionResult> BulkGetFeatures([FromBody] BulkFeatureRequest request)
     {
+        ArgumentNullException.ThrowIfNull(nameof(request));
         try
         {
             if (request?.TenantIds == null || !request.TenantIds.Any())
