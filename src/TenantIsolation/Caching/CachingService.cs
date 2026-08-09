@@ -5,6 +5,11 @@
 // CTO & Software Architect
 // =============================================================================
 
+using System;
+using System.Linq;
+using System.Threading.Tasks;
+using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using TenantIsolation.Configuration;
 
@@ -62,6 +67,9 @@ public class CachingService : ICachingService
     /// </summary>
     public async Task<T?> GetOrFetchAsync<T>(string key, Func<Task<T>> fetchFunc, TimeSpan? expiration = null)
     {
+        ArgumentException.ThrowIfNullOrEmpty(key);
+        ArgumentNullException.ThrowIfNull(fetchFunc);
+
         if (string.IsNullOrWhiteSpace(key))
             return await fetchFunc();
 
@@ -100,6 +108,8 @@ public class CachingService : ICachingService
 
     public ValueTask<T?> GetAsync<T>(string key)
     {
+        ArgumentException.ThrowIfNullOrEmpty(key);
+
         if (string.IsNullOrWhiteSpace(key))
             return ValueTask.FromResult<T?>(default);
 
@@ -108,6 +118,8 @@ public class CachingService : ICachingService
 
     public ValueTask SetAsync<T>(string key, T value, TimeSpan? expiration = null)
     {
+        ArgumentException.ThrowIfNullOrEmpty(key);
+
         if (string.IsNullOrWhiteSpace(key))
             return ValueTask.CompletedTask;
 
@@ -119,6 +131,8 @@ public class CachingService : ICachingService
 
     public ValueTask RemoveAsync(string key)
     {
+        ArgumentException.ThrowIfNullOrEmpty(key);
+
         if (string.IsNullOrWhiteSpace(key))
             return ValueTask.CompletedTask;
 
@@ -129,6 +143,8 @@ public class CachingService : ICachingService
 
     public async ValueTask RemoveAsync(params string[] keys)
     {
+        ArgumentNullException.ThrowIfNull(keys);
+
         foreach (var k in keys.Where(k => !string.IsNullOrWhiteSpace(k)))
             await _cacheProvider.RemoveAsync(k);
 
@@ -183,25 +199,50 @@ public class TenantAwareCachingService : ICachingService
     }
 
     public Task<T?> GetOrFetchAsync<T>(string key, Func<Task<T>> fetchFunc, TimeSpan? expiration = null)
-        => _innerService.GetOrFetchAsync(GetTenantAwareKey(key), fetchFunc, expiration);
+    {
+        ArgumentException.ThrowIfNullOrEmpty(key);
+        ArgumentNullException.ThrowIfNull(fetchFunc);
+
+        return _innerService.GetOrFetchAsync(GetTenantAwareKey(key), fetchFunc, expiration);
+    }
 
     public ValueTask<T?> GetAsync<T>(string key)
-        => _innerService.GetAsync<T>(GetTenantAwareKey(key));
+    {
+        ArgumentException.ThrowIfNullOrEmpty(key);
+
+        return _innerService.GetAsync<T>(GetTenantAwareKey(key));
+    }
 
     public ValueTask SetAsync<T>(string key, T value, TimeSpan? expiration = null)
-        => _innerService.SetAsync(GetTenantAwareKey(key), value, expiration);
+    {
+        ArgumentException.ThrowIfNullOrEmpty(key);
+
+        return _innerService.SetAsync(GetTenantAwareKey(key), value, expiration);
+    }
 
     public ValueTask RemoveAsync(string key)
-        => _innerService.RemoveAsync(GetTenantAwareKey(key));
+    {
+        ArgumentException.ThrowIfNullOrEmpty(key);
+
+        return _innerService.RemoveAsync(GetTenantAwareKey(key));
+    }
 
     public ValueTask RemoveAsync(params string[] keys)
-        => _innerService.RemoveAsync(keys.Select(GetTenantAwareKey).ToArray());
+    {
+        ArgumentNullException.ThrowIfNull(keys);
+
+        return _innerService.RemoveAsync(keys.Select(GetTenantAwareKey).ToArray());
+    }
 
     public ValueTask ClearAsync()
-        => _innerService.ClearAsync();
+    {
+        return _innerService.ClearAsync();
+    }
 
     public ValueTask<CacheStatistics> GetStatisticsAsync()
-        => _innerService.GetStatisticsAsync();
+    {
+        return _innerService.GetStatisticsAsync();
+    }
 }
 
 public static class CachingServiceExtensions
