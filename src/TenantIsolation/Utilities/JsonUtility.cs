@@ -61,6 +61,7 @@ public static class JsonUtility
     /// </summary>
     public static string Serialize<T>(T obj)
     {
+        ArgumentNullException.ThrowIfNull(obj);
         return JsonSerializer.Serialize(obj, DefaultOptions);
     }
 
@@ -70,6 +71,7 @@ public static class JsonUtility
     /// </summary>
     public static string SerializePretty<T>(T obj)
     {
+        ArgumentNullException.ThrowIfNull(obj);
         return JsonSerializer.Serialize(obj, PrettyOptions);
     }
 
@@ -133,6 +135,7 @@ public static class JsonUtility
     /// </summary>
     public static Dictionary<string, object?> ConvertToDictionary<T>(T obj)
     {
+        ArgumentNullException.ThrowIfNull(obj);
         var json = Serialize(obj);
         var element = DeserializeToDynamic(json);
 
@@ -153,6 +156,8 @@ public static class JsonUtility
     /// </summary>
     public static Dictionary<string, object?> MergeJsonObjects<T1, T2>(T1 obj1, T2 obj2)
     {
+        ArgumentNullException.ThrowIfNull(obj1);
+        ArgumentNullException.ThrowIfNull(obj2);
         var dict1 = ConvertToDictionary(obj1);
         var dict2 = ConvertToDictionary(obj2);
 
