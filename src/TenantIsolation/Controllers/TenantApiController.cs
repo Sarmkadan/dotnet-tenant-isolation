@@ -39,7 +39,7 @@ public class TenantApiController : ControllerBase
     /// Create new tenant
     /// </summary>
     [HttpPost("create")]
-    public async Task<IActionResult> CreateTenant([FromBody] CreateTenantRequest request)
+    public async Task<IActionResult> CreateTenant([FromBody] CreateTenantRequest? request = null)
     {
         // Add input validation for request fields
         if (request == null || string.IsNullOrWhiteSpace(request.Name) || request.Name.Length > 200)
@@ -99,6 +99,7 @@ public class TenantApiController : ControllerBase
     [HttpGet("slug/{slug}")]
     public async Task<IActionResult> GetTenantBySlug(string slug)
     {
+        ArgumentException.ThrowIfNullOrEmpty(slug);
         // Add input validation for slug length
         if (string.IsNullOrWhiteSpace(slug) || slug.Length > 100)
         {
@@ -234,6 +235,7 @@ public class TenantApiController : ControllerBase
     [HttpGet("search/{query}")]
     public async Task<IActionResult> SearchTenants(string query)
     {
+        ArgumentException.ThrowIfNullOrEmpty(query);
         try
         {
             var tenants = await _tenantService.SearchTenantsAsync(query);
@@ -252,6 +254,7 @@ public class TenantApiController : ControllerBase
     [HttpGet("{id:guid}/quota")]
     public async Task<IActionResult> GetTenantQuota(Guid id, [FromQuery] string metric)
     {
+        ArgumentException.ThrowIfNullOrEmpty(metric);
         // Add input validation for metric
         if (string.IsNullOrWhiteSpace(metric) || metric.Length > 100)
         {
