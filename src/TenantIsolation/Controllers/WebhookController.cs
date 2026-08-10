@@ -29,6 +29,10 @@ public class WebhookController : ControllerBase
         IResponseFormatter formatter,
         ILogger<WebhookController> logger)
     {
+        ArgumentNullException.ThrowIfNull(webhookHandler);
+        ArgumentNullException.ThrowIfNull(formatter);
+        ArgumentNullException.ThrowIfNull(logger);
+
         _webhookHandler = webhookHandler;
         _formatter = formatter;
         _logger = logger;
