@@ -94,6 +94,9 @@ public static class TimeProviderExtensions
     /// </summary>
     public static DateTime ConvertToTenantTime(this ITimeProvider timeProvider, DateTime utcTime, string tenantTimeZoneId)
     {
+        ArgumentNullException.ThrowIfNull(timeProvider);
+        ArgumentException.ThrowIfNullOrEmpty(tenantTimeZoneId);
+
         try
         {
             var tenantTimeZone = TimeZoneInfo.FindSystemTimeZoneById(tenantTimeZoneId);
@@ -110,6 +113,9 @@ public static class TimeProviderExtensions
     /// </summary>
     public static DateTime ConvertFromTenantTime(this ITimeProvider timeProvider, DateTime localTime, string tenantTimeZoneId)
     {
+        ArgumentNullException.ThrowIfNull(timeProvider);
+        ArgumentException.ThrowIfNullOrEmpty(tenantTimeZoneId);
+
         try
         {
             var tenantTimeZone = TimeZoneInfo.FindSystemTimeZoneById(tenantTimeZoneId);
@@ -126,6 +132,7 @@ public static class TimeProviderExtensions
     /// </summary>
     public static bool IsBusinessHours(this ITimeProvider timeProvider, DateTime time, int startHour = 9, int endHour = 17)
     {
+        ArgumentNullException.ThrowIfNull(timeProvider);
         var hour = time.Hour;
         return hour >= startHour && hour < endHour && time.DayOfWeek != DayOfWeek.Saturday && time.DayOfWeek != DayOfWeek.Sunday;
     }
