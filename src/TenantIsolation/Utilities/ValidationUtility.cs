@@ -39,6 +39,7 @@ public static class ValidationUtility
     /// </summary>
     public static bool IsValidEmail(string email)
     {
+        ArgumentException.ThrowIfNullOrEmpty(email);
         if (string.IsNullOrWhiteSpace(email))
             return false;
 
