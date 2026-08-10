@@ -61,16 +61,7 @@ public class WebhookController : ControllerBase
     public async Task<ActionResult<ApiResponse<WebhookSubscription>>> RegisterWebhook(
         [FromBody] RegisterWebhookRequest request)
     {
-        // Validate request payload
-        if (request == null)
-        {
-            var problem = new ProblemDetails
-            {
-                Title = "Invalid request",
-                Detail = "Request body cannot be null."
-            };
-            return BadRequest(problem);
-        }
+        ArgumentNullException.ThrowIfNull(request);
 
         if (string.IsNullOrWhiteSpace(request.TenantId))
             ModelState.AddModelError(nameof(request.TenantId), "TenantId is required.");
@@ -141,6 +132,8 @@ public class WebhookController : ControllerBase
         string tenantId,
         [FromQuery] string? eventType = null)
     {
+        ArgumentException.ThrowIfNullOrEmpty(tenantId);
+
         try
         {
             if (!Guid.TryParse(tenantId, out var parsedTenantId))
