@@ -87,6 +87,7 @@ public class CompaniesController : ControllerBase
     [HttpPost]
     public async Task<ActionResult<Organization>> CreateCompany(CreateCompanyRequest request)
     {
+        ArgumentNullException.ThrowIfNull(request);
         // Validate request
         if (string.IsNullOrWhiteSpace(request.Name))
             return BadRequest("Company name is required");
@@ -129,6 +130,7 @@ public class CompaniesController : ControllerBase
     [HttpPut("{id:guid}")]
     public async Task<IActionResult> UpdateCompany(Guid id, UpdateCompanyRequest request)
     {
+        ArgumentNullException.ThrowIfNull(request);
         var tenant = await _tenantResolution.ResolveTenantAsync();
 
         if (tenant == null)
@@ -196,7 +198,6 @@ public class CompaniesController : ControllerBase
 
         // Get configuration for this company
         var configKey = $"company:{company.Id}:settings";
-
         var settings = await _configService.GetAllConfigurationsAsync(tenant.Id);
 
         var companySettings = settings
@@ -212,6 +213,7 @@ public class CompaniesController : ControllerBase
     [HttpPut("{id:guid}/settings")]
     public async Task<IActionResult> UpdateCompanySettings(Guid id, Dictionary<string, string> settings)
     {
+        ArgumentNullException.ThrowIfNull(settings);
         var tenant = await _tenantResolution.ResolveTenantAsync();
 
         if (tenant == null)
@@ -240,6 +242,7 @@ public class CompaniesController : ControllerBase
     [HttpGet("features/{featureKey}/available")]
     public async Task<ActionResult<bool>> IsFeatureAvailable(string featureKey)
     {
+        ArgumentException.ThrowIfNullOrEmpty(featureKey);
         var tenant = await _tenantResolution.ResolveTenantAsync();
 
         if (tenant == null)
