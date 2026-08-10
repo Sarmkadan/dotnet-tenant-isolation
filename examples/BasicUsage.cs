@@ -12,6 +12,7 @@ public class BasicUsage
 
     public BasicUsage(TenantService tenantService)
     {
+        ArgumentNullException.ThrowIfNull(nameof(tenantService));
         _tenantService = tenantService;
     }
 
