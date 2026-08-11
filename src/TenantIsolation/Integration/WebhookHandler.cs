@@ -35,6 +35,9 @@ public class WebhookPayload
 
     [JsonPropertyName("signature")]
     public string Signature { get; set; } = string.Empty;
+
+    public override string ToString() =>
+        $"WebhookPayload {{ EventId = {EventId}, EventType = {EventType}, TenantId = {TenantId}, Timestamp = {Timestamp}, Data = {Data}, Signature = {Signature} }}";
 }
 
 /// <summary>
