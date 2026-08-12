@@ -264,4 +264,12 @@ public class User
         IsActive = false;
         UpdatedAt = DateTime.UtcNow;
     }
+
+    /// <summary>
+    /// Returns a concise string representation of the user.
+    /// </summary>
+    public override string ToString()
+    {
+        return $"User {{ Id = {Id}, TenantId = {TenantId}, OrganizationId = {OrganizationId}, Email = {Email}, FirstName = {FirstName}, LastName = {LastName} }}";
+    }
 }
