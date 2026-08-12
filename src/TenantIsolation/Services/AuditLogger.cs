@@ -137,11 +137,15 @@ public class AuditLogger : IAuditLogger
 
     public async Task<IEnumerable<AuditLogEntry>> GetLogsAsync(Guid tenantId, int limit = 100)
     {
+        _logger.LogInformation("Getting audit logs for tenant {TenantId} with limit {Limit}", tenantId, limit);
+
         var logs = _logs.Values
             .Where(l => l.TenantId == tenantId)
             .OrderByDescending(l => l.Timestamp)
             .Take(limit)
             .ToList();
+
+        _logger.LogInformation("Retrieved {Count} audit logs for tenant {TenantId}", logs.Count, tenantId);
 
         return await Task.FromResult(logs);
     }
