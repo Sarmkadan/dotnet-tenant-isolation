@@ -36,6 +36,8 @@ public class RateLimitingMiddleware
     /// </summary>
     public async Task InvokeAsync(HttpContext context)
     {
+        _logger.LogInformation("InvokeAsync called with {ContextPath}", context.Request.Path);
+
         // Skip rate limiting for health check endpoints
         if (context.Request.Path.StartsWithSegments("/health"))
         {
@@ -71,6 +73,7 @@ public class RateLimitingMiddleware
         context.Response.Headers.Add("X-RateLimit-Reset", bucket.ResetTime.ToString("O"));
 
         await _next(context);
+        _logger.LogInformation("InvokeAsync finished for {ContextPath}", context.Request.Path);
     }
 
     /// <summary>
