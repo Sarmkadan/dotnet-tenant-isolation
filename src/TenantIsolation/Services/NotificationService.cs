@@ -96,8 +96,13 @@ public class NotificationService : INotificationService
         if (notification == null)
             throw new ArgumentNullException(nameof(notification));
 
+        _logger.LogInformation("Sending notification to user {RecipientUserId}", notification.RecipientUserId);
+
         if (!_notifications.TryAdd(notification.Id, notification))
+        {
+            _logger.LogError("Failed to add notification {NotificationId} to store", notification.Id);
             throw new InvalidOperationException("Failed to send notification");
+        }
 
         // Track user notification
         if (!string.IsNullOrEmpty(notification.RecipientUserId))
@@ -112,7 +117,7 @@ public class NotificationService : INotificationService
                 });
         }
 
-        _logger.LogInformation(NotificationTemplates.NotificationSent, notification.RecipientUserId, notification.Title);
+        _logger.LogInformation("Notification {NotificationId} sent successfully to user {RecipientUserId}", notification.Id, notification.RecipientUserId);
 
         return await Task.FromResult(notification);
     }
@@ -123,6 +128,8 @@ public class NotificationService : INotificationService
         string message,
         NotificationType type = NotificationType.Info)
     {
+        _logger.LogInformation("Sending tenant notification to {TenantId}", tenantId);
+
         var notification = new Notification
         {
             Title = title,
@@ -132,34 +139,55 @@ public class NotificationService : INotificationService
         };
 
         await SendNotificationAsync(notification);
+
+        _logger.LogInformation("Tenant notification sent to {TenantId}", tenantId);
     }
 
     public async Task<IEnumerable<Notification>> GetUnreadNotificationsAsync(string userId)
     {
+        _logger.LogInformation("Getting unread notifications for user {UserId}", userId);
+
         if (string.IsNullOrEmpty(userId))
+        {
+            _logger.LogWarning("User ID is null or empty when fetching unread notifications");
             return new List<Notification>();
+        }
 
         var unread = _notifications.Values
             .Where(n => n.RecipientUserId == userId && n.ReadAt == null)
             .OrderByDescending(n => n.CreatedAt)
             .ToList();
 
+        _logger.LogInformation("Found {Count} unread notifications for user {UserId}", unread.Count, userId);
+
         return await Task.FromResult(unread);
     }
 
     public async Task<bool> MarkAsReadAsync(string notificationId)
     {
+        _logger.LogInformation("Marking notification {NotificationId} as read", notificationId);
+
         if (!_notifications.TryGetValue(notificationId, out var notification))
+        {
+            _logger.LogWarning("Notification {NotificationId} not found when attempting to mark as read", notificationId);
             return false;
+        }
 
         notification.ReadAt = DateTime.UtcNow;
+        _logger.LogInformation("Notification {NotificationId} marked as read", notificationId);
+
         return await Task.FromResult(true);
     }
 
     public async Task<bool> DeleteNotificationAsync(string notificationId)
     {
+        _logger.LogInformation("Deleting notification {NotificationId}", notificationId);
+
         if (!_notifications.TryRemove(notificationId, out var notification))
+        {
+            _logger.LogWarning("Notification {NotificationId} not found when attempting to delete", notificationId);
             return false;
+        }
 
         // Remove from user's notification list
         if (!string.IsNullOrEmpty(notification.RecipientUserId) &&
@@ -168,20 +196,27 @@ public class NotificationService : INotificationService
             userNotifs.Remove(notificationId);
         }
 
-        _logger.LogInformation(NotificationTemplates.NotificationDeleted, notificationId);
+        _logger.LogInformation("Notification {NotificationId} deleted successfully", notificationId);
         return await Task.FromResult(true);
     }
 
     public async Task<IEnumerable<Notification>> GetNotificationHistoryAsync(string userId, int limit = 50)
     {
+        _logger.LogInformation("Getting notification history for user {UserId} with limit {Limit}", userId, limit);
+
         if (string.IsNullOrEmpty(userId))
+        {
+            _logger.LogWarning("User ID is null or empty when fetching notification history");
             return new List<Notification>();
+        }
 
         var history = _notifications.Values
             .Where(n => n.RecipientUserId == userId)
             .OrderByDescending(n => n.CreatedAt)
             .Take(limit)
             .ToList();
+
+        _logger.LogInformation("Found {Count} notifications in history for user {UserId}", history.Count, userId);
 
         return await Task.FromResult(history);
     }
