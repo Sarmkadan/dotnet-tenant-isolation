@@ -36,6 +36,7 @@ public class RequestContextMiddleware
             : Guid.NewGuid().ToString("N");
 
         context.Items["CorrelationId"] = correlationId;
+            _logger.LogInformation("InvokeAsync started with {CorrelationId}", correlationId);
         context.Response.Headers.Add("X-Correlation-ID", correlationId);
 
         // Extract tenant ID from header or route
@@ -69,7 +70,16 @@ public class RequestContextMiddleware
             { "Method", context.Request.Method }
         }))
         {
-            await _next(context);
+            try
+            {
+                await _next(context);
+                _logger.LogInformation("InvokeAsync finished successfully with {CorrelationId}", correlationId);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "InvokeAsync failed with {CorrelationId}", correlationId);
+                throw;
+            }
         }
     }
 
