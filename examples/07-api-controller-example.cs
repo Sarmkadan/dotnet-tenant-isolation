@@ -251,6 +251,10 @@ public class CompaniesController : ControllerBase
         var isAvailable = await _featureService.IsFeatureEnabledAsync(tenant.Id, featureKey);
         return Ok(isAvailable);
     }
+
+    // Added ToString override for concise representation
+    public override string ToString() =>
+        $"CompaniesController {{ Name = {nameof(CompaniesController)}, Slug = N/A, Description = N/A, Id = N/A }}";
 }
 
 // Request/Response DTOs
