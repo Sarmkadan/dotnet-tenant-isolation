@@ -17,6 +17,14 @@ namespace TenantIsolation.Controllers;
 [Route("api/[controller]")]
 public class FeaturesController : ControllerBase
 {
+    public int Percentage { get; set; }
+    public long Amount { get; set; }
+    public List<Guid>? TenantIds { get; set; }
+    public string? FeatureKey { get; set; }
+    public bool Enabled { get; set; }
+
+    public override string ToString() => $"FeaturesController {{ Percentage = {Percentage}, Amount = {Amount}, TenantIds = {TenantIds}, FeatureKey = {FeatureKey}, Enabled = {Enabled} }}";
+
     private readonly TenantFeatureService _featureService;
     private readonly ITenantResolutionService _resolutionService;
     private readonly ILogger<FeaturesController> _logger;
