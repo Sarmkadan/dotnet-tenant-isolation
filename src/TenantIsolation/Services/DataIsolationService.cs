@@ -80,11 +80,23 @@ public class DataIsolationService
     public async Task<DataIsolationPolicy?> GetPolicyAsync(Guid tenantId, string entityType)
     {
         ArgumentException.ThrowIfNullOrEmpty(entityType);
+        _logger.LogInformation("Getting data isolation policy for tenant {TenantId} and entity type {EntityType}", tenantId, entityType);
 
-        return await _context.DataIsolationPolicies
+        var policy = await _context.DataIsolationPolicies
             .Where(p => p.TenantId == tenantId && p.EntityType == entityType && p.IsActive)
             .OrderBy(p => p.Priority)
             .FirstOrDefaultAsync();
+
+        if (policy == null)
+        {
+            _logger.LogInformation("No data isolation policy found for tenant {TenantId} and entity type {EntityType}", tenantId, entityType);
+        }
+        else
+        {
+            _logger.LogInformation("Found data isolation policy {PolicyId} for tenant {TenantId} and entity type {EntityType}", policy.Id, tenantId, entityType);
+        }
+
+        return policy;
     }
 
     /// <summary>
