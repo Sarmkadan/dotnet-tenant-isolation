@@ -136,6 +136,8 @@ public class TenantResolutionServiceTests
         _mockTenantStore.Setup(s => s.GetTenantByIdAsync(tenantId))
             .ReturnsAsync(tenant);
 
+        _mockLogger.Object.LogInformation("Resolving tenant from header with {TenantId}", tenantId);
+
         // Act
         var result = await _sut.ResolveTenantAsync();
 
