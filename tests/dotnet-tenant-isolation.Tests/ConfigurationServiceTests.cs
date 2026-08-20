@@ -91,6 +91,7 @@ public class ConfigurationServiceTests : IAsyncLifetime
         // Arrange
         const string key = "api-key";
         const string value = "secret123";
+        _mockLogger.Object.LogInformation("SetConfigurationAsync_WithNewKey_CreatesConfiguration called with {TenantId} and {Key}", _tenantId, key);
 
         // Act
         var result = await _sut.SetConfigurationAsync(_tenantId, key, value);
@@ -119,6 +120,7 @@ public class ConfigurationServiceTests : IAsyncLifetime
         const string key = "api-key";
         const string oldValue = "old-secret";
         const string newValue = "new-secret";
+        _mockLogger.Object.LogInformation("SetConfigurationAsync_WithExistingKey_UpdatesConfiguration called with {TenantId} and {Key}", _tenantId, key);
 
         await _sut.SetConfigurationAsync(_tenantId, key, oldValue);
 
@@ -144,6 +146,7 @@ public class ConfigurationServiceTests : IAsyncLifetime
         const string key = "password";
         // Encrypted values must be at least 16 characters (see TenantConfiguration.IsValid).
         const string value = "super-secret-password";
+        _mockLogger.Object.LogInformation("SetConfigurationAsync_WithEncryption_SetsEncryptionFlag called with {TenantId} and {Key}", _tenantId, key);
 
         // Act
         var result = await _sut.SetConfigurationAsync(_tenantId, key, value, "string", true);
@@ -163,6 +166,7 @@ public class ConfigurationServiceTests : IAsyncLifetime
     public async Task SetConfigurationAsync_WithNullOrWhitespaceKey_ThrowsException(string? key)
     {
         // Act & Assert
+        _mockLogger.Object.LogWarning("SetConfigurationAsync_WithNullOrWhitespaceKey_ThrowsException called with invalid {Key}", key);
         var ex = await Assert.ThrowsAsync<TenantConfigurationException>(
             () => _sut.SetConfigurationAsync(_tenantId, key!, "value"));
 
@@ -179,6 +183,7 @@ public class ConfigurationServiceTests : IAsyncLifetime
         // Arrange
         const string key = "cache-test";
         const string value = "test-value";
+        _mockLogger.Object.LogInformation("SetConfigurationAsync_InvalidatesCacheAfterSet called with {TenantId} and {Key}", _tenantId, key);
 
         // Pre-populate cache with old value
         var cacheKey = $"config_{_tenantId}_{key}";
@@ -206,6 +211,7 @@ public class ConfigurationServiceTests : IAsyncLifetime
         // Arrange
         const string key = "test-key";
         const string value = "test-value";
+        _mockLogger.Object.LogInformation("GetConfigurationAsync_WithExistingConfiguration_ReturnsConfiguration called with {TenantId} and {Key}", _tenantId, key);
 
         await _sut.SetConfigurationAsync(_tenantId, key, value);
 
@@ -228,6 +234,7 @@ public class ConfigurationServiceTests : IAsyncLifetime
         // Arrange
         const string key = "cached-key";
         const string value = "cached-value";
+        _mockLogger.Object.LogInformation("GetConfigurationAsync_CachesResultAfterFirstCall called with {TenantId} and {Key}", _tenantId, key);
 
         var config = new TenantConfiguration
         {
@@ -259,6 +266,7 @@ public class ConfigurationServiceTests : IAsyncLifetime
     public async Task GetConfigurationAsync_WithNonExistentKey_ReturnsNull()
     {
         // Act
+        _mockLogger.Object.LogWarning("GetConfigurationAsync_WithNonExistentKey_ReturnsNull called with {TenantId} and non-existent {Key}", _tenantId, "nonexistent");
         var result = await _sut.GetConfigurationAsync(_tenantId, "nonexistent");
 
         // Assert
@@ -279,6 +287,7 @@ public class ConfigurationServiceTests : IAsyncLifetime
         // Arrange
         const string key = "max-users";
         const string value = "100";
+        _mockLogger.Object.LogInformation("GetConfigurationAsync_Generic_ConvertsStringToInt called with {TenantId} and {Key}", _tenantId, key);
 
         await _sut.SetConfigurationAsync(_tenantId, key, value, "int");
 
@@ -299,6 +308,7 @@ public class ConfigurationServiceTests : IAsyncLifetime
         // Arrange
         const string key = "feature-flag";
         const string value = "true";
+        _mockLogger.Object.LogInformation("GetConfigurationAsync_Generic_ConvertsToBool called with {TenantId} and {Key}", _tenantId, key);
 
         await _sut.SetConfigurationAsync(_tenantId, key, value, "bool");
 
@@ -317,6 +327,7 @@ public class ConfigurationServiceTests : IAsyncLifetime
     public async Task GetConfigurationAsync_Generic_ReturnsDefaultWhenNotFound()
     {
         // Act
+        _mockLogger.Object.LogWarning("GetConfigurationAsync_Generic_ReturnsDefaultWhenNotFound called with {TenantId} and non-existent {Key}, falling back to default", _tenantId, "nonexistent");
         var result = await _sut.GetConfigurationAsync<int>(_tenantId, "nonexistent", 42);
 
         // Assert
@@ -333,6 +344,7 @@ public class ConfigurationServiceTests : IAsyncLifetime
         // Arrange
         const string key = "bad-int";
         const string value = "not-a-number";
+        _mockLogger.Object.LogWarning("GetConfigurationAsync_Generic_WithConversionError_ThrowsException called with {TenantId} and {Key} expecting conversion failure", _tenantId, key);
 
         await _sut.SetConfigurationAsync(_tenantId, key, value, "int");
 
@@ -356,6 +368,7 @@ public class ConfigurationServiceTests : IAsyncLifetime
     {
         // Arrange
         const string key = "delete-me";
+        _mockLogger.Object.LogInformation("DeleteConfigurationAsync_WithExistingKey_DeletesConfiguration called with {TenantId} and {Key}", _tenantId, key);
         await _sut.SetConfigurationAsync(_tenantId, key, "value");
 
         // Act
@@ -376,6 +389,7 @@ public class ConfigurationServiceTests : IAsyncLifetime
     public async Task DeleteConfigurationAsync_WithNonExistentKey_ReturnsFalse()
     {
         // Act
+        _mockLogger.Object.LogWarning("DeleteConfigurationAsync_WithNonExistentKey_ReturnsFalse called with {TenantId} and non-existent {Key}", _tenantId, "nonexistent");
         var result = await _sut.DeleteConfigurationAsync(_tenantId, "nonexistent");
 
         // Assert
@@ -391,6 +405,7 @@ public class ConfigurationServiceTests : IAsyncLifetime
     {
         // Arrange
         const string key = "cache-delete";
+        _mockLogger.Object.LogInformation("DeleteConfigurationAsync_InvalidatesCacheAfterDelete called with {TenantId} and {Key}", _tenantId, key);
         await _sut.SetConfigurationAsync(_tenantId, key, "value");
 
         var cacheKey = $"config_{_tenantId}_{key}";
@@ -416,6 +431,7 @@ public class ConfigurationServiceTests : IAsyncLifetime
     public async Task GetAllConfigurationsAsync_ReturnsAllConfigurationsForTenant()
     {
         // Arrange
+        _mockLogger.Object.LogInformation("GetAllConfigurationsAsync_ReturnsAllConfigurationsForTenant called for {TenantId}", _tenantId);
         await _sut.SetConfigurationAsync(_tenantId, "key1", "value1");
         await _sut.SetConfigurationAsync(_tenantId, "key2", "value2");
         await _sut.SetConfigurationAsync(_tenantId, "key3", "value3");
@@ -440,6 +456,7 @@ public class ConfigurationServiceTests : IAsyncLifetime
     public async Task GetAllConfigurationsAsync_CachesResult()
     {
         // Arrange
+        _mockLogger.Object.LogInformation("GetAllConfigurationsAsync_CachesResult called for {TenantId}", _tenantId);
         await _sut.SetConfigurationAsync(_tenantId, "key1", "value1");
 
         // Act
@@ -465,6 +482,7 @@ public class ConfigurationServiceTests : IAsyncLifetime
     {
         // Arrange
         const string key = "exists";
+        _mockLogger.Object.LogInformation("HasConfigurationAsync_WithExistingKey_ReturnsTrue called with {TenantId} and {Key}", _tenantId, key);
         await _sut.SetConfigurationAsync(_tenantId, key, "value");
 
         // Act
@@ -481,6 +499,7 @@ public class ConfigurationServiceTests : IAsyncLifetime
     public async Task HasConfigurationAsync_WithNonExistentKey_ReturnsFalse()
     {
         // Act
+        _mockLogger.Object.LogWarning("HasConfigurationAsync_WithNonExistentKey_ReturnsFalse called with {TenantId} and non-existent {Key}", _tenantId, "nonexistent");
         var result = await _sut.HasConfigurationAsync(_tenantId, "nonexistent");
 
         // Assert
@@ -498,6 +517,7 @@ public class ConfigurationServiceTests : IAsyncLifetime
     public async Task GetConfigurationKeysAsync_WithWildcardPattern_ReturnsAllKeys()
     {
         // Arrange
+        _mockLogger.Object.LogInformation("GetConfigurationKeysAsync_WithWildcardPattern_ReturnsAllKeys called with {TenantId} and {Pattern}", _tenantId, "*");
         await _sut.SetConfigurationAsync(_tenantId, "feature-enabled", "true");
         await _sut.SetConfigurationAsync(_tenantId, "feature-timeout", "30");
         await _sut.SetConfigurationAsync(_tenantId, "api-key", "secret");
@@ -516,6 +536,7 @@ public class ConfigurationServiceTests : IAsyncLifetime
     public async Task GetConfigurationKeysAsync_WithPattern_ReturnsMatchingKeys()
     {
         // Arrange
+        _mockLogger.Object.LogInformation("GetConfigurationKeysAsync_WithPattern_ReturnsMatchingKeys called with {TenantId} and {Pattern}", _tenantId, "feature-*");
         await _sut.SetConfigurationAsync(_tenantId, "feature-enabled", "true");
         await _sut.SetConfigurationAsync(_tenantId, "feature-timeout", "30");
         await _sut.SetConfigurationAsync(_tenantId, "api-key", "secret");
@@ -546,6 +567,7 @@ public class ConfigurationServiceTests : IAsyncLifetime
             { "key2", ("value2", "string", false) },
             { "key3", ("value3", "int", false) }
         };
+        _mockLogger.Object.LogInformation("SetConfigurationBatchAsync_CreatesMultipleConfigurations called with {TenantId} and {ItemCount} items", _tenantId, batch.Count);
 
         // Act
         var count = await _sut.SetConfigurationBatchAsync(_tenantId, batch);
@@ -571,6 +593,7 @@ public class ConfigurationServiceTests : IAsyncLifetime
     public async Task ExportConfigurationAsync_ReturnsJsonString()
     {
         // Arrange
+        _mockLogger.Object.LogInformation("ExportConfigurationAsync_ReturnsJsonString called for {TenantId}", _tenantId);
         await _sut.SetConfigurationAsync(_tenantId, "key1", "value1");
         await _sut.SetConfigurationAsync(_tenantId, "key2", "value2");
 
@@ -597,6 +620,7 @@ public class ConfigurationServiceTests : IAsyncLifetime
     {
         // Arrange
         var jsonConfig = @"{ ""key1"": ""value1"", ""key2"": ""value2"" }";
+        _mockLogger.Object.LogInformation("ImportConfigurationAsync_ImportsConfigurationsFromJson called with {TenantId} and {JsonLength} chars", _tenantId, jsonConfig.Length);
 
         // Act
         var count = await _sut.ImportConfigurationAsync(_tenantId, jsonConfig);
@@ -620,6 +644,7 @@ public class ConfigurationServiceTests : IAsyncLifetime
     {
         // Arrange
         const string invalidJson = "{ invalid json }";
+        _mockLogger.Object.LogWarning("ImportConfigurationAsync_WithInvalidJson_ThrowsException called with {TenantId} and invalid {Json}", _tenantId, invalidJson);
 
         // Act & Assert
         var ex = await Assert.ThrowsAsync<TenantConfigurationException>(
@@ -637,6 +662,7 @@ public class ConfigurationServiceTests : IAsyncLifetime
     {
         // Arrange
         const string emptyJson = "null";
+        _mockLogger.Object.LogWarning("ImportConfigurationAsync_WithEmptyJson_ThrowsException called with {TenantId} and empty {Json}", _tenantId, emptyJson);
 
         // Act & Assert
         var ex = await Assert.ThrowsAsync<TenantConfigurationException>(
@@ -657,6 +683,7 @@ public class ConfigurationServiceTests : IAsyncLifetime
     public async Task GetStatisticsAsync_ReturnsCounts()
     {
         // Arrange
+        _mockLogger.Object.LogInformation("GetStatisticsAsync_ReturnsCounts called for {TenantId}", _tenantId);
         await _sut.SetConfigurationAsync(_tenantId, "key1", "value1", "string", false);
         // Encrypted values must be at least 16 characters (see TenantConfiguration.IsValid).
         await _sut.SetConfigurationAsync(_tenantId, "key2", "value2-long-enough", "string", true);
@@ -691,6 +718,7 @@ public class ConfigurationServiceTests : IAsyncLifetime
             Value = "required-value",
             IsRequired = true
         };
+        _mockLogger.Object.LogInformation("ValidateRequiredConfigurationsAsync_WithAllRequiredPresent_ReturnsTrue called for {TenantId}", _tenantId);
         _dbContext.TenantConfigurations.Add(required);
         await _dbContext.SaveChangesAsync();
 
@@ -716,6 +744,7 @@ public class ConfigurationServiceTests : IAsyncLifetime
             Value = "",
             IsRequired = true
         };
+        _mockLogger.Object.LogWarning("ValidateRequiredConfigurationsAsync_WithMissingRequired_ReturnsFalse called for {TenantId} with missing required config", _tenantId);
         _dbContext.TenantConfigurations.Add(missingRequired);
         await _dbContext.SaveChangesAsync();
 
@@ -733,6 +762,7 @@ public class ConfigurationServiceTests : IAsyncLifetime
     public async Task ValidateRequiredConfigurationsAsync_WithNoRequiredConfigs_ReturnsTrue()
     {
         // Act
+        _mockLogger.Object.LogInformation("ValidateRequiredConfigurationsAsync_WithNoRequiredConfigs_ReturnsTrue called for {TenantId}", _tenantId);
         var result = await _sut.ValidateRequiredConfigurationsAsync(_tenantId);
 
         // Assert
