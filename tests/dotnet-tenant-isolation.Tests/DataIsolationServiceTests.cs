@@ -44,6 +44,7 @@ public class DataIsolationServiceTests
     {
         // Arrange
         var tenantId = Guid.NewGuid();
+        _mockLogger.Object.LogInformation("CreatePolicyAsync_WithValidPolicy_ReturnsPolicy called with {TenantId}", tenantId);
 
         // Act
         var result = await _sut.CreatePolicyAsync(tenantId, "Order", DataIsolationPolicyType.Strict);
@@ -63,6 +64,7 @@ public class DataIsolationServiceTests
     {
         // Arrange
         var tenantId = Guid.NewGuid();
+        _mockLogger.Object.LogInformation("GetPolicyAsync_WithExistingPolicy_ReturnsPolicy called with {TenantId}", tenantId);
         var policy = new DataIsolationPolicy
         {
             Id = Guid.NewGuid(),
@@ -91,6 +93,7 @@ public class DataIsolationServiceTests
     {
         // Arrange
         var tenantId = Guid.NewGuid();
+        _mockLogger.Object.LogInformation("GetPolicyAsync_WithNonExistingPolicy_ReturnsNull called with {TenantId}", tenantId);
 
         // Act
         var result = await _sut.GetPolicyAsync(tenantId, "NonExistent");
@@ -107,6 +110,7 @@ public class DataIsolationServiceTests
     {
         // Arrange
         var tenantId = Guid.NewGuid();
+        _mockLogger.Object.LogInformation("IsFieldAccessAllowedAsync_WithNoPolicy_ReturnsTrue called with {TenantId}", tenantId);
 
         // Act
         var result = await _sut.IsFieldAccessAllowedAsync(tenantId, "Order", "Amount");
@@ -123,6 +127,7 @@ public class DataIsolationServiceTests
     {
         // Arrange
         var tenantId = Guid.NewGuid();
+        _mockLogger.Object.LogInformation("IsFieldAccessAllowedAsync_WithDeniedField_ReturnsFalse called with {TenantId}", tenantId);
         var policy = new DataIsolationPolicy
         {
             Id = Guid.NewGuid(),
@@ -150,6 +155,7 @@ public class DataIsolationServiceTests
     {
         // Arrange
         var tenantId = Guid.NewGuid();
+        _mockLogger.Object.LogInformation("IsFieldAccessAllowedAsync_WithAllowedField_ReturnsTrue called with {TenantId}", tenantId);
         var policy = new DataIsolationPolicy
         {
             Id = Guid.NewGuid(),
@@ -177,6 +183,7 @@ public class DataIsolationServiceTests
     {
         // Arrange
         var tenantId = Guid.NewGuid();
+        _mockLogger.Object.LogInformation("VerifyFieldAccessAsync_WithAllowedAccess_DoesNotThrow called with {TenantId}", tenantId);
         var policy = new DataIsolationPolicy
         {
             Id = Guid.NewGuid(),
@@ -204,6 +211,7 @@ public class DataIsolationServiceTests
     {
         // Arrange
         var tenantId = Guid.NewGuid();
+        _mockLogger.Object.LogWarning("VerifyFieldAccessAsync_WithDeniedAccess_ThrowsDataIsolationViolationException called with {TenantId}", tenantId);
         var policy = new DataIsolationPolicy
         {
             Id = Guid.NewGuid(),
@@ -234,6 +242,7 @@ public class DataIsolationServiceTests
         // Arrange
         var currentTenantId = Guid.NewGuid();
         var targetTenantId = Guid.NewGuid();
+        _mockLogger.Object.LogInformation("CanAccessCrossTenantAsync_WithStrictPolicy_ReturnsFalse called with {CurrentTenantId} and {TargetTenantId}", currentTenantId, targetTenantId);
         var policy = new DataIsolationPolicy
         {
             Id = Guid.NewGuid(),
@@ -261,6 +270,7 @@ public class DataIsolationServiceTests
         // Arrange
         var currentTenantId = Guid.NewGuid();
         var targetTenantId = Guid.NewGuid();
+        _mockLogger.Object.LogInformation("CanAccessCrossTenantAsync_WithRelaxedPolicyAndNoAllowedTenants_ReturnsFalse called with {CurrentTenantId} and {TargetTenantId}", currentTenantId, targetTenantId);
         var policy = new DataIsolationPolicy
         {
             Id = Guid.NewGuid(),
@@ -288,6 +298,7 @@ public class DataIsolationServiceTests
         // Arrange
         var currentTenantId = Guid.NewGuid();
         var targetTenantId = Guid.NewGuid();
+        _mockLogger.Object.LogInformation("CanAccessCrossTenantAsync_WithRelaxedPolicyAndAllowedTenant_ReturnsTrue called with {CurrentTenantId} and {TargetTenantId}", currentTenantId, targetTenantId);
         var policy = new DataIsolationPolicy
         {
             Id = Guid.NewGuid(),
@@ -322,6 +333,7 @@ public class DataIsolationServiceTests
             EntityType = "Order",
             IsActive = true
         };
+        _mockLogger.Object.LogInformation("UpdatePolicyAsync_WithValidUpdate_ReturnsUpdatedPolicy called for {PolicyId}", policy.Id);
         await _dbContext.DataIsolationPolicies.AddAsync(policy);
         await _dbContext.SaveChangesAsync();
 
@@ -350,6 +362,7 @@ public class DataIsolationServiceTests
             EntityType = "Order",
             IsActive = true
         };
+        _mockLogger.Object.LogInformation("DeletePolicyAsync_WithExistingPolicy_ReturnsTrueAndRemovesPolicy called for {PolicyId}", policy.Id);
         await _dbContext.DataIsolationPolicies.AddAsync(policy);
         await _dbContext.SaveChangesAsync();
 
@@ -370,6 +383,7 @@ public class DataIsolationServiceTests
     {
         // Arrange
         var tenantId = Guid.NewGuid();
+        _mockLogger.Object.LogInformation("GetActivePoliciesAsync_WithMultiplePolicies_ReturnsOnlyActivePolicies called for {TenantId}", tenantId);
         var activePolicy1 = new DataIsolationPolicy
         {
             Id = Guid.NewGuid(),
@@ -422,6 +436,7 @@ public class DataIsolationServiceTests
             EntityType = "Order",
             IsActive = true
         };
+        _mockLogger.Object.LogInformation("SetPolicyActiveAsync_WithExistingPolicy_UpdatesActiveStatus called for {PolicyId}", policy.Id);
         await _dbContext.DataIsolationPolicies.AddAsync(policy);
         await _dbContext.SaveChangesAsync();
 
@@ -450,6 +465,7 @@ public class DataIsolationServiceTests
             Priority = 100,
             IsActive = true
         };
+        _mockLogger.Object.LogInformation("SetPolicyPriorityAsync_WithValidPriority_UpdatesPriority called for {PolicyId}", policy.Id);
         await _dbContext.DataIsolationPolicies.AddAsync(policy);
         await _dbContext.SaveChangesAsync();
 
@@ -470,6 +486,7 @@ public class DataIsolationServiceTests
     {
         // Arrange
         var tenantId = Guid.NewGuid();
+        _mockLogger.Object.LogInformation("CheckPolicyViolationsAsync_WithNoPolicy_ReturnsEmptyList called for {TenantId}", tenantId);
         var entityData = new { Id = 1, Name = "Test" };
 
         // Act
@@ -487,6 +504,7 @@ public class DataIsolationServiceTests
     {
         // Arrange
         var tenantId = Guid.NewGuid();
+        _mockLogger.Object.LogInformation("CheckPolicyViolationsAsync_WithDeniedField_ReturnsViolation called for {TenantId}", tenantId);
         var policy = new DataIsolationPolicy
         {
             Id = Guid.NewGuid(),
@@ -525,6 +543,7 @@ public class DataIsolationServiceTests
             EntityType = "Order",
             IsActive = true
         };
+        _mockLogger.Object.LogInformation("ExportPolicyAsync_WithExistingPolicy_ReturnsJson called for {PolicyId}", policy.Id);
         await _dbContext.DataIsolationPolicies.AddAsync(policy);
         await _dbContext.SaveChangesAsync();
 
