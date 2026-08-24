@@ -93,6 +93,13 @@ public class DataIsolationPolicy
     public virtual Tenant? Tenant { get; set; }
 
     /// <summary>
+    /// Returns a concise, informative representation of this policy.
+    /// </summary>
+    /// <returns>A string containing the key policy properties.</returns>
+    public override string ToString() =>
+        $"DataIsolationPolicy {{ Id = {Id}, TenantId = {TenantId}, PolicyType = {PolicyType}, EntityType = {EntityType}, Description = {Description}, FilterRule = {FilterRule} }}";
+
+    /// <summary>
     /// Parses the allowed fields string into a list of field names.
     /// </summary>
     /// <returns>A list of allowed field names.</returns>
