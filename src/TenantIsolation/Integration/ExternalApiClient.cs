@@ -19,6 +19,8 @@ public class ApiCallResult<T>
     public string? ErrorMessage { get; set; }
     public int? HttpStatusCode { get; set; }
     public TimeSpan Duration { get; set; }
+
+    public override string ToString() => $"ApiCallResult {{ IsSuccess = {IsSuccess}, Data = {Data}, ErrorMessage = {ErrorMessage}, HttpStatusCode = {HttpStatusCode}, Duration = {Duration} }}";
 }
 
 /// <summary>
