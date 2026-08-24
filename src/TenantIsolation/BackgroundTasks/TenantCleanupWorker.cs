@@ -58,6 +58,8 @@ public class TenantCleanupWorker : BackgroundService
         _timer = new PeriodicTimer(CheckInterval);
     }
 
+    public override string ToString() => $"TenantCleanupWorker {{ CheckInterval = {CheckInterval}, RetentionPeriod = {RetentionPeriod} }}";
+
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         _logger.LogInformation("Tenant cleanup worker started");
