@@ -87,6 +87,8 @@ public Tenant? Tenant { get; set; }
     /// </summary>
     public bool IsApproachingLimit(int thresholdPercent = 80) =>
         QuotaLimit.HasValue && UsagePercentage >= thresholdPercent;
+
+    public override string ToString() => $"TenantUsageRecord {{ Id = {Id}, TenantId = {TenantId}, Tenant = {Tenant}, MetricKey = {MetricKey}, CurrentValue = {CurrentValue}, QuotaLimit = {QuotaLimit} }}";
 }
 
 /// <summary>
