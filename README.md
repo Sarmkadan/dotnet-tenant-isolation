@@ -2671,6 +2671,56 @@ public class AnalyticsControllerExample
 }
 ```
 
+## TenantResolutionResult
+
+The `TenantResolutionResult` class represents the outcome of a tenant resolution attempt, carrying the resolved `Tenant` (when one was found) together with the `TenantResolutionStrategy` that produced it. Its implicit conversions to `bool` and `Tenant?` let callers use the result directly in conditionals and tenant assignments without unwrapping it manually.
+
+Here's an example usage:
+
+```csharp
+using TenantIsolation.Models;
+using TenantIsolation.Constants;
+
+public class TenantResolutionResultExample
+{
+    public static void Main(string[] args)
+    {
+        // The tenant that a resolution strategy matched
+        var tenant = new Tenant
+        {
+            Id = Guid.NewGuid(),
+            Slug = "acme-corp",
+            Name = "ACME Corporation",
+            AdminEmail = "admin@acme-corp.com",
+            Status = TenantStatus.Active
+        };
+
+        // Describe a successful resolution via the header strategy
+        var result = new TenantResolutionResult
+        {
+            Tenant = tenant,
+            ResolvedStrategy = TenantResolutionStrategy.Header
+        };
+
+        // Inspect the outcome through its properties
+        Tenant? resolvedTenant = result.Tenant;
+        TenantResolutionStrategy? strategy = result.ResolvedStrategy;
+
+        // Implicit conversion to bool: true when a tenant was resolved
+        if (result)
+        {
+            Console.WriteLine($"Resolved tenant '{resolvedTenant!.Name}' using strategy {strategy}");
+        }
+
+        // Implicit conversion to Tenant?: use the result wherever a Tenant is expected
+        Tenant? currentTenant = result;
+        Console.WriteLine($"Current tenant slug: {currentTenant?.Slug}");
+    }
+}
+```
+
+This example demonstrates constructing a `TenantResolutionResult`, reading its `Tenant` and `ResolvedStrategy` properties, and relying on the implicit conversions to `bool` and `Tenant?` for concise consumption.
+
 ## Getting Started
 
 See the [Getting Started Guide](docs/getting-started.md) for installation and basic setup instructions.
