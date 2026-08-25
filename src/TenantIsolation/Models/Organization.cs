@@ -199,4 +199,6 @@ public class Organization
         IsActive = true;
         UpdatedAt = DateTime.UtcNow;
     }
+
+    public override string ToString() => $"Organization {{ Id = {Id}, TenantId = {TenantId}, Name = {Name}, Slug = {Slug}, Description = {Description}, Website = {Website} }}";
 }
