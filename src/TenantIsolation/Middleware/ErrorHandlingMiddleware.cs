@@ -184,5 +184,6 @@ public class ErrorHandlingMiddleware
 
         [JsonPropertyName("timestamp")]
         public DateTime Timestamp { get; set; } = DateTime.UtcNow;
+public override string ToString() = $"ErrorHandlingMiddleware {{ Code = {Code}, Message = {Message}, StatusCode = {StatusCode}, TraceId = {TraceId}, Details = {Details}, Timestamp = {Timestamp} }}";
     }
 }
