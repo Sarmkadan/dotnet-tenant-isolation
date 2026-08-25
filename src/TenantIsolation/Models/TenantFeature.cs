@@ -204,4 +204,9 @@ public class TenantFeature
 
         return "Active";
     }
+
+    /// <summary>
+    /// Returns a string representation of the TenantFeature
+    /// </summary>
+    public override string ToString() => $"TenantFeature {{ Id = {Id}, TenantId = {TenantId}, FeatureKey = {FeatureKey}, DisplayName = {DisplayName}, Description = {Description}, IsEnabled = {IsEnabled} }}";
 }
