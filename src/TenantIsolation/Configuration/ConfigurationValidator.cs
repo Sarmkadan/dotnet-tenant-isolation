@@ -30,6 +30,11 @@ public class ValidationResult
         ArgumentException.ThrowIfNullOrEmpty(warning);
         Warnings.Add(warning);
     }
+
+    public override string ToString()
+    {
+        return $"ValidationResult {{ IsValid = {IsValid}, Errors = {Errors}, Warnings = {Warnings} }}";
+    }
 }
 
 /// <summary>
