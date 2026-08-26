@@ -228,4 +228,6 @@ modelBuilder.Entity<TenantUsageRecord>(entity =>
 
         return base.SaveChanges();
     }
+
+    public override string ToString() => $"TenantDbContext {{ Tenants = {Tenants}, TenantConfigurations = {TenantConfigurations}, TenantConnectionStrings = {TenantConnectionStrings}, Organizations = {Organizations}, Users = {Users}, DataIsolationPolicies = {DataIsolationPolicies} }}";
 }
