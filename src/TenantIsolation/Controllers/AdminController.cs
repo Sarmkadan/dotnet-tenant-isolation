@@ -45,8 +45,6 @@ public class AdminController : ControllerBase
         _logger = logger;
     }
 
-    public override string ToString() => $"AdminController {{ _tenantService = {_tenantService}, _formatter = {_formatter}, _taskQueue = {_taskQueue}, _logger = {_logger} }}";
-
     /// <summary>
     /// Get system statistics and tenant overview
     /// </summary>
