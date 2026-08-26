@@ -27,6 +27,12 @@ public class AdminController : ControllerBase
     private readonly IBackgroundTaskQueue _taskQueue;
     private readonly ILogger<AdminController> _logger;
 
+    public string? Reason { get; set; }
+    public string TaskName { get; set; } = string.Empty;
+    public int Priority { get; set; } = 1;
+
+    public override string ToString() => $"AdminController {{ Reason = {Reason}, TaskName = {TaskName}, Priority = {Priority} }}";
+
     public AdminController(
         TenantService tenantService,
         IResponseFormatter formatter,
@@ -38,6 +44,8 @@ public class AdminController : ControllerBase
         _taskQueue = taskQueue;
         _logger = logger;
     }
+
+    public override string ToString() => $"AdminController {{ _tenantService = {_tenantService}, _formatter = {_formatter}, _taskQueue = {_taskQueue}, _logger = {_logger} }}";
 
     /// <summary>
     /// Get system statistics and tenant overview
@@ -238,5 +246,7 @@ public class AdminController : ControllerBase
     {
         public string TaskName { get; set; } = string.Empty;
         public int Priority { get; set; } = 1;
+
+        public override string ToString() => $"TaskRequest {{ TaskName = {TaskName}, Priority = {Priority} }}";
     }
 }
