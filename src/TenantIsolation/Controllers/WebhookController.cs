@@ -58,6 +58,8 @@ public class WebhookController : ControllerBase
     /// </summary>
     public string? Secret { get; set; }
 
+    public override string ToString() => $"WebhookController {{ TenantId = {TenantId}, EventType = {EventType}, Url = {Url}, Secret = {Secret}, TenantId = {TenantId}, EventType = {EventType} }}";
+
     /// <summary>
     /// Register a new webhook endpoint
     /// </summary>
