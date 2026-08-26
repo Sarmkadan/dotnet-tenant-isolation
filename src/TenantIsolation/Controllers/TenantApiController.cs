@@ -18,6 +18,13 @@ namespace TenantIsolation.Controllers;
 [Route("api/[controller]")]
 public class TenantApiController : ControllerBase
 {
+    public string Name { get; set; } = string.Empty;
+    public string Slug { get; set; } = string.Empty;
+    public string AdminEmail { get; set; } = string.Empty;
+    public string? Reason { get; set; }
+
+    public override string ToString() => $"TenantApiController {{ Name = {Name}, Slug = {Slug}, AdminEmail = {AdminEmail}, Reason = {Reason} }}";
+
     private readonly TenantService _tenantService;
     private readonly ITenantResolutionService _resolutionService;
     private readonly ITenantUsageMeteringService _usageMeteringService;
