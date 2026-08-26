@@ -32,6 +32,11 @@ public class ComponentHealthInfo
     public string Message { get; set; } = string.Empty;
     public long ResponseTimeMs { get; set; }
     public DateTime CheckedAt { get; set; } = DateTime.UtcNow;
+
+    public override string ToString()
+    {
+        return $"ComponentHealthInfo {{ Name = {Name}, Status = {Status}, Message = {Message}, ResponseTimeMs = {ResponseTimeMs}, CheckedAt = {CheckedAt} }}";
+    }
 }
 
 /// <summary>
