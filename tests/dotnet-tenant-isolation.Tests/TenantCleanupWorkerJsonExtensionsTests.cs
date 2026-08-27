@@ -3,8 +3,14 @@ using Xunit;
 
 namespace TenantIsolation.BackgroundTasks;
 
+/// <summary>
+/// Contains tests for the JSON serialization and deserialization extension methods of the <see cref="TenantCleanupWorker"/> class.
+/// </summary>
 public class TenantCleanupWorkerJsonExtensionsTests
 {
+    /// <summary>
+    /// Tests that the <see cref="TenantCleanupWorkerJsonExtensions.ToJson(TenantCleanupWorker)"/> method returns a non-empty JSON string containing the checkInterval and retentionPeriod properties when called on a valid worker instance.
+    /// </summary>
     [Fact]
     public void ToJson_WithValidWorker_ReturnsNonEmptyJsonString()
     {
@@ -22,6 +28,9 @@ public class TenantCleanupWorkerJsonExtensionsTests
         json.Should().Contain("retentionPeriod");
     }
 
+    /// <summary>
+    /// Tests that the <see cref="TenantCleanupWorkerJsonExtensions.ToJson(TenantCleanupWorker,bool)"/> method returns formatted JSON (with newlines and indentation) when the indented parameter is set to true.
+    /// </summary>
     [Fact]
     public void ToJson_WithIndentedTrue_ReturnsFormattedJson()
     {
@@ -37,6 +46,9 @@ public class TenantCleanupWorkerJsonExtensionsTests
         json.Should().Contain("  "); // Should have indentation
     }
 
+    /// <summary>
+    /// Tests that the <see cref="TenantCleanupWorkerJsonExtensions.ToJson(TenantCleanupWorker,bool)"/> method returns compact JSON (without newlines) when the indented parameter is set to false.
+    /// </summary>
     [Fact]
     public void ToJson_WithIndentedFalse_ReturnsCompactJson()
     {
@@ -51,6 +63,9 @@ public class TenantCleanupWorkerJsonExtensionsTests
         json.Should().NotContain("\n"); // Should not have newlines
     }
 
+    /// <summary>
+    /// Tests that the <see cref="TenantCleanupWorkerJsonExtensions.ToJson(TenantCleanupWorker)"/> method throws an <see cref="ArgumentNullException"/> when the worker parameter is null.
+    /// </summary>
     [Fact]
     public void ToJson_WithNullWorker_ThrowsArgumentNullException()
     {
@@ -61,6 +76,9 @@ public class TenantCleanupWorkerJsonExtensionsTests
         Assert.Throws<ArgumentNullException>(() => worker.ToJson());
     }
 
+    /// <summary>
+    /// Tests that the <see cref="TenantCleanupWorkerJsonExtensions.FromJson(string)"/> method correctly deserializes a valid JSON string into a <see cref="TenantCleanupWorker"/> instance with the expected checkInterval and retentionPeriod values.
+    /// </summary>
     [Fact]
     public void FromJson_WithValidJson_ReturnsWorkerInstance()
     {
@@ -80,6 +98,9 @@ public class TenantCleanupWorkerJsonExtensionsTests
         result.RetentionPeriod.Should().Be(TimeSpan.FromDays(14));
     }
 
+    /// <summary>
+    /// Tests that the <see cref="TenantCleanupWorkerJsonExtensions.FromJson(string)"/> method returns null when the JSON string is empty.
+    /// </summary>
     [Fact]
     public void FromJson_WithEmptyString_ReturnsNull()
     {
@@ -93,6 +114,9 @@ public class TenantCleanupWorkerJsonExtensionsTests
         result.Should().BeNull();
     }
 
+    /// <summary>
+    /// Tests that the <see cref="TenantCleanupWorkerJsonExtensions.FromJson(string)"/> method returns null when the JSON string contains only whitespace.
+    /// </summary>
     [Fact]
     public void FromJson_WithWhitespaceString_ReturnsNull()
     {
@@ -106,6 +130,9 @@ public class TenantCleanupWorkerJsonExtensionsTests
         result.Should().BeNull();
     }
 
+    /// <summary>
+    /// Tests that the <see cref="TenantCleanupWorkerJsonExtensions.FromJson(string)"/> method throws an <see cref="ArgumentNullException"/> when the JSON string is null.
+    /// </summary>
     [Fact]
     public void FromJson_WithNullString_ThrowsArgumentNullException()
     {
@@ -116,6 +143,9 @@ public class TenantCleanupWorkerJsonExtensionsTests
         Assert.Throws<ArgumentNullException>(() => TenantCleanupWorkerJsonExtensions.FromJson(json));
     }
 
+    /// <summary>
+    /// Tests that the <see cref="TenantCleanupWorkerJsonExtensions.FromJson(string)"/> method throws a <see cref="System.Text.Json.JsonException"/> when the JSON string is invalid.
+    /// </summary>
     [Fact]
     public void FromJson_WithInvalidJson_ThrowsJsonException()
     {
@@ -126,6 +156,9 @@ public class TenantCleanupWorkerJsonExtensionsTests
         Assert.Throws<System.Text.Json.JsonException>(() => TenantCleanupWorkerJsonExtensions.FromJson(json));
     }
 
+    /// <summary>
+    /// Tests that the <see cref="TenantCleanupWorkerJsonExtensions.TryFromJson(string,TenantCleanupWorker@)"/> method returns true and populates the worker instance when the JSON string is valid.
+    /// </summary>
     [Fact]
     public void TryFromJson_WithValidJson_ReturnsTrueAndWorkerInstance()
     {
@@ -146,6 +179,9 @@ public class TenantCleanupWorkerJsonExtensionsTests
         workerInstance.RetentionPeriod.Should().Be(TimeSpan.FromDays(21));
     }
 
+    /// <summary>
+    /// Tests that the <see cref="TenantCleanupWorkerJsonExtensions.TryFromJson(string,TenantCleanupWorker@)"/> method returns false and null when the JSON string is empty.
+    /// </summary>
     [Fact]
     public void TryFromJson_WithEmptyString_ReturnsFalseAndNull()
     {
@@ -160,6 +196,9 @@ public class TenantCleanupWorkerJsonExtensionsTests
         workerInstance.Should().BeNull();
     }
 
+    /// <summary>
+    /// Tests that the <see cref="TenantCleanupWorkerJsonExtensions.TryFromJson(string,TenantCleanupWorker@)"/> method returns false and null when the JSON string contains only whitespace.
+    /// </summary>
     [Fact]
     public void TryFromJson_WithWhitespaceString_ReturnsFalseAndNull()
     {
@@ -174,6 +213,9 @@ public class TenantCleanupWorkerJsonExtensionsTests
         workerInstance.Should().BeNull();
     }
 
+    /// <summary>
+    /// Tests that the <see cref="TenantCleanupWorkerJsonExtensions.TryFromJson(string,TenantCleanupWorker@)"/> method throws an <see cref="ArgumentNullException"/> when the JSON string is null.
+    /// </summary>
     [Fact]
     public void TryFromJson_WithNullString_ThrowsArgumentNullException()
     {
@@ -184,6 +226,9 @@ public class TenantCleanupWorkerJsonExtensionsTests
         Assert.Throws<ArgumentNullException>(() => TenantCleanupWorkerJsonExtensions.TryFromJson(json, out _));
     }
 
+    /// <summary>
+    /// Tests that the <see cref="TenantCleanupWorkerJsonExtensions.TryFromJson(string,TenantCleanupWorker@)"/> method returns false and null when the JSON string is invalid.
+    /// </summary>
     [Fact]
     public void TryFromJson_WithInvalidJson_ReturnsFalseAndNull()
     {
@@ -198,6 +243,9 @@ public class TenantCleanupWorkerJsonExtensionsTests
         workerInstance.Should().BeNull();
     }
 
+    /// <summary>
+    /// Tests that the round-trip serialization (serialize then deserialize) of a <see cref="TenantCleanupWorker"/> instance using <see cref="TenantCleanupWorkerJsonExtensions.ToJson(TenantCleanupWorker)"/> and <see cref="TenantCleanupWorkerJsonExtensions.FromJson(string)"/> preserves all property values.
+    /// </summary>
     [Fact]
     public void RoundtripSerialization_PreservesAllProperties()
     {
@@ -216,6 +264,9 @@ public class TenantCleanupWorkerJsonExtensionsTests
         deserialized.RetentionPeriod.Should().Be(original.RetentionPeriod);
     }
 
+    /// <summary>
+    /// Tests that the round-trip serialization (serialize then deserialize using TryFromJson) of a <see cref="TenantCleanupWorker"/> instance preserves all property values.
+    /// </summary>
     [Fact]
     public void RoundtripSerialization_WithTryFromJson_PreservesAllProperties()
     {
@@ -236,6 +287,9 @@ public class TenantCleanupWorkerJsonExtensionsTests
         deserialized.RetentionPeriod.Should().Be(original.RetentionPeriod);
     }
 
+    /// <summary>
+    /// Tests that the JSON produced by the <see cref="TenantCleanupWorkerJsonExtensions.ToJson(TenantCleanupWorker)"/> method uses camelCase naming for property names (as opposed to PascalCase).
+    /// </summary>
     [Fact]
     public void JsonUsesCamelCaseNamingPolicy()
     {
