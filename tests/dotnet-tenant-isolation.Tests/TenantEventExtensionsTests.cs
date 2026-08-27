@@ -4,8 +4,14 @@ using Xunit;
 
 namespace TenantIsolation.Tests;
 
+/// <summary>
+/// Contains unit tests for the <see cref="TenantEventExtensions"/> class.
+/// </summary>
 public class TenantEventExtensionsTests
 {
+    /// <summary>
+    /// Tests that GetEventDescription returns a formatted description when given a valid tenant event.
+    /// </summary>
     [Fact]
     public void GetEventDescription_WithValidTenantEvent_ReturnsFormattedDescription()
     {
@@ -32,6 +38,9 @@ public class TenantEventExtensionsTests
         description.Should().Contain("OccurredAt:");
     }
 
+    /// <summary>
+    /// Tests that GetEventDescription returns the correct type name for TenantActivatedEvent.
+    /// </summary>
     [Fact]
     public void GetEventDescription_WithTenantActivatedEvent_ReturnsCorrectTypeName()
     {
