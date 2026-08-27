@@ -7,10 +7,20 @@ using Xunit;
 
 namespace TenantIsolation.BackgroundTasks;
 
+/// <summary>
+/// Tests for the <see cref="TenantCleanupWorker"/> class.
+/// </summary>
 public class TenantCleanupWorkerTests
 {
-    private readonly ILogger<TenantCleanupWorkerTests> _logger;
+    /// <summary>
+/// Logger instance for test output.
+/// </summary>
+private readonly ILogger<TenantCleanupWorkerTests> _logger;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="TenantCleanupWorkerTests"/> class.
+    /// Sets up a mock logger for test output.
+    /// </summary>
     public TenantCleanupWorkerTests()
     {
         // Logger will be injected via test framework if needed
@@ -19,6 +29,9 @@ public class TenantCleanupWorkerTests
         _logger = mockLogger.Object;
     }
 
+    /// <summary>
+    /// Verifies that the default value of the CheckInterval property is one day.
+    /// </summary>
     [Fact]
     public void CheckInterval_DefaultValue_IsOneDay()
     {
@@ -36,6 +49,9 @@ public class TenantCleanupWorkerTests
         }
     }
 
+    /// <summary>
+    /// Verifies that the default value of the RetentionPeriod property is thirty days.
+    /// </summary>
     [Fact]
     public void RetentionPeriod_DefaultValue_IsThirtyDays()
     {
@@ -53,6 +69,9 @@ public class TenantCleanupWorkerTests
         }
     }
 
+    /// <summary>
+    /// Verifies that the CheckInterval property can be set to a custom value.
+    /// </summary>
     [Fact]
     public void CheckInterval_CanBeCustomized()
     {
@@ -72,6 +91,9 @@ public class TenantCleanupWorkerTests
         }
     }
 
+    /// <summary>
+    /// Verifies that the RetentionPeriod property can be set to a custom value.
+    /// </summary>
     [Fact]
     public void RetentionPeriod_CanBeCustomized()
     {
@@ -91,6 +113,9 @@ public class TenantCleanupWorkerTests
         }
     }
 
+    /// <summary>
+    /// Verifies that the TenantCleanupWorker can be constructed with valid service provider and logger.
+    /// </summary>
     [Fact]
     public void Constructor_WithValidParameters_CreatesWorker()
     {
@@ -112,6 +137,9 @@ public class TenantCleanupWorkerTests
         }
     }
 
+    /// <summary>
+    /// Verifies that StopAsync disposes the timer properly.
+    /// </summary>
     [Fact]
     public async Task StopAsync_DisposesTimer()
     {
@@ -132,6 +160,9 @@ public class TenantCleanupWorkerTests
         }
     }
 
+    /// <summary>
+    /// Verifies that the Dispose method disposes the timer properly.
+    /// </summary>
     [Fact]
     public void Dispose_DisposesTimer()
     {
@@ -152,6 +183,9 @@ public class TenantCleanupWorkerTests
         }
     }
 
+    /// <summary>
+    /// Verifies that the Dispose method can be called multiple times without throwing an exception.
+    /// </summary>
     [Fact]
     public void Dispose_CanBeCalledMultipleTimes()
     {
@@ -173,6 +207,9 @@ public class TenantCleanupWorkerTests
         }
     }
 
+    /// <summary>
+    /// Verifies that the GetRetentionPeriod method returns the correct retention period for a valid worker instance.
+    /// </summary>
     [Fact]
     public void GetRetentionPeriod_WithValidWorker_ReturnsRetentionPeriod()
     {
@@ -192,6 +229,9 @@ public class TenantCleanupWorkerTests
         }
     }
 
+    /// <summary>
+    /// Verifies that the GetRetentionPeriod method throws an ArgumentNullException when called with a null worker instance.
+    /// </summary>
     [Fact]
     public void GetRetentionPeriod_WithNullWorker_ThrowsArgumentNullException()
     {
@@ -209,6 +249,9 @@ public class TenantCleanupWorkerTests
         }
     }
 
+    /// <summary>
+    /// Verifies that the GetCheckInterval method returns the correct check interval for a valid worker instance.
+    /// </summary>
     [Fact]
     public void GetCheckInterval_WithValidWorker_ReturnsCheckInterval()
     {
@@ -228,6 +271,9 @@ public class TenantCleanupWorkerTests
         }
     }
 
+    /// <summary>
+    /// Verifies that the GetCheckInterval method throws an ArgumentNullException when called with a null worker instance.
+    /// </summary>
     [Fact]
     public void GetCheckInterval_WithNullWorker_ThrowsArgumentNullException()
     {
@@ -245,6 +291,9 @@ public class TenantCleanupWorkerTests
         }
     }
 
+    /// <summary>
+    /// Verifies that the AddTenantCleanupWorker extension method throws an ArgumentNullException when the host builder is null.
+    /// </summary>
     [Fact]
     public void AddTenantCleanupWorker_WithNullBuilder_ThrowsArgumentNullException()
     {
@@ -264,6 +313,9 @@ public class TenantCleanupWorkerTests
         }
     }
 
+    /// <summary>
+    /// Verifies that the AddTenantCleanupWorker extension method throws an ArgumentNullException when the host builder is null (overload with only retention period).
+    /// </summary>
     [Fact]
     public void AddTenantCleanupWorker_WithNullBuilderAndRetention_ThrowsArgumentNullException()
     {
@@ -282,6 +334,9 @@ public class TenantCleanupWorkerTests
         }
     }
 
+    /// <summary>
+    /// Verifies that the default value of the CheckInterval property matches the expected default value of one day.
+    /// </summary>
     [Fact]
     public void CheckInterval_DefaultValue_MatchesExpectedDefault()
     {
@@ -300,6 +355,9 @@ public class TenantCleanupWorkerTests
         }
     }
 
+    /// <summary>
+    /// Verifies that the default value of the RetentionPeriod property matches the expected default value of thirty days.
+    /// </summary>
     [Fact]
     public void RetentionPeriod_DefaultValue_MatchesExpectedDefault()
     {
