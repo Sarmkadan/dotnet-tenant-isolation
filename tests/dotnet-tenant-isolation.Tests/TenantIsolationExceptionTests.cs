@@ -6,6 +6,9 @@ using Xunit;
 
 namespace TenantIsolation.Tests;
 
+    /// <summary>
+    /// Test class for <see cref="TenantIsolationException"/> and related exception types.
+    /// </summary>
 public class TenantIsolationExceptionTests
 {
     [Fact]
