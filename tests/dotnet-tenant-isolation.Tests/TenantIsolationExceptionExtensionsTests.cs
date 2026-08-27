@@ -6,8 +6,14 @@ using Xunit;
 
 namespace TenantIsolation.Tests;
 
+/// <summary>
+/// Tests for the <see cref="TenantIsolationExceptionExtensions> class.
+/// </summary>
 public class TenantIsolationExceptionExtensionsTests
 {
+/// <summary>
+    /// Tests that WithDetail adds a detail to an exception that has no details.
+    /// </summary>
     [Fact]
     public void WithDetail_AddsDetailToException_WhenExceptionHasNoDetails()
     {
@@ -27,6 +33,9 @@ public class TenantIsolationExceptionExtensionsTests
         exception.ErrorDetails[key].Should().Be(value);
     }
 
+/// <summary>
+    /// Tests that WithDetail adds a detail to an exception that already has details.
+    /// </summary>
     [Fact]
     public void WithDetail_AddsDetailToExistingDictionary_WhenExceptionHasDetails()
     {
@@ -46,6 +55,9 @@ public class TenantIsolationExceptionExtensionsTests
         exception.ErrorDetails[key].Should().Be(value);
     }
 
+/// <summary>
+    /// Tests that WithDetail updates the value for an existing key.
+    /// </summary>
     [Fact]
     public void WithDetail_UpdatesExistingKey_WhenKeyAlreadyExists()
     {
@@ -63,6 +75,9 @@ public class TenantIsolationExceptionExtensionsTests
         exception.ErrorDetails["key"].Should().Be(value);
     }
 
+/// <summary>
+    /// Tests that WithDetail throws an ArgumentNullException when the exception is null.
+    /// </summary>
     [Fact]
     public void WithDetail_ThrowsArgumentNullException_WhenExceptionIsNull()
     {
@@ -78,6 +93,9 @@ public class TenantIsolationExceptionExtensionsTests
         act.Should().Throw<ArgumentNullException>();
     }
 
+/// <summary>
+    /// Tests that WithDetail throws an ArgumentNullException when the key is null.
+    /// </summary>
     [Fact]
     public void WithDetail_ThrowsArgumentNullException_WhenKeyIsNull()
     {
@@ -93,6 +111,9 @@ public class TenantIsolationExceptionExtensionsTests
         act.Should().Throw<ArgumentNullException>();
     }
 
+/// <summary>
+    /// Tests that WithDetails adds multiple details at once to an exception.
+    /// </summary>
     [Fact]
     public void WithDetails_AddsMultipleDetailsAtOnce()
     {
@@ -118,6 +139,9 @@ public class TenantIsolationExceptionExtensionsTests
         exception.ErrorDetails["key3"].Should().BeNull();
     }
 
+/// <summary>
+    /// Tests that WithDetails adds details to an exception that already has details.
+    /// </summary>
     [Fact]
     public void WithDetails_AddsToExistingDictionary_WhenExceptionHasDetails()
     {
@@ -134,6 +158,9 @@ public class TenantIsolationExceptionExtensionsTests
         exception.ErrorDetails.Should().HaveCount(3);
     }
 
+/// <summary>
+    /// Tests that WithDetails throws an ArgumentNullException when the exception is null.
+    /// </summary>
     [Fact]
     public void WithDetails_ThrowsArgumentNullException_WhenExceptionIsNull()
     {
@@ -148,6 +175,9 @@ public class TenantIsolationExceptionExtensionsTests
         act.Should().Throw<ArgumentNullException>();
     }
 
+/// <summary>
+    /// Tests that WithDetails throws an ArgumentNullException when the details dictionary is null.
+    /// </summary>
     [Fact]
     public void WithDetails_ThrowsArgumentNullException_WhenDetailsIsNull()
     {
@@ -162,6 +192,9 @@ public class TenantIsolationExceptionExtensionsTests
         act.Should().Throw<ArgumentNullException>();
     }
 
+/// <summary>
+    /// Tests that WithErrorCode creates a new exception with the new error code and preserves the original message and details.
+    /// </summary>
     [Fact]
     public void WithErrorCode_CreatesNewExceptionWithNewErrorCode()
     {
@@ -183,6 +216,9 @@ public class TenantIsolationExceptionExtensionsTests
         result.ErrorDetails["detail"].Should().Be("value");
     }
 
+/// <summary>
+    /// Tests that WithErrorCode copies all properties (Source, HelpLink, HResult) from the original exception.
+    /// </summary>
     [Fact]
     public void WithErrorCode_CopiesAllPropertiesFromOriginalException()
     {
@@ -202,6 +238,9 @@ public class TenantIsolationExceptionExtensionsTests
         result.HResult.Should().Be(-1);
     }
 
+/// <summary>
+    /// Tests that WithErrorCode includes the original exception in the Data dictionary of the new exception.
+    /// </summary>
     [Fact]
     public void WithErrorCode_IncludesOriginalExceptionInData()
     {
@@ -218,6 +257,9 @@ public class TenantIsolationExceptionExtensionsTests
         result.Data["OriginalException"].Should().BeSameAs(originalException);
     }
 
+/// <summary>
+    /// Tests that WithErrorCode throws an ArgumentNullException when the exception is null.
+    /// </summary>
     [Fact]
     public void WithErrorCode_ThrowsArgumentNullException_WhenExceptionIsNull()
     {
@@ -232,6 +274,9 @@ public class TenantIsolationExceptionExtensionsTests
         act.Should().Throw<ArgumentNullException>();
     }
 
+/// <summary>
+    /// Tests that WithErrorCode throws an ArgumentNullException when the new error code is null.
+    /// </summary>
     [Fact]
     public void WithErrorCode_ThrowsArgumentNullException_WhenNewErrorCodeIsNull()
     {
@@ -246,6 +291,9 @@ public class TenantIsolationExceptionExtensionsTests
         act.Should().Throw<ArgumentNullException>();
     }
 
+/// <summary>
+    /// Tests that WithContext creates a new exception with the context appended to the original message.
+    /// </summary>
     [Fact]
     public void WithContext_CreatesNewExceptionWithAppendedContext()
     {
@@ -262,6 +310,9 @@ public class TenantIsolationExceptionExtensionsTests
         result.ErrorCode.Should().Be("ORIGINAL_CODE");
     }
 
+/// <summary>
+    /// Tests that WithContext includes the context in the Data dictionary of the new exception.
+    /// </summary>
     [Fact]
     public void WithContext_IncludesContextInData()
     {
@@ -278,6 +329,9 @@ public class TenantIsolationExceptionExtensionsTests
         result.Data["Context"].Should().Be(context);
     }
 
+/// <summary>
+    /// Tests that WithContext copies all properties (Source, HelpLink, HResult) from the original exception.
+    /// </summary>
     [Fact]
     public void WithContext_CopiesAllPropertiesFromOriginalException()
     {
@@ -297,6 +351,9 @@ public class TenantIsolationExceptionExtensionsTests
         result.HResult.Should().Be(-1);
     }
 
+/// <summary>
+    /// Tests that WithContext throws an ArgumentNullException when the exception is null.
+    /// </summary>
     [Fact]
     public void WithContext_ThrowsArgumentNullException_WhenExceptionIsNull()
     {
@@ -311,6 +368,9 @@ public class TenantIsolationExceptionExtensionsTests
         act.Should().Throw<ArgumentNullException>();
     }
 
+/// <summary>
+    /// Tests that WithContext throws an ArgumentNullException when the context is null.
+    /// </summary>
     [Fact]
     public void WithContext_ThrowsArgumentNullException_WhenContextIsNull()
     {
@@ -325,6 +385,9 @@ public class TenantIsolationExceptionExtensionsTests
         act.Should().Throw<ArgumentNullException>();
     }
 
+/// <summary>
+    /// Tests that TryGetTenantId returns true and sets the tenant id for TenantNotActiveException.
+    /// </summary>
     [Fact]
     public void TryGetTenantId_ReturnsTrueAndSetsTenantId_ForTenantNotActiveException()
     {
@@ -340,6 +403,9 @@ public class TenantIsolationExceptionExtensionsTests
         retrievedTenantId.Should().Be(tenantId);
     }
 
+/// <summary>
+    /// Tests that TryGetTenantId returns true and sets the tenant id for DataIsolationViolationException.
+    /// </summary>
     [Fact]
     public void TryGetTenantId_ReturnsTrueAndSetsTenantId_ForDataIsolationViolationException()
     {
@@ -355,6 +421,9 @@ public class TenantIsolationExceptionExtensionsTests
         retrievedTenantId.Should().Be(tenantId);
     }
 
+/// <summary>
+    /// Tests that TryGetTenantId returns false and sets Guid.Empty for base TenantIsolationException.
+    /// </summary>
     [Fact]
     public void TryGetTenantId_ReturnsFalseAndSetsDefault_ForBaseTenantIsolationException()
     {
@@ -369,6 +438,9 @@ public class TenantIsolationExceptionExtensionsTests
         retrievedTenantId.Should().Be(Guid.Empty);
     }
 
+/// <summary>
+    /// Tests that TryGetTenantId throws an ArgumentNullException when the exception is null.
+    /// </summary>
     [Fact]
     public void TryGetTenantId_ThrowsArgumentNullException_WhenExceptionIsNull()
     {
@@ -382,6 +454,9 @@ public class TenantIsolationExceptionExtensionsTests
         act.Should().Throw<ArgumentNullException>();
     }
 
+/// <summary>
+    /// Tests that TryGetEntityType returns true and sets the entity type for DataIsolationViolationException with entity type.
+    /// </summary>
     [Fact]
     public void TryGetEntityType_ReturnsTrueAndSetsEntityType_ForDataIsolationViolationExceptionWithEntityType()
     {
@@ -397,6 +472,9 @@ public class TenantIsolationExceptionExtensionsTests
         retrievedEntityType.Should().Be(entityType);
     }
 
+/// <summary>
+    /// Tests that TryGetEntityType returns true and sets null for DataIsolationViolationException without entity type.
+    /// </summary>
     [Fact]
     public void TryGetEntityType_ReturnsTrueAndSetsNull_ForDataIsolationViolationExceptionWithoutEntityType()
     {
@@ -411,6 +489,9 @@ public class TenantIsolationExceptionExtensionsTests
         retrievedEntityType.Should().BeNull();
     }
 
+/// <summary>
+    /// Tests that TryGetEntityType returns false and sets null for base TenantIsolationException.
+    /// </summary>
     [Fact]
     public void TryGetEntityType_ReturnsFalseAndSetsNull_ForBaseTenantIsolationException()
     {
@@ -425,6 +506,9 @@ public class TenantIsolationExceptionExtensionsTests
         retrievedEntityType.Should().BeNull();
     }
 
+/// <summary>
+    /// Tests that TryGetEntityType throws an ArgumentNullException when the exception is null.
+    /// </summary>
     [Fact]
     public void TryGetEntityType_ThrowsArgumentNullException_WhenExceptionIsNull()
     {
