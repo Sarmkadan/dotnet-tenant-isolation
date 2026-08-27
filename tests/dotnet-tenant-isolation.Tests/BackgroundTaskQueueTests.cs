@@ -11,17 +11,27 @@ using Xunit;
 
 namespace TenantIsolation.Tests.BackgroundTasks;
 
+/// <summary>
+/// Tests for the <see cref="BackgroundTaskQueue"/> class.
+/// </summary>
 public class BackgroundTaskQueueTests
 {
     private readonly Mock<ILogger<BackgroundTaskQueue>> _loggerMock;
     private readonly BackgroundTaskQueue _queue;
 
+/// <summary>
+/// Initializes a new instance of the <see cref="BackgroundTaskQueueTests"/> class.
+/// Sets up a mock logger and a new <see cref="BackgroundTaskQueue"/> instance.
+/// </summary>
     public BackgroundTaskQueueTests()
     {
         _loggerMock = new Mock<ILogger<BackgroundTaskQueue>>();
         _queue = new BackgroundTaskQueue(_loggerMock.Object);
     }
 
+/// <summary>
+/// Verifies that queuing a null task throws an ArgumentNullException.
+/// </summary>
     [Fact]
     public void QueueTask_WithNullTask_ThrowsArgumentNullException()
     {
@@ -33,6 +43,9 @@ public class BackgroundTaskQueueTests
         Assert.Throws<ArgumentNullException>(() => _queue.QueueTask(nullTask!));
     }
 
+/// <summary>
+/// Verifies that queuing a valid task adds it to the queue and signals that a task is available.
+/// </summary>
     [Fact]
     public void QueueTask_WithValidTask_AddsToQueueAndSignals()
     {
@@ -53,6 +66,9 @@ public class BackgroundTaskQueueTests
         _loggerMock.Object.LogInformation("Test {TestName} completed successfully", nameof(QueueTask_WithValidTask_AddsToQueueAndSignals));
     }
 
+/// <summary>
+/// Verifies that DequeueAsync waits when the queue is empty until a task is available or timeout occurs.
+/// </summary>
     [Fact]
     public async Task DequeueAsync_WithEmptyQueue_WaitsUntilItemAvailable()
     {
@@ -80,6 +96,9 @@ public class BackgroundTaskQueueTests
         _loggerMock.Object.LogInformation("Test {TestName} completed in {ElapsedMs}ms", nameof(DequeueAsync_WithEmptyQueue_WaitsUntilItemAvailable), stopwatch.ElapsedMilliseconds);
     }
 
+/// <summary>
+/// Verifies that DequeueAsync returns a task immediately when one is available in the queue.
+/// </summary>
     [Fact]
     public async Task DequeueAsync_WithItemAvailable_ReturnsTaskImmediately()
     {
@@ -105,6 +124,9 @@ public class BackgroundTaskQueueTests
         _loggerMock.Object.LogInformation("Test {TestName} completed successfully", nameof(DequeueAsync_WithItemAvailable_ReturnsTaskImmediately));
     }
 
+/// <summary>
+/// Verifies that DequeueAsync returns tasks in the correct priority order (lowest priority value first).
+/// </summary>
     [Fact]
     public async Task DequeueAsync_WithMultipleTasks_ReturnsTasksInPriorityOrder()
     {
@@ -155,6 +177,9 @@ public class BackgroundTaskQueueTests
         _loggerMock.Object.LogInformation("Test {TestName}: All assertions passed", nameof(DequeueAsync_WithMultipleTasks_ReturnsTasksInPriorityOrder));
     }
 
+/// <summary>
+/// Verifies that DequeueAsync can be cancelled by a cancellation token while waiting for a task.
+/// </summary>
     [Fact]
     public async Task DequeueAsync_WithCancellationToken_CancelsWaitingOperation()
     {
@@ -173,6 +198,9 @@ public class BackgroundTaskQueueTests
         _loggerMock.Object.LogInformation("Test {TestName} completed successfully", nameof(DequeueAsync_WithCancellationToken_CancelsWaitingOperation));
     }
 
+/// <summary>
+/// Verifies that the queue handles concurrent producers correctly, ensuring all tasks are eventually dequeued.
+/// </summary>
     [Fact]
     public async Task DequeueAsync_WithConcurrentProducers_HandlesCorrectly()
     {
@@ -236,6 +264,9 @@ public class BackgroundTaskQueueTests
         _loggerMock.Object.LogInformation("Test {TestName}: All task names verified", nameof(DequeueAsync_WithConcurrentProducers_HandlesCorrectly));
     }
 
+/// <summary>
+/// Verifies that DequeueAsync returns null when a timeout occurs while waiting for a task.
+/// </summary>
     [Fact]
     public async Task DequeueAsync_WithTimeout_ReturnsNullWhenTimeout()
     {
@@ -260,6 +291,9 @@ public class BackgroundTaskQueueTests
         _loggerMock.Object.LogInformation("Test {TestName} completed successfully", nameof(DequeueAsync_WithTimeout_ReturnsNullWhenTimeout));
     }
 
+/// <summary>
+/// Verifies that GetStatistics returns zero values for all counts when the queue is empty.
+/// </summary>
     [Fact]
     public void GetStatistics_WithEmptyQueue_ReturnsZeroValues()
     {
@@ -277,6 +311,9 @@ public class BackgroundTaskQueueTests
         _loggerMock.Object.LogInformation("Test {TestName}: Assertion passed", nameof(GetStatistics_WithEmptyQueue_ReturnsZeroValues));
     }
 
+/// <summary>
+/// Verifies that GetStatistics returns correct counts for pending tasks when tasks are queued.
+/// </summary>
     [Fact]
     public void GetStatistics_WithTasks_ReturnsCorrectCounts()
     {
@@ -299,6 +336,9 @@ public class BackgroundTaskQueueTests
         _loggerMock.Object.LogInformation("Test {TestName}: Assertion passed", nameof(GetStatistics_WithTasks_ReturnsCorrectCounts));
     }
 
+/// <summary>
+/// Verifies that RecordTaskCompletion correctly records execution time and updates completed/failed task counts.
+/// </summary>
     [Fact]
     public async Task RecordTaskCompletion_RecordsExecutionTimeAndUpdatesCounts()
     {
@@ -323,6 +363,9 @@ public class BackgroundTaskQueueTests
         _loggerMock.Object.LogInformation("Test {TestName}: Assertion passed", nameof(RecordTaskCompletion_RecordsExecutionTimeAndUpdatesCounts));
     }
 
+/// <summary>
+/// Verifies that IncrementRunningCount and DecrementRunningCount correctly update the running task count.
+/// </summary>
     [Fact]
     public void IncrementRunningCount_And_DecrementRunningCount_UpdatesRunningTasks()
     {
@@ -349,6 +392,9 @@ public class BackgroundTaskQueueTests
         _loggerMock.Object.LogInformation("Test {TestName}: Assertion passed", nameof(IncrementRunningCount_And_DecrementRunningCount_UpdatesRunningTasks));
     }
 
+/// <summary>
+/// Verifies that tasks are queued and processed in the correct priority order (lowest priority value first).
+/// </summary>
     [Fact]
     public async Task QueueTask_WithDifferentPriorities_ProcessesInCorrectOrder()
     {
@@ -385,6 +431,9 @@ public class BackgroundTaskQueueTests
         _loggerMock.Object.LogInformation("Test {TestName}: Assertion passed", nameof(QueueTask_WithDifferentPriorities_ProcessesInCorrectOrder));
     }
 
+/// <summary>
+/// Verifies that queuing a task and then immediately dequeuing it returns the task without waiting.
+/// </summary>
     [Fact]
     public async Task DequeueAsync_AfterQueueTask_ReturnsTaskWithoutWaiting()
     {
@@ -403,6 +452,9 @@ public class BackgroundTaskQueueTests
         _loggerMock.Object.LogInformation("Test {TestName}: Assertion passed", nameof(DequeueAsync_AfterQueueTask_ReturnsTaskWithoutWaiting));
     }
 
+/// <summary>
+/// Verifies that multiple calls to DequeueAsync return all queued tasks when sufficient tasks are available.
+/// </summary>
     [Fact]
     public async Task MultipleDequeueAsyncCalls_WithSufficientTasks_ReturnsAllTasks()
     {
