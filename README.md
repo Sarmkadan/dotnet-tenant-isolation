@@ -5902,3 +5902,106 @@ public class BackgroundTaskQueueTestsExample
     }
 }
 ```
+
+## TenantIsolationExceptionTests
+
+The `TenantIsolationExceptionTests` class provides comprehensive unit test coverage for the `TenantIsolationException` base class and all derived exception types (`TenantNotResolvedException`, `TenantNotActiveException`, `TenantConfigurationException`, `DataIsolationViolationException`, `TenantDatabaseException`). It validates exception construction, property setting, inheritance behavior, and `ToString()` output formatting using FluentAssertions for expressive test assertions and Xunit for test discovery.
+
+**Key capabilities:**
+- Test all constructors for the base `TenantIsolationException` class including default, message-only, message-with-error-code, message-with-inner-exception, and full constructor overloads
+- Validate property setters for `ErrorCode` and `ErrorDetails` including null handling and dictionary modification behavior
+- Verify `ToString()` method output includes error codes and inner exception messages when present
+- Test constructors and behavior of all derived exception types with their specific message formatting and error codes
+- Validate inheritance hierarchy ensuring all exception types properly inherit from `TenantIsolationException`
+
+**Usage example**
+
+```csharp
+using System;
+using System.Collections.Generic;
+using FluentAssertions;
+using TenantIsolation.Exceptions;
+using Xunit;
+
+public class TenantIsolationExceptionTestsExample
+{
+    public void RunTenantIsolationExceptionTests()
+    {
+        // Test base exception with default constructor
+        var baseException = new TenantIsolationException();
+        baseException.Message.Should().NotBeEmpty();
+        baseException.ErrorCode.Should().BeNull();
+        
+        // Test base exception with custom message
+        var messageException = new TenantIsolationException("Custom error message");
+        messageException.Message.Should().Be("Custom error message");
+        
+        // Test base exception with message and error code
+        var messageCodeException = new TenantIsolationException("Database error", "DB_CONN_FAILED");
+        messageCodeException.Message.Should().Be("Database error");
+        messageCodeException.ErrorCode.Should().Be("DB_CONN_FAILED");
+        
+        // Test base exception with error details dictionary
+        var errorDetails = new Dictionary<string, object?>
+        {
+            { "tenantId", "tenant-123" },
+            { "attemptCount", 3 },
+            { "lastError", null }
+        };
+        var fullException = new TenantIsolationException(
+            "Validation failed", 
+            "VALIDATION_ERROR", 
+            errorDetails
+        );
+        fullException.Message.Should().Be("Validation failed");
+        fullException.ErrorCode.Should().Be("VALIDATION_ERROR");
+        fullException.ErrorDetails.Should().BeSameAs(errorDetails);
+        fullException.ErrorDetails.Should().HaveCount(3);
+        
+        // Test TenantNotResolvedException with source and identifier
+        var notResolvedException = new TenantNotResolvedException("HttpContext", "tenant-id-header");
+        notResolvedException.Message.Should().Be(
+            "Tenant could not be resolved from HttpContext using identifier: tenant-id-header"
+        );
+        notResolvedException.ErrorCode.Should().Be("TENANT_NOT_RESOLVED");
+        
+        // Test TenantNotActiveException with tenant ID and reason
+        var tenantId = Guid.Parse("12345678-1234-1234-1234-123456789012");
+        var notActiveException = new TenantNotActiveException(tenantId, "Subscription expired");
+        notActiveException.TenantId.Should().Be(tenantId);
+        notActiveException.Message.Should().Be(
+            $"Tenant {tenantId} is not active: Subscription expired"
+        );
+        notActiveException.ErrorCode.Should().Be("TENANT_NOT_ACTIVE");
+        
+        // Test TenantConfigurationException with config key and message
+        var configException = new TenantConfigurationException(
+            "ConnectionStrings:Default", 
+            "Invalid connection string format"
+        );
+        configException.Message.Should().Be(
+            "Configuration error for key 'ConnectionStrings:Default': Invalid connection string format"
+        );
+        configException.ErrorCode.Should().Be("TENANT_CONFIG_ERROR");
+        
+        // Test DataIsolationViolationException with tenant ID and message
+        var isolationException = new DataIsolationViolationException(
+            Guid.NewGuid(),
+            "Unauthorized access to customer data"
+        );
+        isolationException.Message.Should().Contain("Unauthorized access to customer data");
+        isolationException.ErrorCode.Should().Be("DATA_ISOLATION_VIOLATION");
+        
+        // Test ToString() includes error code when present
+        var exceptionWithCode = new TenantIsolationException("Test message", "TEST_CODE");
+        exceptionWithCode.ToString().Should().Contain("Test message");
+        exceptionWithCode.ToString().Should().Contain("[Code: TEST_CODE]");
+        
+        // Test ToString() includes inner exception message
+        var innerException = new InvalidOperationException("Inner error details");
+        var exceptionWithInner = new TenantIsolationException("Outer message", innerException);
+        exceptionWithInner.ToString().Should().Contain("Outer message");
+        exceptionWithInner.ToString().Should().Contain("Inner error details");
+    }
+}
+```
