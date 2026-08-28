@@ -5665,3 +5665,107 @@ public class TenantServiceTestsExample
 ```
 
 ## ITimeProvider
+
+## TenantCleanupWorkerTests
+
+The `TenantCleanupWorkerTests` class provides comprehensive unit test coverage for the `TenantCleanupWorker` class, validating all configuration properties, constructor behavior, disposal patterns, and extension methods. It uses FluentAssertions for expressive test assertions and Xunit for test discovery.
+
+**Key capabilities:**
+- Test default values for CheckInterval (1 day) and RetentionPeriod (30 days)
+- Validate that CheckInterval and RetentionPeriod properties can be customized
+- Test constructor with valid service provider and logger parameters
+- Verify StopAsync and Dispose methods properly dispose resources
+- Test GetRetentionPeriod and GetCheckInterval helper methods
+- Validate AddTenantCleanupWorker extension method overloads
+
+**Public members tested:**
+- `CheckInterval_DefaultValue_IsOneDay` - Verifies default check interval
+- `RetentionPeriod_DefaultValue_IsThirtyDays` - Verifies default retention period
+- `CheckInterval_CanBeCustomized` - Tests custom check interval setting
+- `RetentionPeriod_CanBeCustomized` - Tests custom retention period setting
+- `Constructor_WithValidParameters_CreatesWorker` - Tests successful construction
+- `StopAsync_DisposesTimer` - Verifies timer disposal on stop
+- `Dispose_DisposesTimer` - Verifies timer disposal
+- `Dispose_CanBeCalledMultipleTimes` - Tests multiple dispose calls
+- `GetRetentionPeriod_WithValidWorker_ReturnsRetentionPeriod` - Tests retention period getter
+- `GetRetentionPeriod_WithNullWorker_ThrowsArgumentNullException` - Tests null worker handling
+- `GetCheckInterval_WithValidWorker_ReturnsCheckInterval` - Tests check interval getter
+- `GetCheckInterval_WithNullWorker_ThrowsArgumentNullException` - Tests null worker handling
+- `AddTenantCleanupWorker_WithNullBuilder_ThrowsArgumentNullException` - Tests null builder validation
+- `AddTenantCleanupWorker_WithNullBuilderAndRetention_ThrowsArgumentNullException` - Tests null builder validation (overload)
+- `CheckInterval_DefaultValue_MatchesExpectedDefault` - Verifies default check interval value
+- `RetentionPeriod_DefaultValue_MatchesExpectedDefault` - Verifies default retention period value
+
+**Usage example**
+
+```csharp
+using FluentAssertions;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
+using Moq;
+using TenantIsolation.BackgroundTasks;
+using TenantIsolation.Tests;
+using Xunit;
+
+public class TenantCleanupWorkerTestsExample
+{
+    private readonly TenantCleanupWorkerTests _tenantCleanupWorkerTests;
+
+    public TenantCleanupWorkerTestsExample()
+    {
+        _tenantCleanupWorkerTests = new TenantCleanupWorkerTests();
+    }
+
+    public void RunTenantCleanupWorkerTests()
+    {
+        // Test default check interval
+        _tenantCleanupWorkerTests.CheckInterval_DefaultValue_IsOneDay();
+        
+        // Test default retention period
+        _tenantCleanupWorkerTests.RetentionPeriod_DefaultValue_IsThirtyDays();
+        
+        // Test custom check interval
+        _tenantCleanupWorkerTests.CheckInterval_CanBeCustomized();
+        
+        // Test custom retention period
+        _tenantCleanupWorkerTests.RetentionPeriod_CanBeCustomized();
+        
+        // Test constructor with valid parameters
+        _tenantCleanupWorkerTests.Constructor_WithValidParameters_CreatesWorker();
+        
+        // Test StopAsync disposes timer
+        _tenantCleanupWorkerTests.StopAsync_DisposesTimer().GetAwaiter().GetResult();
+        
+        // Test Dispose disposes timer
+        _tenantCleanupWorkerTests.Dispose_DisposesTimer();
+        
+        // Test Dispose can be called multiple times
+        _tenantCleanupWorkerTests.Dispose_CanBeCalledMultipleTimes();
+        
+        // Test GetRetentionPeriod with valid worker
+        _tenantCleanupWorkerTests.GetRetentionPeriod_WithValidWorker_ReturnsRetentionPeriod();
+        
+        // Test GetRetentionPeriod with null worker throws
+        _tenantCleanupWorkerTests.GetRetentionPeriod_WithNullWorker_ThrowsArgumentNullException();
+        
+        // Test GetCheckInterval with valid worker
+        _tenantCleanupWorkerTests.GetCheckInterval_WithValidWorker_ReturnsCheckInterval();
+        
+        // Test GetCheckInterval with null worker throws
+        _tenantCleanupWorkerTests.GetCheckInterval_WithNullWorker_ThrowsArgumentNullException();
+        
+        // Test AddTenantCleanupWorker with null builder throws
+        _tenantCleanupWorkerTests.AddTenantCleanupWorker_WithNullBuilder_ThrowsArgumentNullException();
+        
+        // Test AddTenantCleanupWorker with null builder and retention throws
+        _tenantCleanupWorkerTests.AddTenantCleanupWorker_WithNullBuilderAndRetention_ThrowsArgumentNullException();
+        
+        // Test default check interval matches expected default
+        _tenantCleanupWorkerTests.CheckInterval_DefaultValue_MatchesExpectedDefault();
+        
+        // Test default retention period matches expected default
+        _tenantCleanupWorkerTests.RetentionPeriod_DefaultValue_MatchesExpectedDefault();
+    }
+}
+```
