@@ -6242,3 +6242,28 @@ public class TenantEventExtensionsTestsExample
     }
 }
 ```
+
+
+
+
+
+
+## TenantEventTests
+
+The `TenantEventTests` class provides unit tests for the `TenantEvent` base class and derived tenant event types, verifying correct initialization of base properties, UserId and CorrelationId handling, and Source property assignment.
+
+**Usage example**
+
+```csharp
+using TenantIsolation.Tests;
+using Xunit;
+
+public class TenantEventTestsExample
+{
+    public void RunTenantEventTests()
+    {
+        var testClass = new TenantEventTests();
+        testClass.TenantEvent_SetUserId_ShouldSetUserIdCorrectly();
+    }
+}
+```
