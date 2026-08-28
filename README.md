@@ -5769,3 +5769,46 @@ public class TenantCleanupWorkerTestsExample
     }
 }
 ```
+## TenantFeatureServiceTests
+
+The `TenantFeatureServiceTests` class provides unit tests for the `TenantFeatureService` class, validating feature flag operations such as enabling, disabling, and checking feature availability for tenants. It uses asynchronous test methods to verify the service behavior under various scenarios.
+
+Here's an example usage:
+
+```csharp
+using System.Threading.Tasks;
+using TenantIsolation.Services;
+using TenantIsolation.Tests;
+using Xunit;
+
+public class TenantFeatureServiceTestsExample
+{
+    private readonly TenantFeatureServiceTests _tenantFeatureServiceTests;
+
+    public TenantFeatureServiceTestsExample()
+    {
+        _tenantFeatureServiceTests = new TenantFeatureServiceTests();
+    }
+
+    public async Task RunTests()
+    {
+        // Test enabling a new feature
+        await _tenantFeatureServiceTests.EnableFeatureAsync_WithNewFeature_EnablesAndReturnsFeature();
+        
+        // Test checking an unknown feature returns false
+        await _tenantFeatureServiceTests.IsFeatureEnabledAsync_WithUnknownFeature_ReturnsFalse();
+        
+        // Test disabling an existing enabled feature
+        await _tenantFeatureServiceTests.DisableFeatureAsync_WithExistingEnabledFeature_DisablesAndReturnsTrue();
+        
+        // Test disabling a non-existent feature returns false
+        await _tenantFeatureServiceTests.DisableFeatureAsync_WithNonExistentFeature_ReturnsFalse();
+        
+        // Test enabling an existing disabled feature
+        await _tenantFeatureServiceTests.EnableFeatureAsync_WithExistingDisabledFeature_EnablesFeature();
+        
+        // Test checking feature for unknown tenant returns false
+        await _tenantFeatureServiceTests.IsFeatureEnabledAsync_WithUnknownTenant_ReturnsFalse();
+    }
+}
+```
