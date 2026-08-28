@@ -6005,3 +6005,163 @@ public class TenantIsolationExceptionTestsExample
     }
 }
 ```
+
+## TenantEventExtensionsTests
+
+The `TenantEventExtensionsTests` class provides comprehensive unit test coverage for the `TenantEventExtensions` class, validating extension methods for tenant events including event description generation and type-specific event checks. It uses FluentAssertions for expressive test assertions and Xunit for test discovery.
+
+**Key capabilities:**
+- Test event description formatting for various tenant event types
+- Validate null event handling for description generation
+- Test type-specific event detection methods (activated, suspended, deleted)
+- Verify proper boolean returns for non-matching event types
+- Confirm null event handling returns false without throwing exceptions
+
+**Public members tested:**
+- `GetEventDescription()` - Returns formatted description for tenant events
+- `IsTenantActivatedEvent()` - Checks if event is a tenant activated event
+- `IsTenantSuspendedEvent()` - Checks if event is a tenant suspended event
+- `IsTenantDeletedEvent()` - Checks if event is a tenant deleted event
+
+**Usage example**
+
+```csharp
+using FluentAssertions;
+using TenantIsolation.Events;
+using TenantIsolation.Tests;
+using Xunit;
+
+public class TenantEventExtensionsTestsExample
+{
+    private readonly TenantEventExtensionsTests _tenantEventExtensionsTests;
+
+    public TenantEventExtensionsTestsExample()
+    {
+        _tenantEventExtensionsTests = new TenantEventExtensionsTests();
+    }
+
+    public void RunTenantEventExtensionsTests()
+    {
+        // Test GetEventDescription with valid tenant event
+        var tenantId = Guid.NewGuid();
+        var tenantCreatedEvent = new TenantCreatedEvent
+        {
+            TenantName = "Test Tenant",
+            TenantSlug = "test-tenant"
+        };
+        
+        // Set TenantId using reflection since it's protected set
+        var tenantIdProperty = typeof(TenantEvent).GetProperty("TenantId");
+        tenantIdProperty?.SetValue(tenantCreatedEvent, tenantId);
+
+        var description = tenantCreatedEvent.GetEventDescription();
+        description.Should().NotBeNullOrEmpty();
+        description.Should().StartWith("Event [TenantCreatedEvent]");
+        description.Should().Contain(tenantCreatedEvent.EventId);
+        description.Should().Contain(tenantId.ToString());
+        description.Should().Contain("OccurredAt:");
+
+        // Test GetEventDescription with specific event types
+        var tenantActivatedEvent = new TenantActivatedEvent();
+        var activatedDescription = tenantActivatedEvent.GetEventDescription();
+        activatedDescription.Should().StartWith("Event [TenantActivatedEvent]");
+
+        var tenantSuspendedEvent = new TenantSuspendedEvent();
+        var suspendedDescription = tenantSuspendedEvent.GetEventDescription();
+        suspendedDescription.Should().StartWith("Event [TenantSuspendedEvent]");
+
+        var tenantDeletedEvent = new TenantDeletedEvent();
+        var deletedDescription = tenantDeletedEvent.GetEventDescription();
+        deletedDescription.Should().StartWith("Event [TenantDeletedEvent]");
+
+        // Test GetEventDescription with null event
+        TenantEvent? nullEvent = null;
+        Action nullDescriptionAct = () => nullEvent!.GetEventDescription();
+        nullDescriptionAct.Should().Throw<ArgumentNullException>();
+
+        // Test IsTenantActivatedEvent with various events
+        var tenantActivatedEventCheck = new TenantActivatedEvent();
+        tenantActivatedEventCheck.IsTenantActivatedEvent().Should().BeTrue();
+
+        var tenantCreatedEventCheck = new TenantCreatedEvent();
+        tenantCreatedEventCheck.IsTenantActivatedEvent().Should().BeFalse();
+
+        var tenantSuspendedEventCheck = new TenantSuspendedEvent();
+        tenantSuspendedEventCheck.IsTenantActivatedEvent().Should().BeFalse();
+
+        var tenantDeletedEventCheck = new TenantDeletedEvent();
+        tenantDeletedEventCheck.IsTenantActivatedEvent().Should().BeFalse();
+
+        // Test IsTenantActivatedEvent with null event
+        TenantEvent? nullEventCheck = null;
+        Action nullActivatedAct = () => nullEventCheck!.IsTenantActivatedEvent();
+        nullActivatedAct.Should().NotThrow();
+        nullEventCheck.IsTenantActivatedEvent().Should().BeFalse();
+
+        // Test IsTenantSuspendedEvent with various events
+        var tenantSuspendedEventCheck = new TenantSuspendedEvent();
+        tenantSuspendedEventCheck.IsTenantSuspendedEvent().Should().BeTrue();
+
+        var tenantCreatedEventCheck2 = new TenantCreatedEvent();
+        tenantCreatedEventCheck2.IsTenantSuspendedEvent().Should().BeFalse();
+
+        var tenantActivatedEventCheck2 = new TenantActivatedEvent();
+        tenantActivatedEventCheck2.IsTenantSuspendedEvent().Should().BeFalse();
+
+        var tenantDeletedEventCheck2 = new TenantDeletedEvent();
+        tenantDeletedEventCheck2.IsTenantSuspendedEvent().Should().BeFalse();
+
+        // Test IsTenantSuspendedEvent with null event
+        Action nullSuspendedAct = () => nullEventCheck!.IsTenantSuspendedEvent();
+        nullSuspendedAct.Should().NotThrow();
+        nullEventCheck.IsTenantSuspendedEvent().Should().BeFalse();
+
+        // Test IsTenantDeletedEvent with various events
+        var tenantDeletedEventCheck3 = new TenantDeletedEvent();
+        tenantDeletedEventCheck3.IsTenantDeletedEvent().Should().BeTrue();
+
+        var tenantCreatedEventCheck3 = new TenantCreatedEvent();
+        tenantCreatedEventCheck3.IsTenantDeletedEvent().Should().BeFalse();
+
+        var tenantActivatedEventCheck3 = new TenantActivatedEvent();
+        tenantActivatedEventCheck3.IsTenantDeletedEvent().Should().BeFalse();
+
+        var tenantSuspendedEventCheck3 = new TenantSuspendedEvent();
+        tenantSuspendedEventCheck3.IsTenantDeletedEvent().Should().BeFalse();
+
+        // Test IsTenantDeletedEvent with null event
+        Action nullDeletedAct = () => nullEventCheck!.IsTenantDeletedEvent();
+        nullDeletedAct.Should().NotThrow();
+        nullEventCheck.IsTenantDeletedEvent().Should().BeFalse();
+
+        // Test event type specificity
+        var tenantActivatedEventSpecific = new TenantActivatedEvent();
+        var tenantSuspendedEventSpecific = new TenantSuspendedEvent();
+        var tenantDeletedEventSpecific = new TenantDeletedEvent();
+
+        var activatedResult = tenantActivatedEventSpecific.IsTenantActivatedEvent();
+        var suspendedResult = tenantSuspendedEventSpecific.IsTenantActivatedEvent();
+        var deletedResult = tenantDeletedEventSpecific.IsTenantActivatedEvent();
+
+        activatedResult.Should().BeTrue();
+        suspendedResult.Should().BeFalse();
+        deletedResult.Should().BeFalse();
+
+        var suspendedResult2 = tenantSuspendedEventSpecific.IsTenantSuspendedEvent();
+        var activatedResult2 = tenantActivatedEventSpecific.IsTenantSuspendedEvent();
+        var deletedResult2 = tenantDeletedEventSpecific.IsTenantSuspendedEvent();
+
+        suspendedResult2.Should().BeTrue();
+        activatedResult2.Should().BeFalse();
+        deletedResult2.Should().BeFalse();
+
+        var deletedResult3 = tenantDeletedEventSpecific.IsTenantDeletedEvent();
+        var activatedResult3 = tenantActivatedEventSpecific.IsTenantDeletedEvent();
+        var suspendedResult3 = tenantSuspendedEventSpecific.IsTenantDeletedEvent();
+
+        deletedResult3.Should().BeTrue();
+        activatedResult3.Should().BeFalse();
+        suspendedResult3.Should().BeFalse();
+    }
+}
+```
