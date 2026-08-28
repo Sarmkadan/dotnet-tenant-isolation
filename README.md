@@ -6267,3 +6267,389 @@ public class TenantEventTestsExample
     }
 }
 ```
+
+## DataIsolationServiceTests
+
+The `DataIsolationServiceTests` class provides comprehensive unit test coverage for the `DataIsolationService` class, which manages data isolation policies for multi-tenancy. It validates policy creation, retrieval, field access control, cross-tenant access, policy updates, and violation checking using FluentAssertions for expressive test assertions and Xunit for test discovery.
+
+**Key capabilities:**
+- Test policy creation and retrieval for different entity types and policy types
+- Validate field access control with allowed/denied fields and no policy scenarios
+- Verify cross-tenant access behavior with strict and relaxed policies
+- Test policy updates, deletion, activation status, and priority changes
+- Validate policy violation checking and JSON export functionality
+
+**Public members tested:**
+- `CreatePolicyAsync` - Creates a new data isolation policy
+- `GetPolicyAsync` - Retrieves an existing policy by tenant ID and entity type
+- `IsFieldAccessAllowedAsync` - Checks if field access is allowed based on policy
+- `VerifyFieldAccessAsync` - Verifies field access and throws exception if denied
+- `CanAccessCrossTenantAsync` - Checks if cross-tenant access is allowed
+- `UpdatePolicyAsync` - Updates an existing policy
+- `DeletePolicyAsync` - Deletes an existing policy
+- `GetActivePoliciesAsync` - Retrieves all active policies for a tenant
+- `SetPolicyActiveAsync` - Sets the active status of a policy
+- `SetPolicyPriorityAsync` - Sets the priority of a policy
+- `CheckPolicyViolationsAsync` - Checks for policy violations in entity data
+- `ExportPolicyAsync` - Exports a policy as JSON
+
+**Usage example**
+
+```csharp
+using FluentAssertions;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
+using Moq;
+using TenantIsolation.Constants;
+using TenantIsolation.Data;
+using TenantIsolation.Models;
+using TenantIsolation.Services;
+using TenantIsolation.Tests;
+using Xunit;
+
+public class DataIsolationServiceTestsExample
+{
+    private readonly TenantDbContext _dbContext;
+    private readonly Mock<ILogger<DataIsolationService>> _mockLogger;
+    private readonly DataIsolationService _sut;
+
+    public DataIsolationServiceTestsExample()
+    {
+        var options = new DbContextOptionsBuilder<TenantDbContext>()
+            .UseInMemoryDatabase($"DataIsolationServiceTests_{Guid.NewGuid()}")
+            .Options;
+
+        _dbContext = new TenantDbContext(options);
+        _mockLogger = new Mock<ILogger<DataIsolationService>>();
+
+        _sut = new DataIsolationService(_dbContext, _mockLogger.Object);
+    }
+
+    public void RunDataIsolationServiceTests()
+    {
+        // Test creating a policy with valid parameters
+        var tenantId = Guid.NewGuid();
+        _mockLogger.Object.LogInformation("CreatePolicyAsync_WithValidPolicy_ReturnsPolicy called with {TenantId}", tenantId);
+
+        var createTask = _sut.CreatePolicyAsync(tenantId, "Order", DataIsolationPolicyType.Strict);
+        createTask.Wait();
+        var createResult = createTask.Result;
+        
+        createResult.Should().NotBeNull();
+        createResult.TenantId.Should().Be(tenantId);
+        createResult.EntityType.Should().Be("Order");
+        createResult.PolicyType.Should().Be(DataIsolationPolicyType.Strict);
+
+        // Test retrieving an existing policy
+        var policy = new DataIsolationPolicy
+        {
+            Id = Guid.NewGuid(),
+            TenantId = tenantId,
+            PolicyType = DataIsolationPolicyType.Strict,
+            EntityType = "Customer",
+            IsActive = true
+        };
+        _dbContext.DataIsolationPolicies.Add(policy);
+        _dbContext.SaveChanges();
+
+        var getTask = _sut.GetPolicyAsync(tenantId, "Customer");
+        getTask.Wait();
+        var getResult = getTask.Result;
+        
+        getResult.Should().NotBeNull();
+        getResult!.TenantId.Should().Be(tenantId);
+        getResult.EntityType.Should().Be("Customer");
+
+        // Test retrieving a non-existing policy
+        var getNoneTask = _sut.GetPolicyAsync(tenantId, "NonExistent");
+        getNoneTask.Wait();
+        var getNoneResult = getNoneTask.Result;
+        
+        getNoneResult.Should().BeNull();
+
+        // Test field access allowed when no policy exists
+        var accessAllowedTask = _sut.IsFieldAccessAllowedAsync(tenantId, "Order", "Amount");
+        accessAllowedTask.Wait();
+        var accessAllowedResult = accessAllowedTask.Result;
+        
+        accessAllowedResult.Should().BeTrue();
+
+        // Test field access denied when field is explicitly denied
+        var deniedPolicy = new DataIsolationPolicy
+        {
+            Id = Guid.NewGuid(),
+            TenantId = tenantId,
+            PolicyType = DataIsolationPolicyType.Strict,
+            EntityType = "Order",
+            DeniedFields = "Amount,Total",
+            IsActive = true
+        };
+        _dbContext.DataIsolationPolicies.Add(deniedPolicy);
+        _dbContext.SaveChanges();
+
+        var accessDeniedTask = _sut.IsFieldAccessAllowedAsync(tenantId, "Order", "Amount");
+        accessDeniedTask.Wait();
+        var accessDeniedResult = accessDeniedTask.Result;
+        
+        accessDeniedResult.Should().BeFalse();
+
+        // Test field access allowed when field is explicitly allowed
+        var allowedPolicy = new DataIsolationPolicy
+        {
+            Id = Guid.NewGuid(),
+            TenantId = tenantId,
+            PolicyType = DataIsolationPolicyType.Strict,
+            EntityType = "Order",
+            AllowedFields = "Id,CustomerId",
+            IsActive = true
+        };
+        _dbContext.DataIsolationPolicies.Add(allowedPolicy);
+        _dbContext.SaveChanges();
+
+        var accessAllowedFieldTask = _sut.IsFieldAccessAllowedAsync(tenantId, "Order", "CustomerId");
+        accessAllowedFieldTask.Wait();
+        var accessAllowedFieldResult = accessAllowedFieldTask.Result;
+        
+        accessAllowedFieldResult.Should().BeTrue();
+
+        // Test verifying field access does not throw when access is allowed
+        Func<Task> verifyAllowedAct = async () => await _sut.VerifyFieldAccessAsync(tenantId, "Order", "CustomerId");
+        verifyAllowedAct.Should().NotThrowAsync();
+
+        // Test verifying field access throws DataIsolationViolationException when access is denied
+        Func<Task> verifyDeniedAct = async () => await _sut.VerifyFieldAccessAsync(tenantId, "Order", "Amount");
+        verifyDeniedAct.Should().ThrowAsync<DataIsolationViolationException>()
+            .Where(e => e.TenantId == tenantId)
+            .Where(e => e.EntityType == "Order");
+
+        // Test cross-tenant access denied with strict policy
+        var currentTenantId = Guid.NewGuid();
+        var targetTenantId = Guid.NewGuid();
+        var strictPolicy = new DataIsolationPolicy
+        {
+            Id = Guid.NewGuid(),
+            TenantId = currentTenantId,
+            PolicyType = DataIsolationPolicyType.Strict,
+            EntityType = "Order",
+            IsActive = true
+        };
+        _dbContext.DataIsolationPolicies.Add(strictPolicy);
+        _dbContext.SaveChanges();
+
+        var crossTenantStrictTask = _sut.CanAccessCrossTenantAsync(currentTenantId, targetTenantId, "Order");
+        crossTenantStrictTask.Wait();
+        var crossTenantStrictResult = crossTenantStrictTask.Result;
+        
+        crossTenantStrictResult.Should().BeFalse();
+
+        // Test cross-tenant access denied with relaxed policy but no allowed tenants
+        var relaxedPolicy = new DataIsolationPolicy
+        {
+            Id = Guid.NewGuid(),
+            TenantId = currentTenantId,
+            PolicyType = DataIsolationPolicyType.Relaxed,
+            EntityType = "Order",
+            IsActive = true
+        };
+        _dbContext.DataIsolationPolicies.Add(relaxedPolicy);
+        _dbContext.SaveChanges();
+
+        var crossTenantRelaxedNoneTask = _sut.CanAccessCrossTenantAsync(currentTenantId, targetTenantId, "Order");
+        crossTenantRelaxedNoneTask.Wait();
+        var crossTenantRelaxedNoneResult = crossTenantRelaxedNoneTask.Result;
+        
+        crossTenantRelaxedNoneResult.Should().BeFalse();
+
+        // Test cross-tenant access allowed with relaxed policy and allowed tenant
+        var relaxedWithAllowedPolicy = new DataIsolationPolicy
+        {
+            Id = Guid.NewGuid(),
+            TenantId = currentTenantId,
+            PolicyType = DataIsolationPolicyType.Relaxed,
+            EntityType = "Order",
+            AllowedCrossTenantAccess = $"{targetTenantId}",
+            IsActive = true
+        };
+        _dbContext.DataIsolationPolicies.Add(relaxedWithAllowedPolicy);
+        _dbContext.SaveChanges();
+
+        var crossTenantRelaxedAllowedTask = _sut.CanAccessCrossTenantAsync(currentTenantId, targetTenantId, "Order");
+        crossTenantRelaxedAllowedTask.Wait();
+        var crossTenantRelaxedAllowedResult = crossTenantRelaxedAllowedTask.Result;
+        
+        crossTenantRelaxedAllowedResult.Should().BeTrue();
+
+        // Test updating a policy with valid changes
+        var updatePolicy = new DataIsolationPolicy
+        {
+            Id = Guid.NewGuid(),
+            TenantId = Guid.NewGuid(),
+            PolicyType = DataIsolationPolicyType.Strict,
+            EntityType = "Order",
+            IsActive = true
+        };
+        _dbContext.DataIsolationPolicies.Add(updatePolicy);
+        _dbContext.SaveChanges();
+
+        var updateTask = _sut.UpdatePolicyAsync(updatePolicy.Id, p => p.Description = "Updated description");
+        updateTask.Wait();
+        var updateResult = updateTask.Result;
+        
+        updateResult.Should().NotBeNull();
+        updateResult.Description.Should().Be("Updated description");
+        var savedPolicy = _dbContext.DataIsolationPolicies.Find(updatePolicy.Id);
+        savedPolicy!.UpdatedAt.Should().BeAfter(savedPolicy.CreatedAt);
+
+        // Test deleting an existing policy
+        var deletePolicy = new DataIsolationPolicy
+        {
+            Id = Guid.NewGuid(),
+            TenantId = Guid.NewGuid(),
+            PolicyType = DataIsolationPolicyType.Strict,
+            EntityType = "Order",
+            IsActive = true
+        };
+        _dbContext.DataIsolationPolicies.Add(deletePolicy);
+        _dbContext.SaveChanges();
+
+        var deleteTask = _sut.DeletePolicyAsync(deletePolicy.Id);
+        deleteTask.Wait();
+        var deleteResult = deleteTask.Result;
+        
+        deleteResult.Should().BeTrue();
+        var deletedPolicy = _dbContext.DataIsolationPolicies.Find(deletePolicy.Id);
+        deletedPolicy.Should().BeNull();
+
+        // Test getting active policies returns only active policies
+        var activeTenantId = Guid.NewGuid();
+        var activePolicy1 = new DataIsolationPolicy
+        {
+            Id = Guid.NewGuid(),
+            TenantId = activeTenantId,
+            PolicyType = DataIsolationPolicyType.Strict,
+            EntityType = "Order",
+            IsActive = true
+        };
+        var activePolicy2 = new DataIsolationPolicy
+        {
+            Id = Guid.NewGuid(),
+            TenantId = activeTenantId,
+            PolicyType = DataIsolationPolicyType.Relaxed,
+            EntityType = "Customer",
+            IsActive = true
+        };
+        var inactivePolicy = new DataIsolationPolicy
+        {
+            Id = Guid.NewGuid(),
+            TenantId = activeTenantId,
+            PolicyType = DataIsolationPolicyType.Strict,
+            EntityType = "Product",
+            IsActive = false
+        };
+        _dbContext.DataIsolationPolicies.AddRange(activePolicy1, activePolicy2, inactivePolicy);
+        _dbContext.SaveChanges();
+
+        var getActiveTask = _sut.GetActivePoliciesAsync(activeTenantId);
+        getActiveTask.Wait();
+        var getActiveResult = getActiveTask.Result;
+        
+        getActiveResult.Should().HaveCount(2);
+        getActiveResult.Should().Contain(p => p.Id == activePolicy1.Id);
+        getActiveResult.Should().Contain(p => p.Id == activePolicy2.Id);
+        getActiveResult.Should().NotContain(p => p.Id == inactivePolicy.Id);
+
+        // Test setting a policy's active status updates the status correctly
+        var statusPolicy = new DataIsolationPolicy
+        {
+            Id = Guid.NewGuid(),
+            TenantId = Guid.NewGuid(),
+            PolicyType = DataIsolationPolicyType.Strict,
+            EntityType = "Order",
+            IsActive = true
+        };
+        _dbContext.DataIsolationPolicies.Add(statusPolicy);
+        _dbContext.SaveChanges();
+
+        var setActiveTask = _sut.SetPolicyActiveAsync(statusPolicy.Id, false);
+        setActiveTask.Wait();
+        var setActiveResult = setActiveTask.Result;
+        
+        setActiveResult.Should().BeTrue();
+        var savedStatusPolicy = _dbContext.DataIsolationPolicies.Find(statusPolicy.Id);
+        savedStatusPolicy!.IsActive.Should().BeFalse();
+
+        // Test setting a policy's priority updates the priority correctly
+        var priorityPolicy = new DataIsolationPolicy
+        {
+            Id = Guid.NewGuid(),
+            TenantId = Guid.NewGuid(),
+            PolicyType = DataIsolationPolicyType.Strict,
+            EntityType = "Order",
+            Priority = 100,
+            IsActive = true
+        };
+        _dbContext.DataIsolationPolicies.Add(priorityPolicy);
+        _dbContext.SaveChanges();
+
+        var setPriorityTask = _sut.SetPolicyPriorityAsync(priorityPolicy.Id, 50);
+        setPriorityTask.Wait();
+        var setPriorityResult = setPriorityTask.Result;
+        
+        setPriorityResult.Should().BeTrue();
+        var savedPriorityPolicy = _dbContext.DataIsolationPolicies.Find(priorityPolicy.Id);
+        savedPriorityPolicy!.Priority.Should().Be(50);
+
+        // Test checking policy violations returns empty list when no policy exists
+        var violationsTenantId = Guid.NewGuid();
+        var entityData = new { Id = 1, Name = "Test" };
+
+        var checkViolationsNoneTask = _sut.CheckPolicyViolationsAsync(violationsTenantId, "Order", entityData);
+        checkViolationsNoneTask.Wait();
+        var checkViolationsNoneResult = checkViolationsNoneTask.Result;
+        
+        checkViolationsNoneResult.Should().BeEmpty();
+
+        // Test checking policy violations returns violations for denied fields
+        var violationsPolicy = new DataIsolationPolicy
+        {
+            Id = Guid.NewGuid(),
+            TenantId = violationsTenantId,
+            PolicyType = DataIsolationPolicyType.Strict,
+            EntityType = "Order",
+            DeniedFields = "Amount,Total",
+            IsActive = true
+        };
+        _dbContext.DataIsolationPolicies.Add(violationsPolicy);
+        _dbContext.SaveChanges();
+
+        var violationEntityData = new { Id = 1, Amount = 100, Total = 200 };
+
+        var checkViolationsTask = _sut.CheckPolicyViolationsAsync(violationsTenantId, "Order", violationEntityData);
+        checkViolationsTask.Wait();
+        var checkViolationsResult = checkViolationsTask.Result;
+        
+        checkViolationsResult.Should().HaveCount(2);
+        checkViolationsResult.Should().Contain(item => item.Contains("Amount"));
+        checkViolationsResult.Should().Contain(item => item.Contains("Total"));
+
+        // Test exporting an existing policy returns JSON
+        var exportPolicy = new DataIsolationPolicy
+        {
+            Id = Guid.NewGuid(),
+            TenantId = Guid.NewGuid(),
+            PolicyType = DataIsolationPolicyType.Strict,
+            EntityType = "Order",
+            IsActive = true
+        };
+        _dbContext.DataIsolationPolicies.Add(exportPolicy);
+        _dbContext.SaveChanges();
+
+        var exportTask = _sut.ExportPolicyAsync(exportPolicy.Id);
+        exportTask.Wait();
+        var exportResult = exportTask.Result;
+        
+        exportResult.Should().NotBeNullOrEmpty();
+        exportResult.Should().Contain("Order");
+    }
+}
+```
