@@ -5769,6 +5769,83 @@ public class TenantCleanupWorkerTestsExample
     }
 }
 ```
+
+## TenantCleanupWorkerJsonExtensionsTests
+
+The `TenantCleanupWorkerJsonExtensionsTests` class provides unit tests for the JSON serialization and deserialization extension methods of the `TenantCleanupWorker` class. It validates that the `ToJson` and `FromJson` methods correctly handle serialization, deserialization, null checks, and error conditions using FluentAssertions for expressive test assertions.
+
+**Usage example**
+
+```csharp
+using FluentAssertions;
+using TenantIsolation.BackgroundTasks;
+using TenantIsolation.Tests;
+using Xunit;
+
+public class TenantCleanupWorkerJsonExtensionsTestsExample
+{
+    private readonly TenantCleanupWorkerJsonExtensionsTests _tenantCleanupWorkerJsonExtensionsTests;
+
+    public TenantCleanupWorkerJsonExtensionsTestsExample()
+    {
+        _tenantCleanupWorkerJsonExtensionsTests = new TenantCleanupWorkerJsonExtensionsTests();
+    }
+
+    public void RunTenantCleanupWorkerJsonExtensionsTests()
+    {
+        // Test ToJson with valid worker returns non-empty JSON string
+        _tenantCleanupWorkerJsonExtensionsTests.ToJson_WithValidWorker_ReturnsNonEmptyJsonString();
+        
+        // Test ToJson with indented true returns formatted JSON
+        _tenantCleanupWorkerJsonExtensionsTests.ToJson_WithIndentedTrue_ReturnsFormattedJson();
+        
+        // Test ToJson with indented false returns compact JSON
+        _tenantCleanupWorkerJsonExtensionsTests.ToJson_WithIndentedFalse_ReturnsCompactJson();
+        
+        // Test ToJson with null worker throws ArgumentNullException
+        _tenantCleanupWorkerJsonExtensionsTests.ToJson_WithNullWorker_ThrowsArgumentNullException();
+        
+        // Test FromJson with valid JSON returns worker instance
+        _tenantCleanupWorkerJsonExtensionsTests.FromJson_WithValidJson_ReturnsWorkerInstance();
+        
+        // Test FromJson with empty string returns null
+        _tenantCleanupWorkerJsonExtensionsTests.FromJson_WithEmptyString_ReturnsNull();
+        
+        // Test FromJson with whitespace string returns null
+        _tenantCleanupWorkerJsonExtensionsTests.FromJson_WithWhitespaceString_ReturnsNull();
+        
+        // Test FromJson with null string throws ArgumentNullException
+        _tenantCleanupWorkerJsonExtensionsTests.FromJson_WithNullString_ThrowsArgumentNullException();
+        
+        // Test FromJson with invalid JSON throws JsonException
+        _tenantCleanupWorkerJsonExtensionsTests.FromJson_WithInvalidJson_ThrowsJsonException();
+        
+        // Test TryFromJson with valid JSON returns true and worker instance
+        _tenantCleanupWorkerJsonExtensionsTests.TryFromJson_WithValidJson_ReturnsTrueAndWorkerInstance();
+        
+        // Test TryFromJson with empty string returns false and null
+        _tenantCleanupWorkerJsonExtensionsTests.TryFromJson_WithEmptyString_ReturnsFalseAndNull();
+        
+        // Test TryFromJson with whitespace string returns false and null
+        _tenantCleanupWorkerJsonExtensionsTests.TryFromJson_WithWhitespaceString_ReturnsFalseAndNull();
+        
+        // Test TryFromJson with null string throws ArgumentNullException
+        _tenantCleanupWorkerJsonExtensionsTests.TryFromJson_WithNullString_ThrowsArgumentNullException();
+        
+        // Test TryFromJson with invalid JSON returns false and null
+        _tenantCleanupWorkerJsonExtensionsTests.TryFromJson_WithInvalidJson_ReturnsFalseAndNull();
+        
+        // Test roundtrip serialization preserves all properties
+        _tenantCleanupWorkerJsonExtensionsTests.RoundtripSerialization_PreservesAllProperties();
+        
+        // Test roundtrip serialization with TryFromJson preserves all properties
+        _tenantCleanupWorkerJsonExtensionsTests.RoundtripSerialization_WithTryFromJson_PreservesAllProperties();
+        
+        // Test JSON uses camelCase naming policy
+        _tenantCleanupWorkerJsonExtensionsTests.JsonUsesCamelCaseNamingPolicy();
+    }
+}
+```
 ## TenantFeatureServiceTests
 
 The `TenantFeatureServiceTests` class provides unit tests for the `TenantFeatureService` class, validating feature flag operations such as enabling, disabling, and checking feature availability for tenants. It uses asynchronous test methods to verify the service behavior under various scenarios.
