@@ -5812,3 +5812,93 @@ public class TenantFeatureServiceTestsExample
     }
 }
 ```
+
+## BackgroundTaskQueueTests
+
+The `BackgroundTaskQueueTests` class provides comprehensive unit test coverage for the `BackgroundTaskQueue` class, validating all background task queue functionality including task queuing, dequeuing, priority handling, cancellation, timeout behavior, and statistics tracking. It uses FluentAssertions for expressive test assertions and Xunit for test discovery.
+
+**Key capabilities:**
+- Test task queuing with null and valid tasks
+- Validate dequeuing behavior with empty queues, available items, and timeouts
+- Verify priority-based task processing (lowest priority value first)
+- Test cancellation token handling and concurrent producer scenarios
+- Validate statistics tracking for pending, completed, failed, and running tasks
+- Test task completion recording and running count management
+
+**Public members tested:**
+- `QueueTask(BackgroundTask?)` - Queues a background task for processing
+- `DequeueAsync(CancellationToken)` - Asynchronously dequeues a background task
+- `GetStatistics()` - Returns current queue statistics
+- `RecordTaskCompletion(long, bool)` - Records task execution time and success/failure
+- `IncrementRunningCount()` - Increments the running task count
+- `DecrementRunningCount()` - Decrements the running task count
+
+**Usage example**
+
+```csharp
+using System;
+using System.Threading;
+using System.Threading.Tasks;
+using FluentAssertions;
+using TenantIsolation.BackgroundTasks;
+using TenantIsolation.Tests;
+using Xunit;
+
+public class BackgroundTaskQueueTestsExample
+{
+    private readonly BackgroundTaskQueueTests _backgroundTaskQueueTests;
+
+    public BackgroundTaskQueueTestsExample()
+    {
+        _backgroundTaskQueueTests = new BackgroundTaskQueueTests();
+    }
+
+    public void RunBackgroundTaskQueueTests()
+    {
+        // Test queuing a null task throws exception
+        _backgroundTaskQueueTests.QueueTask_WithNullTask_ThrowsArgumentNullException();
+        
+        // Test queuing a valid task adds to queue
+        _backgroundTaskQueueTests.QueueTask_WithValidTask_AddsToQueueAndSignals();
+        
+        // Test dequeuing with empty queue waits until timeout
+        _backgroundTaskQueueTests.DequeueAsync_WithEmptyQueue_WaitsUntilItemAvailable().GetAwaiter().GetResult();
+        
+        // Test dequeuing with item available returns immediately
+        _backgroundTaskQueueTests.DequeueAsync_WithItemAvailable_ReturnsTaskImmediately().GetAwaiter().GetResult();
+        
+        // Test dequeuing multiple tasks returns in priority order
+        _backgroundTaskQueueTests.DequeueAsync_WithMultipleTasks_ReturnsTasksInPriorityOrder().GetAwaiter().GetResult();
+        
+        // Test dequeuing with cancellation token cancels waiting
+        _backgroundTaskQueueTests.DequeueAsync_WithCancellationToken_CancelsWaitingOperation().GetAwaiter().GetResult();
+        
+        // Test dequeuing with concurrent producers handles correctly
+        _backgroundTaskQueueTests.DequeueAsync_WithConcurrentProducers_HandlesCorrectly().GetAwaiter().GetResult();
+        
+        // Test dequeuing with timeout returns null
+        _backgroundTaskQueueTests.DequeueAsync_WithTimeout_ReturnsNullWhenTimeout().GetAwaiter().GetResult();
+        
+        // Test statistics with empty queue returns zero values
+        _backgroundTaskQueueTests.GetStatistics_WithEmptyQueue_ReturnsZeroValues();
+        
+        // Test statistics with tasks returns correct counts
+        _backgroundTaskQueueTests.GetStatistics_WithTasks_ReturnsCorrectCounts();
+        
+        // Test recording task completion updates counts and average time
+        _backgroundTaskQueueTests.RecordTaskCompletion_RecordsExecutionTimeAndUpdatesCounts().GetAwaiter().GetResult();
+        
+        // Test increment/decrement running count updates running tasks
+        _backgroundTaskQueueTests.IncrementRunningCount_And_DecrementRunningCount_UpdatesRunningTasks();
+        
+        // Test queuing different priorities processes in correct order
+        _backgroundTaskQueueTests.QueueTask_WithDifferentPriorities_ProcessesInCorrectOrder().GetAwaiter().GetResult();
+        
+        // Test dequeuing after queueing task returns without waiting
+        _backgroundTaskQueueTests.DequeueAsync_AfterQueueTask_ReturnsTaskWithoutWaiting().GetAwaiter().GetResult();
+        
+        // Test multiple dequeue calls return all tasks
+        _backgroundTaskQueueTests.MultipleDequeueAsyncCalls_WithSufficientTasks_ReturnsAllTasks().GetAwaiter().GetResult();
+    }
+}
+```
