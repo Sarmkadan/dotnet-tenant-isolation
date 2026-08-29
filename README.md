@@ -6652,4 +6652,130 @@ public class DataIsolationServiceTestsExample
         exportResult.Should().Contain("Order");
     }
 }
+
+## TenantIsolationExceptionExtensionsTests
+
+The `TenantIsolationExceptionExtensionsTests` class provides comprehensive unit test coverage for the `TenantIsolationExceptionExtensions` class, validating extension methods for adding error details, error codes, context, and retrieving tenant information from tenant isolation exceptions. It uses FluentAssertions for expressive test assertions and Xunit for test discovery.
+
+**Key capabilities:**
+- Test adding single and multiple error details to exceptions with and without existing details
+- Validate updating existing error detail keys and proper null argument handling
+- Test creating new exceptions with different error codes while preserving original properties
+- Verify context appending to exception messages and inclusion in Data dictionary
+- Confirm tenant ID and entity type retrieval from derived exception types
+- Validate proper ArgumentNullException throwing for null inputs
+
+**Public members tested:**
+- `WithDetail(string key, object? value)` - Adds or updates an error detail entry
+- `WithDetails(Dictionary<string, object?> details)` - Adds multiple error details at once
+- `WithErrorCode(string newErrorCode)` - Creates a new exception with a different error code
+- `WithContext(string context)` - Creates a new exception with additional context appended to the message
+- `TryGetTenantId(out Guid tenantId)` - Gets the tenant ID for TenantNotActiveException and DataIsolationViolationException
+- `TryGetEntityType(out string? entityType)` - Gets the entity type for DataIsolationViolationException
+
+**Usage example**
+
+```csharp
+using System;
+using System.Collections.Generic;
+using FluentAssertions;
+using TenantIsolation.Exceptions;
+using Xunit;
+
+public class TenantIsolationExceptionExtensionsTestsExample
+{
+    public void RunTenantIsolationExceptionExtensionsTests()
+    {
+        // Test WithDetail adds detail to exception with no details
+        var exception = new TenantIsolationException("Test message");
+        var result = exception.WithDetail("testKey", "testValue");
+        
+        result.Should().BeSameAs(exception); // Should return same instance for chaining
+        exception.ErrorDetails.Should().NotBeNull();
+        exception.ErrorDetails.Should().HaveCount(1);
+        exception.ErrorDetails.Should().ContainKey("testKey");
+        exception.ErrorDetails["testKey"].Should().Be("testValue");
+        
+        // Test WithDetail adds to existing dictionary
+        exception.WithDetail("existingKey", "existingValue");
+        result = exception.WithDetail("newKey", "newValue");
+        
+        result.Should().BeSameAs(exception);
+        exception.ErrorDetails.Should().HaveCount(2);
+        exception.ErrorDetails.Should().ContainKey("newKey");
+        exception.ErrorDetails["newKey"].Should().Be("newValue");
+        
+        // Test WithDetail updates existing key
+        result = exception.WithDetail("existingKey", "updatedValue");
+        
+        result.Should().BeSameAs(exception);
+        exception.ErrorDetails.Should().ContainKey("existingKey");
+        exception.ErrorDetails["existingKey"].Should().Be("updatedValue");
+        
+        // Test WithDetails adds multiple details at once
+        var details = new Dictionary<string, object?>
+        {
+            { "key1", "value1" },
+            { "key2", 123 },
+            { "key3", null }
+        };
+        
+        exception = new TenantIsolationException("Test message");
+        result = exception.WithDetails(details);
+        
+        result.Should().BeSameAs(exception);
+        exception.ErrorDetails.Should().NotBeNull();
+        exception.ErrorDetails.Should().HaveCount(3);
+        exception.ErrorDetails.Should().ContainKeys("key1", "key2", "key3");
+        exception.ErrorDetails["key1"].Should().Be("value1");
+        exception.ErrorDetails["key2"].Should().Be(123);
+        exception.ErrorDetails["key3"].Should().BeNull();
+        
+        // Test WithErrorCode creates new exception with new error code
+        var originalException = new TenantIsolationException("Original message", "ORIGINAL_CODE");
+        originalException.WithDetail("detail", "value");
+        var newErrorCode = "NEW_ERROR_CODE";
+        
+        var resultException = originalException.WithErrorCode(newErrorCode);
+        
+        resultException.Should().NotBeSameAs(originalException); // Should return new instance
+        resultException.ErrorCode.Should().Be(newErrorCode);
+        resultException.Message.Should().Be("Original message");
+        resultException.ErrorDetails.Should().NotBeNull();
+        resultException.ErrorDetails.Should().HaveCount(1);
+        resultException.ErrorDetails.Should().ContainKey("detail");
+        resultException.ErrorDetails["detail"].Should().Be("value");
+        
+        // Test WithContext creates new exception with appended context
+        var contextException = new TenantIsolationException("Original message", "ORIGINAL_CODE");
+        var context = "Additional context information";
+        
+        var contextResult = contextException.WithContext(context);
+        
+        contextResult.Should().NotBeSameAs(contextException); // Should return new instance
+        contextResult.Message.Should().Be("Original message Additional context information");
+        contextResult.ErrorCode.Should().Be("ORIGINAL_CODE");
+        contextResult.Data.Should().NotBeNull();
+        contextResult.Data.Should().ContainKey("Context");
+        contextResult.Data["Context"].Should().Be(context);
+        
+        // Test TryGetTenantId returns true for TenantNotActiveException
+        var tenantId = Guid.NewGuid();
+        var notActiveException = new TenantNotActiveException(tenantId, "Inactive");
+        
+        var tenantIdResult = notActiveException.TryGetTenantId(out var retrievedTenantId);
+        
+        tenantIdResult.Should().BeTrue();
+        retrievedTenantId.Should().Be(tenantId);
+        
+        // Test TryGetTenantId returns false for base TenantIsolationException
+        var baseException = new TenantIsolationException("Test message");
+        
+        var baseResult = baseException.TryGetTenantId(out var baseTenantId);
+        
+        baseResult.Should().BeFalse();
+        baseTenantId.Should().Be(Guid.Empty);
+    }
+}
+```
 ```
