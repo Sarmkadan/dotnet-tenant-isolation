@@ -72,6 +72,13 @@ public interface IExportService
 /// </summary>
 public class ExportService : IExportService
 {
+    private static readonly Dictionary<ExportFormat, (string ContentType, string Extension)> FormatMetadata = new()
+    {
+        [ExportFormat.Json] = ("application/json", "json"),
+        [ExportFormat.Csv] = ("text/csv", "csv"),
+        [ExportFormat.Xml] = ("application/xml", "xml")
+    };
+
     private readonly ILogger<ExportService> _logger;
 
     public ExportService(ILogger<ExportService> logger)
@@ -79,7 +86,7 @@ public class ExportService : IExportService
         _logger = logger;
     }
 
-    public async Task<ExportResult> ExportAsync(ExportRequest request, List<object> data)
+    public Task<ExportResult> ExportAsync(ExportRequest request, List<object> data)
     {
         if (request == null)
             throw new ArgumentNullException(nameof(request));
@@ -107,7 +114,7 @@ public class ExportService : IExportService
         };
 
         _logger.LogInformation("Export completed. File size: {SizeBytes} bytes", result.SizeBytes);
-        return await Task.FromResult(result);
+        return Task.FromResult(result);
     }
 
     public IEnumerable<ExportFormat> GetSupportedFormats(string resourceType)
@@ -118,7 +125,7 @@ public class ExportService : IExportService
     /// <summary>
     /// Export data to JSON format
     /// </summary>
-    private byte[] ExportToJson(List<object> data, List<string>? includeFields)
+    private static byte[] ExportToJson(List<object> data, List<string>? includeFields)
     {
         var json = JsonSerializer.Serialize(data, new JsonSerializerOptions { WriteIndented = true });
         return Encoding.UTF8.GetBytes(json);
@@ -127,7 +134,7 @@ public class ExportService : IExportService
     /// <summary>
     /// Export data to CSV format
     /// </summary>
-    private byte[] ExportToCsv(List<object> data, List<string>? includeFields)
+    private static byte[] ExportToCsv(List<object> data, List<string>? includeFields)
     {
         if (data.Count == 0)
             return Array.Empty<byte>();
@@ -158,7 +165,7 @@ public class ExportService : IExportService
     /// <summary>
     /// Export data to XML format
     /// </summary>
-    private byte[] ExportToXml(List<object> data, string rootElementName, List<string>? includeFields)
+    private static byte[] ExportToXml(List<object> data, string rootElementName, List<string>? includeFields)
     {
         var root = new XElement(rootElementName);
 
@@ -205,30 +212,22 @@ public class ExportService : IExportService
     /// <summary>
     /// Get content type for format
     /// </summary>
-    private string GetContentType(ExportFormat format)
+    private static string GetContentType(ExportFormat format)
     {
-        return format switch
-        {
-            ExportFormat.Json => "application/json",
-            ExportFormat.Csv => "text/csv",
-            ExportFormat.Xml => "application/xml",
-            _ => "application/octet-stream"
-        };
+        return FormatMetadata.TryGetValue(format, out var metadata)
+            ? metadata.ContentType
+            : "application/octet-stream";
     }
 
     /// <summary>
     /// Generate filename for export
     /// </summary>
-    private string GenerateFileName(string resourceType, ExportFormat format)
+    private static string GenerateFileName(string resourceType, ExportFormat format)
     {
         var timestamp = DateTime.UtcNow.ToString("yyyyMMdd_HHmmss");
-        var extension = format switch
-        {
-            ExportFormat.Json => "json",
-            ExportFormat.Csv => "csv",
-            ExportFormat.Xml => "xml",
-            _ => "txt"
-        };
+        var extension = FormatMetadata.TryGetValue(format, out var metadata)
+            ? metadata.Extension
+            : "txt";
 
         return $"{resourceType}_{timestamp}.{extension}";
     }
