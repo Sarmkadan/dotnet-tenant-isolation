@@ -6778,4 +6778,69 @@ public class TenantIsolationExceptionExtensionsTestsExample
     }
 }
 ```
+## TenantIsolationExceptionValidationTests
+
+The `TenantIsolationExceptionValidationTests` class provides comprehensive unit test coverage for validation methods on tenant isolation exception types (`TenantIsolationException`, `TenantNotResolvedException`, `TenantNotActiveException`, `TenantConfigurationException`, `DataIsolationViolationException`, `TenantDatabaseException`). It validates the `Validate()`, `IsValid()`, and `EnsureValid()` extension methods that check exception invariants such as non-empty error codes, non-empty error details dictionaries, and valid GUIDs/strings. It uses FluentAssertions for expressive test assertions and Xunit for test discovery.
+
+**Public members tested:**
+- `Validate()` - Returns list of validation errors (empty if valid)
+- `IsValid()` - Returns boolean indicating if exception is valid
+- `EnsureValid()` - Throws ArgumentException if invalid, ArgumentNullException if null
+
+**Usage example**
+
+```csharp
+using System;
+using System.Collections.Generic;
+using FluentAssertions;
+using TenantIsolation.Exceptions;
+using Xunit;
+
+public class TenantIsolationExceptionValidationTestsExample
+{
+    public void RunTenantIsolationExceptionValidationTests()
+    {
+        // Test Validate returns empty list for valid exception
+        var validException = new TenantIsolationException("Test message", "TEST_CODE")
+        {
+            ErrorDetails = new Dictionary<string, object?> { { "key1", "value1" } }
+        };
+        
+        var validationResult = validException.Validate();
+        validationResult.Should().BeEmpty();
+        
+        // Test Validate returns error for empty error code
+        var invalidException = new TenantIsolationException("Test message")
+        {
+            ErrorCode = ""
+        };
+        
+        validationResult = invalidException.Validate();
+        validationResult.Should().HaveCount(1);
+        validationResult.Should().Contain("ErrorCode cannot be an empty string");
+        
+        // Test IsValid returns true for valid exception
+        var isValidResult = validException.IsValid();
+        isValidResult.Should().BeTrue();
+        
+        // Test IsValid returns false for invalid exception
+        isValidResult = invalidException.IsValid();
+        isValidResult.Should().BeFalse();
+        
+        // Test EnsureValid does not throw for valid exception
+        Action validAction = () => validException.EnsureValid();
+        validAction.Should().NotThrow();
+        
+        // Test EnsureValid throws ArgumentException for invalid exception
+        Action invalidAction = () => invalidException.EnsureValid();
+        invalidAction.Should().Throw<ArgumentException>()
+            .WithMessage("*ErrorCode cannot be an empty string*");
+        
+        // Test EnsureValid throws ArgumentNullException for null input
+        TenantIsolationException? nullException = null;
+        Action nullAction = () => nullException!.EnsureValid();
+        nullAction.Should().Throw<ArgumentNullException>();
+    }
+}
+```
 ```
