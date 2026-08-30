@@ -5,6 +5,7 @@
 // CTO & Software Architect
 // =============================================================================
 
+using System.Diagnostics;
 using System.Text;
 using System.Text.Json;
 using System.Xml.Linq;
@@ -91,16 +92,35 @@ public class ExportService : IExportService
         if (request == null)
             throw new ArgumentNullException(nameof(request));
 
-        _logger.LogInformation("Exporting {Count} {ResourceType} records in {Format} format for tenant {TenantId}",
+        var stopwatch = Stopwatch.StartNew();
+
+        _logger.LogDebug("Exporting {Count} {ResourceType} records in {Format} format for tenant {TenantId}",
             data.Count, request.ResourceType, request.Format, request.TenantId);
 
-        var content = request.Format switch
+        if (data.Count == 0)
         {
-            ExportFormat.Json => ExportToJson(data, request.IncludeFields),
-            ExportFormat.Csv => ExportToCsv(data, request.IncludeFields),
-            ExportFormat.Xml => ExportToXml(data, request.ResourceType, request.IncludeFields),
-            _ => throw new NotSupportedException($"Format {request.Format} is not supported")
-        };
+            _logger.LogWarning("Export data is empty for tenant {TenantId} and resource type {ResourceType}",
+                request.TenantId, request.ResourceType);
+        }
+
+        byte[] content;
+        try
+        {
+            content = request.Format switch
+            {
+                ExportFormat.Json => ExportToJson(data, request.IncludeFields),
+                ExportFormat.Csv => ExportToCsv(data, request.IncludeFields),
+                ExportFormat.Xml => ExportToXml(data, request.ResourceType, request.IncludeFields),
+                _ => throw new NotSupportedException($"Format {request.Format} is not supported")
+            };
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex,
+                "Export conversion failed for tenant {TenantId}, resource type {ResourceType}, and format {Format}",
+                request.TenantId, request.ResourceType, request.Format);
+            throw;
+        }
 
         var result = new ExportResult
         {
@@ -113,7 +133,10 @@ public class ExportService : IExportService
             SizeBytes = content.Length
         };
 
-        _logger.LogInformation("Export completed. File size: {SizeBytes} bytes", result.SizeBytes);
+        stopwatch.Stop();
+        _logger.LogInformation(
+            "Export {ExportId} completed for tenant {TenantId} in {Format} format with {SizeBytes} bytes in {ElapsedMilliseconds} ms",
+            result.Id, result.TenantId, result.Format, result.SizeBytes, stopwatch.ElapsedMilliseconds);
         return Task.FromResult(result);
     }
 
