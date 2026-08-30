@@ -23,6 +23,17 @@ public class RateLimitingMiddleware
     private readonly RateLimitOptions _options;
     private readonly ConcurrentDictionary<string, RateLimitBucket> _buckets;
 
+    private const string HealthPath = "/health";
+    private const string TenantIdKey = "TenantId";
+    private const string AnonymousTenantId = "anonymous";
+    private const string UnknownIp = "unknown";
+    private const string RetryAfterHeader = "Retry-After";
+    private const string RateLimitLimitHeader = "X-RateLimit-Limit";
+    private const string RateLimitRemainingHeader = "X-RateLimit-Remaining";
+    private const string RateLimitResetHeader = "X-RateLimit-Reset";
+    private const string JsonContentType = "application/json";
+    private const string RateLimitExceededCode = "RATE_LIMIT_EXCEEDED";
+
     public RateLimitingMiddleware(RequestDelegate next, ILogger<RateLimitingMiddleware> logger, RateLimitOptions? options = null)
     {
         _next = next;
@@ -39,14 +50,14 @@ public class RateLimitingMiddleware
         _logger.LogInformation("InvokeAsync called with {ContextPath}", context.Request.Path);
 
         // Skip rate limiting for health check endpoints
-        if (context.Request.Path.StartsWithSegments("/health"))
+        if (context.Request.Path.StartsWithSegments(HealthPath))
         {
             await _next(context);
             return;
         }
 
-        var tenantId = context.Items.ContainsKey("TenantId") ? context.Items["TenantId"]?.ToString() : "anonymous";
-        var remoteIp = context.Connection.RemoteIpAddress?.ToString() ?? "unknown";
+        var tenantId = context.Items.ContainsKey(TenantIdKey) ? context.Items[TenantIdKey]?.ToString() : AnonymousTenantId;
+        var remoteIp = context.Connection.RemoteIpAddress?.ToString() ?? UnknownIp;
         var key = $"{tenantId}:{remoteIp}";
 
         var bucket = _buckets.GetOrAdd(key, _ => new RateLimitBucket(_options.RequestsPerMinute));
@@ -58,19 +69,19 @@ public class RateLimitingMiddleware
                 key, bucket.RequestCount, _options.RequestsPerMinute);
 
             context.Response.StatusCode = (int)HttpStatusCode.TooManyRequests;
-            context.Response.Headers.Add("Retry-After", _options.RetryAfterSeconds.ToString());
-            context.Response.ContentType = "application/json";
+            context.Response.Headers.Add(RetryAfterHeader, _options.RetryAfterSeconds.ToString());
+            context.Response.ContentType = JsonContentType;
 
-            var errorMessage = new { code = "RATE_LIMIT_EXCEEDED", message = "Too many requests. Please try again later." };
+            var errorMessage = new { code = RateLimitExceededCode, message = "Too many requests. Please try again later." };
             var json = System.Text.Json.JsonSerializer.Serialize(errorMessage);
             await context.Response.WriteAsync(json);
             return;
         }
 
         // Add rate limit headers to response
-        context.Response.Headers.Add("X-RateLimit-Limit", _options.RequestsPerMinute.ToString());
-        context.Response.Headers.Add("X-RateLimit-Remaining", bucket.RemainingTokens.ToString());
-        context.Response.Headers.Add("X-RateLimit-Reset", bucket.ResetTime.ToString("O"));
+        context.Response.Headers.Add(RateLimitLimitHeader, _options.RequestsPerMinute.ToString());
+        context.Response.Headers.Add(RateLimitRemainingHeader, bucket.RemainingTokens.ToString());
+        context.Response.Headers.Add(RateLimitResetHeader, bucket.ResetTime.ToString("O"));
 
         await _next(context);
         _logger.LogInformation("InvokeAsync finished for {ContextPath}", context.Request.Path);
