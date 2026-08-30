@@ -22,6 +22,8 @@ public static class CryptographyUtility
     /// </summary>
     public static string GenerateSha256Hash(string input)
     {
+        ArgumentNullException.ThrowIfNull(input);
+
         if (string.IsNullOrEmpty(input))
             return string.Empty;
 
@@ -35,6 +37,8 @@ public static class CryptographyUtility
     /// </summary>
     public static string GenerateSha512Hash(string input)
     {
+        ArgumentNullException.ThrowIfNull(input);
+
         if (string.IsNullOrEmpty(input))
             return string.Empty;
 
@@ -48,6 +52,8 @@ public static class CryptographyUtility
     /// </summary>
     public static string GenerateSecureToken(int lengthInBytes = 32)
     {
+        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(lengthInBytes);
+
         using var rng = RandomNumberGenerator.Create();
         var tokenData = new byte[lengthInBytes];
         rng.GetBytes(tokenData);
@@ -60,6 +66,9 @@ public static class CryptographyUtility
     /// </summary>
     public static string GenerateHmacSha256(string message, string secretKey)
     {
+        ArgumentNullException.ThrowIfNull(message);
+        ArgumentNullException.ThrowIfNull(secretKey);
+
         if (string.IsNullOrEmpty(message) || string.IsNullOrEmpty(secretKey))
             return string.Empty;
 
@@ -73,6 +82,10 @@ public static class CryptographyUtility
     /// </summary>
     public static bool VerifyHmacSha256(string message, string signature, string secretKey)
     {
+        ArgumentNullException.ThrowIfNull(message);
+        ArgumentNullException.ThrowIfNull(signature);
+        ArgumentNullException.ThrowIfNull(secretKey);
+
         System.ArgumentException.ThrowIfNullOrEmpty(signature, nameof(signature));
         var expectedSignature = GenerateHmacSha256(message, secretKey);
         return CryptographicOperations.FixedTimeEquals(
@@ -87,6 +100,8 @@ public static class CryptographyUtility
     /// </summary>
     public static string GenerateRandomString(int length = 16, bool includeSpecialChars = false)
     {
+        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(length);
+
         var characters = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
         if (includeSpecialChars)
             characters += "!@#$%^&*()-_=+";
@@ -110,6 +125,8 @@ public static class CryptographyUtility
     /// </summary>
     public static string GenerateRandomNumericCode(int length = 6)
     {
+        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(length);
+
         using var rng = RandomNumberGenerator.Create();
         var result = new StringBuilder(length);
         var buffer = new byte[4];
@@ -129,6 +146,9 @@ public static class CryptographyUtility
     /// </summary>
     public static string EncryptAes256(string plainText, string key)
     {
+        ArgumentNullException.ThrowIfNull(plainText);
+        ArgumentNullException.ThrowIfNull(key);
+
         if (string.IsNullOrEmpty(plainText) || string.IsNullOrEmpty(key))
             return string.Empty;
 
@@ -168,6 +188,9 @@ public static class CryptographyUtility
     /// </summary>
     public static string DecryptAes256(string cipherText, string key)
     {
+        ArgumentNullException.ThrowIfNull(cipherText);
+        ArgumentNullException.ThrowIfNull(key);
+
         if (string.IsNullOrEmpty(cipherText) || string.IsNullOrEmpty(key))
             return string.Empty;
 
@@ -214,6 +237,9 @@ public static class CryptographyUtility
     public static string ComputeFingerprint(params string[] inputs)
     {
         System.ArgumentNullException.ThrowIfNull(inputs, nameof(inputs));
+        if (inputs.Length == 0)
+            throw new ArgumentException("At least one input is required.", nameof(inputs));
+
         var combined = string.Concat(inputs);
         return GenerateSha256Hash(combined);
     }
@@ -224,6 +250,8 @@ public static class CryptographyUtility
     /// </summary>
     public static (string Hash, string Salt) HashPassword(string password)
     {
+        ArgumentNullException.ThrowIfNull(password);
+
         System.ArgumentException.ThrowIfNullOrEmpty(password, nameof(password));
         using var rng = RandomNumberGenerator.Create();
         var salt = new byte[16];
@@ -244,6 +272,10 @@ public static class CryptographyUtility
     /// </summary>
     public static bool VerifyPassword(string password, string hash, string salt)
     {
+        ArgumentNullException.ThrowIfNull(password);
+        ArgumentNullException.ThrowIfNull(hash);
+        ArgumentNullException.ThrowIfNull(salt);
+
         System.ArgumentException.ThrowIfNullOrEmpty(password, nameof(password));
         System.ArgumentException.ThrowIfNullOrEmpty(hash, nameof(hash));
         System.ArgumentException.ThrowIfNullOrEmpty(salt, nameof(salt));
