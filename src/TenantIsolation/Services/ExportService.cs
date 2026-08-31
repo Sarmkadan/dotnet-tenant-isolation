@@ -6,6 +6,7 @@
 // =============================================================================
 
 using System.Diagnostics;
+using System.IO.Compression;
 using System.Text;
 using System.Text.Json;
 using System.Xml.Linq;
@@ -33,6 +34,8 @@ public class ExportRequest
     public ExportFormat Format { get; set; } = ExportFormat.Json;
     public Dictionary<string, object>? Filters { get; set; }
     public List<string>? IncludeFields { get; set; }
+    public int? MaxRecords { get; set; }
+    public bool Compress { get; set; }
 }
 
 /// <summary>
@@ -92,6 +95,15 @@ public class ExportService : IExportService
         if (request == null)
             throw new ArgumentNullException(nameof(request));
 
+        if (string.IsNullOrWhiteSpace(request.ResourceType))
+            throw new ArgumentException("Resource type must be provided.", nameof(request));
+
+        if (request.MaxRecords.HasValue && data.Count > request.MaxRecords.Value)
+        {
+            throw new InvalidOperationException(
+                $"Export contains {data.Count} records, which exceeds the maximum of {request.MaxRecords.Value} records.");
+        }
+
         var stopwatch = Stopwatch.StartNew();
 
         _logger.LogDebug("Exporting {Count} {ResourceType} records in {Format} format for tenant {TenantId}",
@@ -113,6 +125,9 @@ public class ExportService : IExportService
                 ExportFormat.Xml => ExportToXml(data, request.ResourceType, request.IncludeFields),
                 _ => throw new NotSupportedException($"Format {request.Format} is not supported")
             };
+
+            if (request.Compress)
+                content = CompressContent(content);
         }
         catch (Exception ex)
         {
@@ -128,8 +143,8 @@ public class ExportService : IExportService
             ResourceType = request.ResourceType,
             Format = request.Format,
             Content = content,
-            ContentType = GetContentType(request.Format),
-            FileName = GenerateFileName(request.ResourceType, request.Format),
+            ContentType = request.Compress ? "application/gzip" : GetContentType(request.Format),
+            FileName = GenerateFileName(request.ResourceType, request.Format) + (request.Compress ? ".gz" : string.Empty),
             SizeBytes = content.Length
         };
 
@@ -230,6 +245,17 @@ public class ExportService : IExportService
         }
 
         return field;
+    }
+
+    private static byte[] CompressContent(byte[] content)
+    {
+        using var output = new MemoryStream();
+        using (var gzip = new GZipStream(output, CompressionLevel.Optimal, leaveOpen: true))
+        {
+            gzip.Write(content, 0, content.Length);
+        }
+
+        return output.ToArray();
     }
 
     /// <summary>
