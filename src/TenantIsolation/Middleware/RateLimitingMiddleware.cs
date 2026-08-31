@@ -33,6 +33,7 @@ public class RateLimitingMiddleware
     private const string RateLimitResetHeader = "X-RateLimit-Reset";
     private const string JsonContentType = "application/json";
     private const string RateLimitExceededCode = "RATE_LIMIT_EXCEEDED";
+    private const int BucketCleanupThreshold = 1_000;
 
     public RateLimitingMiddleware(RequestDelegate next, ILogger<RateLimitingMiddleware> logger, RateLimitOptions? options = null)
     {
@@ -60,6 +61,7 @@ public class RateLimitingMiddleware
         var remoteIp = context.Connection.RemoteIpAddress?.ToString() ?? UnknownIp;
         var key = $"{tenantId}:{remoteIp}";
 
+        CleanupExpiredBuckets();
         var bucket = _buckets.GetOrAdd(key, _ => new RateLimitBucket(_options.RequestsPerMinute));
 
         // Check if rate limit exceeded
@@ -69,7 +71,7 @@ public class RateLimitingMiddleware
                 key, bucket.RequestCount, _options.RequestsPerMinute);
 
             context.Response.StatusCode = (int)HttpStatusCode.TooManyRequests;
-            context.Response.Headers.Add(RetryAfterHeader, _options.RetryAfterSeconds.ToString());
+            context.Response.Headers[RetryAfterHeader] = _options.RetryAfterSeconds.ToString();
             context.Response.ContentType = JsonContentType;
 
             var errorMessage = new { code = RateLimitExceededCode, message = "Too many requests. Please try again later." };
@@ -79,12 +81,28 @@ public class RateLimitingMiddleware
         }
 
         // Add rate limit headers to response
-        context.Response.Headers.Add(RateLimitLimitHeader, _options.RequestsPerMinute.ToString());
-        context.Response.Headers.Add(RateLimitRemainingHeader, bucket.RemainingTokens.ToString());
-        context.Response.Headers.Add(RateLimitResetHeader, bucket.ResetTime.ToString("O"));
+        if (!context.Response.HasStarted)
+        {
+            context.Response.Headers[RateLimitLimitHeader] = _options.RequestsPerMinute.ToString();
+            context.Response.Headers[RateLimitRemainingHeader] = bucket.RemainingTokens.ToString();
+            context.Response.Headers[RateLimitResetHeader] = bucket.ResetTime.ToString("O");
+        }
 
         await _next(context);
         _logger.LogInformation("InvokeAsync finished for {ContextPath}", context.Request.Path);
+    }
+
+    private void CleanupExpiredBuckets()
+    {
+        if (_buckets.Count <= BucketCleanupThreshold)
+            return;
+
+        var now = DateTime.UtcNow;
+        foreach (var bucket in _buckets)
+        {
+            if (bucket.Value.ResetTime <= now)
+                _buckets.TryRemove(bucket.Key, out _);
+        }
     }
 
     /// <summary>
