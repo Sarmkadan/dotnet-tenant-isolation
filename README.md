@@ -46,6 +46,81 @@ This example demonstrates creating a `TenantConfiguration` instance and using it
 
 The `Organization` class represents an organization entity within a multi-tenant system, storing core business information such as name, contact details, and operational metadata. It supports soft deletion, activation/deactivation, and provides navigation properties for related entities.
 
+#### Purpose
+
+`Organization` is the entity that groups users and business data under a single tenant boundary. Every organization belongs to exactly one tenant (via `TenantId`), so all organization-scoped data inherits the tenant's isolation strategy. It carries the identity and operational details of a company or unit — name, contact information, industry, location, and registration identifiers — and manages its lifecycle through soft deletion and activation checks.
+
+#### Properties
+
+| Property | Type | Description |
+| --- | --- | --- |
+| `Id` | `Guid` | Unique identifier for the organization (primary key). |
+| `TenantId` | `Guid` | Tenant this organization belongs to (foreign key). |
+| `Name` | `string` | Organization name (required, max 255 chars). |
+| `Slug` | `string?` | Optional URL-friendly identifier (max 100 chars). |
+| `Description` | `string?` | Optional organization description (max 1000 chars). |
+| `Website` | `string?` | Optional website URL (max 500 chars). |
+| `LogoUrl` | `string?` | Optional logo URL (max 500 chars). |
+| `ContactEmail` | `string` | Primary contact email (required, validated as email). |
+| `ContactPhone` | `string?` | Optional primary contact phone (max 20 chars). |
+| `OrganizationType` | `string?` | Organization type, e.g. `Company`, `NonProfit`, `Government` (max 50 chars). |
+| `EmployeeCount` | `int?` | Number of employees/users in the organization. |
+| `Industry` | `string?` | Industry classification (max 100 chars). |
+| `CountryCode` | `string?` | Country of operation, ISO 3166-1 alpha-2 (2 chars). |
+| `RegistrationNumber` | `string?` | Business registration number (max 50 chars). |
+| `TaxId` | `string?` | Tax ID (max 50 chars). |
+| `IsActive` | `bool` | Whether the organization is active (defaults to `true`). |
+| `CreatedAt` | `DateTime` | When the organization was created. |
+| `UpdatedAt` | `DateTime` | When the organization was last updated. |
+| `Metadata` | `string?` | Custom metadata stored as JSON. |
+| `IsDeleted` | `bool` | Soft-delete flag. |
+| `Tenant` | `Tenant?` | Navigation property to the owning tenant. |
+| `Users` | `ICollection<User>` | Navigation property to the organization's users. |
+
+#### Lifecycle and behavior
+
+`CanActivate()` validates that the organization has a name and contact email and is not soft-deleted before it can be activated. `Delete()` performs a soft delete (sets `IsDeleted` and clears `IsActive`), while `Restore()` reverses it. `GetDisplayName()` returns the name, appending the slug in parentheses when present.
+
+Here's an example usage:
+
+```csharp
+using TenantIsolation.Models;
+
+public class OrganizationManagement
+{
+    public static void Main(string[] args)
+    {
+        // Create a new organization
+        var org = new Organization
+        {
+            TenantId = Guid.NewGuid(),
+            Name = "ACME Corporation",
+            Slug = "acme-corp",
+            Description = "Enterprise manufacturing solutions provider",
+            Website = "https://acme-corp.com",
+            ContactEmail = "contact@acme-corp.com",
+            OrganizationType = "Company",
+            EmployeeCount = 500,
+            Industry = "Manufacturing",
+            CountryCode = "US",
+            IsActive = true
+        };
+
+        // Validate organization can be activated
+        bool canActivate = org.CanActivate(out string? errorMessage);
+
+        // Display name with tenant context
+        string displayName = org.GetDisplayName(); // "ACME Corporation (acme-corp)"
+
+        // Soft delete, then restore
+        org.Delete();
+        org.Restore();
+    }
+}
+```
+
+This example demonstrates creating an `Organization` instance, validating it for activation, and managing its lifecycle through the public members and methods.
+
 For detailed API documentation and usage examples, see the [Organization documentation](docs/Organization.md).
 
 ## Tenant
