@@ -2026,9 +2026,36 @@ public class UsageMeteringExample
 
 ## TenantResolutionService
 
-The `TenantResolutionService` resolves the current tenant for each request using a prioritized set of strategies (header → claims → route → subdomain) and caches the result in `HttpContext.Items`. It exposes helper methods to retrieve the resolved tenant, its identifier, and to check whether a tenant is present.
+The `TenantResolutionService` resolves the current tenant from HTTP requests using a configurable chain of strategies. It attempts each strategy in order until one succeeds, then caches the result in `HttpContext.Items` for the duration of the request. The service provides methods to retrieve the resolved tenant, its identifier, check tenant presence, and inspect which strategy was used.
 
-**Usage example**
+### Resolution Strategy Chain
+
+By default, strategies are evaluated in this order:
+1. **Subdomain** - Extracts tenant from subdomain (e.g., `tenant.example.com`)
+2. **Header** - Reads from `X-Tenant-Id` or `X-Tenant-Slug` HTTP headers
+3. **QueryString** - Reads from `tenantId` or `tenantSlug` query parameters
+4. **Route** - Extracts from route parameters `{tenantId}` or `{slug}`
+5. **Claims** - Reads from `tenant_id` or `tenant_slug` user claims
+6. **Default** - Falls back to configured default tenant (if any)
+
+The strategy order is configurable via `TenantResolutionOptions.ResolutionStrategies`. The `Default` strategy, if enabled, must be last in the chain.
+
+### Dependencies
+
+- `IHttpContextAccessor` - Access to current HTTP request context
+- `IDynamicTenantStore` - Store for retrieving tenant records by ID or slug
+- `ILogger<TenantResolutionService>` - Logging of resolution attempts and failures
+- `IOptions<TenantResolutionOptions>` - Configuration for strategy order and defaults
+
+### Caching Behavior
+
+Once a tenant is successfully resolved, both the tenant object and the strategy used are cached in `HttpContext.Items` using:
+- `tenant:current` - The resolved `Tenant` object
+- `tenant:resolved_strategy` - The `TenantResolutionStrategy` that succeeded
+
+Subsequent calls within the same request return the cached result without re-evaluating strategies.
+
+### Usage Example
 
 ```csharp
 using Microsoft.Extensions.DependencyInjection;
@@ -2061,8 +2088,9 @@ public class Example
         // Access helper members
         var tenantId = tenantResolver.GetCurrentTenantId();
         var hasTenant = tenantResolver.HasTenant();
+        var strategy = tenantResolver.GetResolvedStrategy();
 
-        Console.WriteLine($"Resolved tenant: {tenant.Name} (Id: {tenantId}), HasTenant: {hasTenant}");
+        Console.WriteLine($"Resolved tenant: {tenant.Name} (Id: {tenantId}), HasTenant: {hasTenant}, Strategy: {strategy}");
     }
 }
 ```
