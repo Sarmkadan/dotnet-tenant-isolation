@@ -52,6 +52,43 @@ For detailed API documentation and usage examples, see the [Organization documen
 
 The `Tenant` class represents a tenant in a multi-tenancy system, storing configuration, status, and isolation settings. It supports soft deletion, subscription management, and provides methods to check tenant validity and limits.
 
+### Purpose
+
+`Tenant` is the central entity that identifies a single customer/organization in the multi-tenant system. Every request is resolved to a `Tenant` (via header, claims, route, or subdomain) and that resolved tenant drives downstream isolation decisions — which database/schema/row scope is used, which feature flags apply, and whether the tenant is allowed to access the system at all. It is the anchor for all data-isolation boundaries.
+
+### Properties
+
+| Property | Type | Description |
+| --- | --- | --- |
+| `Id` | `Guid` | Unique identifier for the tenant (primary key). |
+| `Slug` | `string` | Unique slug used as the subdomain or URL identifier. |
+| `Name` | `string` | Display name of the tenant. |
+| `Description` | `string?` | Optional description of the tenant. |
+| `AdminEmail` | `string` | Contact email for the tenant administrator. |
+| `PhoneNumber` | `string?` | Optional contact phone number. |
+| `Status` | `TenantStatus` | Current lifecycle status (`Active`, `Suspended`, `Trial`, `Inactive`, `Archived`, `Provisioning`). |
+| `IsolationStrategy` | `TenantIsolationStrategy` | Data isolation strategy used for this tenant (`DatabasePerTenant`, `SchemaPerTenant`, `RowLevelSecurity`, `Hybrid`). |
+| `PlanId` | `string?` | Subscription plan identifier. |
+| `MaxUsers` | `int?` | Maximum number of users allowed (`null` = unlimited). |
+| `MaxStorageGb` | `decimal?` | Maximum storage in GB (`null` = unlimited). |
+| `CreatedAt` | `DateTime` | When the tenant was created. |
+| `UpdatedAt` | `DateTime` | When the tenant was last updated. |
+| `SubscriptionExpiresAt` | `DateTime?` | When the subscription expires (`null` = no expiration). |
+| `Metadata` | `string?` | Custom metadata stored as JSON. |
+| `IsDeleted` | `bool` | Soft-delete flag. |
+| `DeletedAt` | `DateTime?` | When the tenant was deleted. |
+
+### Multi-tenancy isolation
+
+The `IsolationStrategy` property is the key link between the `Tenant` model and the isolation layer. It tells the tenant-aware `DbContext` factory how to scope data for this tenant:
+
+- **`DatabasePerTenant`** — each tenant gets a dedicated database; the connection string is selected per tenant.
+- **`SchemaPerTenant`** — a single database is shared, but each tenant is isolated in its own schema.
+- **`RowLevelSecurity`** — a single database/schema is shared and rows are scoped by a tenant identifier column.
+- **`Hybrid`** — a combination of the above strategies.
+
+Lifecycle methods enforce isolation boundaries: `CanActivate()` and `IsSubscriptionValid()` gate whether a tenant may access the system, `IsUserLimitExceeded()` enforces plan limits, and `Delete()`/`Restore()`/`Suspend()` manage soft-deletion and access revocation without physically removing data.
+
 Here's an example usage:
 
 ```csharp
