@@ -35,6 +35,12 @@ public class RateLimitingMiddleware
     private const string RateLimitExceededCode = "RATE_LIMIT_EXCEEDED";
     private const int BucketCleanupThreshold = 1_000;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="RateLimitingMiddleware"/> class.
+    /// </summary>
+    /// <param name="next">The next middleware in the request pipeline.</param>
+    /// <param name="logger">The logger used to record rate-limiting activity.</param>
+    /// <param name="options">The rate-limiting options, or <see langword="null"/> to use the defaults.</param>
     public RateLimitingMiddleware(RequestDelegate next, ILogger<RateLimitingMiddleware> logger, RateLimitOptions? options = null)
     {
         _next = next;
@@ -115,10 +121,25 @@ public class RateLimitingMiddleware
         private readonly Queue<DateTime> _requestTimestamps;
         private readonly object _lockObject = new();
 
+        /// <summary>
+        /// Gets the number of requests currently recorded in the bucket.
+        /// </summary>
         public int RequestCount => _requestTimestamps.Count;
+
+        /// <summary>
+        /// Gets the time at which the current rate-limit window resets.
+        /// </summary>
         public DateTime ResetTime { get; private set; }
+
+        /// <summary>
+        /// Gets the number of requests remaining before the rate limit is reached.
+        /// </summary>
         public int RemainingTokens => Math.Max(0, _maxRequests - RequestCount);
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="RateLimitBucket"/> class.
+        /// </summary>
+        /// <param name="maxRequests">The maximum number of requests permitted in the window.</param>
         public RateLimitBucket(int maxRequests)
         {
             _maxRequests = maxRequests;
@@ -181,6 +202,12 @@ public class RateLimitOptions
 /// </summary>
 public static class RateLimitingMiddlewareExtensions
 {
+    /// <summary>
+    /// Adds the rate-limiting middleware to the application's request pipeline.
+    /// </summary>
+    /// <param name="builder">The application builder.</param>
+    /// <param name="options">The rate-limiting options, or <see langword="null"/> to use the defaults.</param>
+    /// <returns>The application builder.</returns>
     public static IApplicationBuilder UseRateLimiting(this IApplicationBuilder builder, RateLimitOptions? options = null)
     {
         return builder.UseMiddleware<RateLimitingMiddleware>(options ?? new RateLimitOptions());
