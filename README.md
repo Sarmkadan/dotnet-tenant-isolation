@@ -5190,9 +5190,23 @@ public class CacheServiceExample
 }
 ```
 
-## ICachingService
+## CachingService
 
 The `ICachingService` interface provides a high-level caching abstraction for application-specific caching operations. It implements the cache-aside pattern with automatic expiration and provides convenient methods for caching frequently accessed data. The service tracks cache statistics including hits and misses, enabling performance monitoring and optimization.
+
+### Caching strategy
+
+`CachingService` is a cache-aside wrapper around `ICacheProvider`. `GetOrFetchAsync` first asks the provider for the supplied key. A non-null value is returned immediately; otherwise, the service invokes the caller's fetch function and stores its non-null result with the optional expiration. Null results are not cached, and exceptions from the fetch function are logged and rethrown. The provider defines the storage mechanism and the precise expiration behavior.
+
+Calls to `GetAsync`, `SetAsync`, and `RemoveAsync` are passed directly to the provider as `ValueTask` operations. This keeps the common in-memory path lightweight. `GetOrFetchAsync` records hits and misses for the lifetime of its scoped `CachingService`; direct `GetAsync` calls do not affect those counters. `ClearAsync` clears the underlying provider and resets the counters. Cache-aside loading is not single-flight, so concurrent misses for the same key can invoke the fetch function more than once.
+
+Choose keys that identify both the resource and every input that changes its value, and use an expiration appropriate for how stale that data may become. After a write to the source of truth, remove or replace the corresponding cache entry. Reserve `ClearAsync` for cases where clearing the entire configured provider is intended.
+
+### Tenant-aware caching
+
+`TenantAwareCachingService` decorates `ICachingService` and scopes each supplied key with the current tenant identifier from `HttpContext.Items["TenantId"]`. For example, a logical key of `products:featured` becomes `tenant-a:products:featured` for tenant `tenant-a`, so another tenant using the same logical key cannot receive that entry. The prefix is applied consistently to reads, writes, cache-aside loads, and single- or multi-key removals.
+
+The decorator falls back to the original, unprefixed key when the HTTP context has no tenant identifier. Callers must therefore ensure tenant resolution middleware has populated `HttpContext.Items["TenantId"]` before accessing tenant-sensitive cached data; background work should establish an equivalent tenant scope or use explicitly tenant-qualified keys. `ClearAsync` and statistics are delegated without tenant filtering, so clearing affects the entire underlying provider and the reported counters are not broken down by tenant.
 
 **Key capabilities:**
 - Get or fetch values with automatic caching
