@@ -111,6 +111,15 @@ public class Tenant
     public DateTime? DeletedAt { get; set; }
 
     /// <summary>
+    /// Returns a concise human-readable representation of the tenant.
+    /// </summary>
+    /// <returns>A string containing the tenant's Id, Slug, and Name.</returns>
+    public override string ToString()
+    {
+        return $"{Id} | {Slug} | {Name}";
+    }
+
+    /// <summary>
     /// Validate tenant can be activated
     /// </summary>
     public bool CanActivate()
