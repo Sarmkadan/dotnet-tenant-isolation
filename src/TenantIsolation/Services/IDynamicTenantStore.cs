@@ -42,5 +42,8 @@ public interface IDynamicTenantStore
 /// </summary>
 public class TenantEventArgs : EventArgs
 {
+    /// <summary>
+    /// Gets or sets the tenant associated with the event.
+    /// </summary>
     public required Tenant Tenant { get; set; }
 }
