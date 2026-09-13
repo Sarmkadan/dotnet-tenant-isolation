@@ -29,6 +29,10 @@ public class TenantService
         IDynamicTenantStore dynamicTenantStore,
         ILogger<TenantService> logger)
     {
+        ArgumentNullException.ThrowIfNull(tenantRepository);
+        ArgumentNullException.ThrowIfNull(dynamicTenantStore);
+        ArgumentNullException.ThrowIfNull(logger);
+
         _tenantRepository = tenantRepository;
         _dynamicTenantStore = dynamicTenantStore;
         _logger = logger;
