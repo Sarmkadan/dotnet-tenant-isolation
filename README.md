@@ -4486,6 +4486,33 @@ app.MapGet("/", () => "Hello World!");
 app.Run();
 ```
 
+### Per-tenant rate limiting
+
+`RateLimitingMiddleware` applies an in-memory sliding-window limit to each tenant and client IP pair. For every request, it reads the tenant identifier from `HttpContext.Items["TenantId"]`, reads the remote IP address from `HttpContext.Connection.RemoteIpAddress`, and combines them into a bucket key. Requests from different tenants or different IP addresses therefore use independent buckets. If no tenant item is present, the request uses the `anonymous` tenant identifier; if no remote IP is available, it uses `unknown`.
+
+Each bucket stores request timestamps for the preceding minute. Access to a bucket is locked while expired timestamps are removed and the current request is counted, making consumption safe when concurrent requests share a bucket. Each middleware instance keeps its buckets in a `ConcurrentDictionary`; the state is local to the application instance and is not shared across servers or preserved across restarts. When the dictionary grows beyond 1,000 entries, expired buckets are removed during request processing.
+
+Allowed requests continue through the pipeline with these response headers:
+
+- `X-RateLimit-Limit`: configured requests per minute.
+- `X-RateLimit-Remaining`: requests remaining in the current bucket.
+- `X-RateLimit-Reset`: the bucket reset time in ISO 8601 format.
+
+When the limit is reached, the middleware stops the pipeline and returns HTTP `429 Too Many Requests`, a configurable `Retry-After` header, and a JSON response with the code `RATE_LIMIT_EXCEEDED`. Requests whose path starts with `/health` bypass rate limiting. The default `RateLimitOptions` values are 60 requests per minute and a 60-second retry interval.
+
+Register the middleware after the component that populates `HttpContext.Items["TenantId"]` so requests are assigned to tenant-specific buckets:
+
+```csharp
+using TenantIsolation.Middleware;
+
+app.UseMiddleware<TenantResolutionMiddleware>();
+app.UseRateLimiting(new RateLimitOptions
+{
+    RequestsPerMinute = 120,
+    RetryAfterSeconds = 30
+});
+```
+
 ### Tenant-Aware Caching Configuration
 
 ```csharp
