@@ -1865,6 +1865,32 @@ public class TenantCleanupExample
 ### TenantResolutionService
 Provides tenant resolution strategies for multi-tenant applications.
 
+### DataIsolationService
+
+`DataIsolationService` manages and evaluates per-tenant data isolation policies for
+specific entity types. It provides an application-layer authorization boundary that
+callers can use before exposing entity fields or accessing another tenant's data.
+Policies are stored in `TenantDbContext` and looked up by tenant ID and entity type;
+when multiple active policies match, the policy with the lowest priority value is
+used.
+
+The service enforces isolation in two main ways:
+
+- Field access checks evaluate a policy's allowed and denied field lists.
+  `VerifyFieldAccessAsync` throws `DataIsolationViolationException` when access is
+  denied, while `CheckPolicyViolationsAsync` reports inaccessible properties on an
+  entity. If no active policy exists, field access is allowed.
+- Cross-tenant checks are deny-by-default. `CanAccessCrossTenantAsync` rejects access
+  when no active policy exists, always rejects it for a `Strict` policy, and otherwise
+  permits only target tenant IDs explicitly listed by the policy.
+
+The service also creates, retrieves, validates, updates, activates, prioritizes,
+deletes, imports, and exports policies. It does not automatically add filters to
+application queries: code that reads or returns tenant-owned data must call the
+appropriate check using the resolved current tenant ID before performing the
+operation. This keeps cross-tenant access explicit and prevents a target tenant ID
+supplied by a caller from becoming authorization on its own.
+
 ### TenantService
 
 The `TenantService` provides services for managing tenant lifecycles, including creation, activation, suspension, and deletion. It handles tenant operations such as creating new tenants, retrieving tenant information, managing tenant status, and providing tenant statistics.
