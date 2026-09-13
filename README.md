@@ -3702,6 +3702,29 @@ public class ValidationExample
 public enum UserRole { Administrator, User, Guest }
 ```
 
+## WebhookDeliveryService
+
+`WebhookDeliveryService` sends a `WebhookPayload` to a configured `WebhookEndpoint` through the named `webhook` HTTP client. Register it with `services.AddWebhookDeliveryService()` and inject `IWebhookDeliveryService` into the component that dispatches tenant events.
+
+### Delivery flow
+
+1. When circuit breaking is enabled, the service checks the breaker for the endpoint URL and returns a failed result without sending when that circuit is open.
+2. It copies the payload, optionally signs the serialized copy with the endpoint secret using HMAC-SHA256, and sends it as JSON. The initial request includes `X-Signature` when configured plus `X-Event-Id`, `X-Event-Type`, and `X-Tenant-Id` correlation headers.
+3. Each HTTP attempt has the endpoint's configured timeout. A successful response records the status code, elapsed duration, and circuit-breaker success; a non-retryable response, timeout, or request failure produces a failed `WebhookDeliveryResult` and records a circuit-breaker failure when enabled.
+4. Callers can inspect `IsSuccess`, `HttpStatusCode`, `ErrorMessage`, `RetryCount`, `WasRetried`, and `Duration`, or query endpoint health with `GetCircuitBreakerState(endpointUrl)`.
+
+### Retries
+
+Only an initial `5xx` response enters the retry loop, and `MaxRetries` is the number of additional attempts after the first request. Before each retry, the service uses the response's `Retry-After` delta when `RespectRetryAfter` is enabled; otherwise it applies exponential backoff from `BaseDelayMilliseconds` with random jitter of up to half the calculated delay. Later `5xx` responses continue until the retry budget is exhausted, while a success returns immediately and a non-`5xx` response ends the delivery as failed. Each retry creates a new request and timeout; retry requests contain the JSON payload and optional `X-Signature` header.
+
+Circuit breakers are maintained in memory per endpoint URL. With the current service implementation they use a 50% failure threshold after at least 10 recorded requests and open for a configured internal 30-second period. Because the service is registered as a singleton, that endpoint state is shared by all callers in the process.
+
+### Tenant scoping
+
+Tenant scope comes from `WebhookPayload.TenantId`. The initial delivery includes that value in both the JSON body and `X-Tenant-Id`, allowing the receiver to associate the event with the correct tenant. The delivery service does not read the current request's tenant context, authorize an endpoint for a tenant, or verify that the payload tenant matches the subscription; the caller must select a subscription belonging to the tenant and construct the payload from the same tenant-scoped event.
+
+Circuit-breaker isolation is by exact endpoint URL, not by tenant. Tenants that share a URL therefore also share breaker health and failures. Use tenant-specific endpoint URLs when independent breaker state is required. Retry requests retain `TenantId` in the JSON payload but do not repeat the `X-Tenant-Id` correlation header, so receivers must treat the body as the authoritative tenant identifier across all attempts.
+
 ## WebhookController
 
 The `WebhookController` provides RESTful API endpoints for managing webhook subscriptions in multi-tenant applications. It allows tenants to register, retrieve, update, and delete webhook endpoints for receiving event notifications, with support for delivery history and testing capabilities.
