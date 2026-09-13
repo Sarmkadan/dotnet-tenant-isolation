@@ -20,6 +20,7 @@ namespace TenantIsolation.Models
         /// </remarks>
         /// <param name="tenant">The tenant instance.</param>
         /// <returns><c>true</c> if the tenant is active; otherwise, <c>false</c>.</returns>
+        /// <exception cref="ArgumentNullException"><paramref name="tenant"/> is <c>null</c>.</exception>
         public static bool IsActive(this Tenant tenant)
         {
             if (tenant == null) throw new ArgumentNullException(nameof(tenant));
@@ -41,6 +42,7 @@ namespace TenantIsolation.Models
         /// <param name="tenant">The tenant instance.</param>
         /// <param name="featureName">The name of the feature to check.</param>
         /// <returns><c>true</c> if the feature is present; otherwise, <c>false</c>.</returns>
+        /// <exception cref="ArgumentNullException"><paramref name="tenant"/> is <c>null</c>.</exception>
         public static bool HasFeature(this Tenant tenant, string featureName)
         {
             if (tenant == null) throw new ArgumentNullException(nameof(tenant));
@@ -67,6 +69,7 @@ namespace TenantIsolation.Models
         /// </remarks>
         /// <param name="tenant">The tenant instance.</param>
         /// <returns>A string suitable for display purposes.</returns>
+        /// <exception cref="ArgumentNullException"><paramref name="tenant"/> is <c>null</c>.</exception>
         public static string DisplayName(this Tenant tenant)
         {
             if (tenant == null) throw new ArgumentNullException(nameof(tenant));
