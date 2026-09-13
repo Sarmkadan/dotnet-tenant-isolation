@@ -16,7 +16,10 @@ namespace TenantIsolation.Data;
 /// </summary>
 public class TenantRepository : Repository<Tenant>
 {
-    public TenantRepository(ITenantDbContextFactory<TenantDbContext> contextFactory) : base(contextFactory) { }
+    public TenantRepository(ITenantDbContextFactory<TenantDbContext> contextFactory) : base(contextFactory)
+    {
+        ArgumentNullException.ThrowIfNull(contextFactory);
+    }
 
     /// <summary>
     /// Get tenant by slug
