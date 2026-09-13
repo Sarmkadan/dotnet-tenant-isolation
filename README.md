@@ -4536,6 +4536,26 @@ app.UseRateLimiting(new RateLimitOptions
 });
 ```
 
+### Per-tenant usage metering
+
+`TenantUsageMeteringService` tracks named counters independently for each tenant. Its in-process store uses the tenant ID and metric key together (for example, tenant A's `api_calls` counter is separate from tenant B's counter with the same name). `RecordUsageAsync` creates a `TenantUsageRecord` on first use and adds a positive amount to its `CurrentValue` on later calls. `GetUsageAsync` reads one counter, while `GetAllMetricsAsync` returns a tenant's counters ordered by metric key.
+
+Quota checks read a tenant configuration value named `quota:{metricKey}` and parse it as a `long`. A missing, invalid, or unreadable value is treated as unlimited. `CheckQuotaAsync` returns a `QuotaCheckResult`; `IsWithinQuotaAsync` returns a boolean; and `EnforceQuotaAsync` throws a `TenantIsolationException` with error code `QUOTA_EXCEEDED` once current usage has reached or exceeded the configured limit. These methods check already-recorded usage, so callers should enforce at the appropriate point in their workflow and record successful consumption separately.
+
+```csharp
+public async Task ProcessAsync(Guid tenantId, CancellationToken cancellationToken)
+{
+    const string metricKey = "api_calls";
+
+    await _usageMetering.EnforceQuotaAsync(tenantId, metricKey, cancellationToken);
+
+    // Perform the metered operation, then record the units actually consumed.
+    await _usageMetering.RecordUsageAsync(tenantId, metricKey, amount: 1, cancellationToken);
+}
+```
+
+`ResetUsageAsync` sets one counter to zero and starts a new period timestamp. The default service does not reset counters automatically based on `UsagePeriod`. It is registered as a singleton by `AddTenantUsageMetering`, but its data remains local to one application process and is lost on restart. Use a custom `ITenantUsageMeteringService` backed by shared durable storage when counters must survive restarts or remain consistent across multiple application instances.
+
 ### Tenant-Aware Caching Configuration
 
 ```csharp
