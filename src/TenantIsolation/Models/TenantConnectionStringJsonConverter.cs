@@ -12,6 +12,13 @@ namespace TenantIsolation.Models;
 public class TenantConnectionStringJsonConverter : JsonConverter<TenantConnectionString>
 {
     /// <summary>
+    /// Initializes a new instance of the <see cref="TenantConnectionStringJsonConverter"/> class.
+    /// </summary>
+    public TenantConnectionStringJsonConverter()
+    {
+    }
+
+    /// <summary>
     /// Reads and converts the JSON to a TenantConnectionString
     /// </summary>
     /// <param name="reader">The reader</param>
