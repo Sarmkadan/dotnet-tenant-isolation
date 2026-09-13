@@ -200,5 +200,9 @@ public class Organization
         UpdatedAt = DateTime.UtcNow;
     }
 
+    /// <summary>
+    /// Returns a string representation of the organization.
+    /// </summary>
+    /// <returns>A string containing the organization's identifying details.</returns>
     public override string ToString() => $"Organization {{ Id = {Id}, TenantId = {TenantId}, Name = {Name}, Slug = {Slug}, Description = {Description}, Website = {Website} }}";
 }
