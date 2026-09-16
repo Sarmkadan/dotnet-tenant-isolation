@@ -36,6 +36,10 @@ public class DynamicTenantStore : IDynamicTenantStore, IDisposable
         ILogger<DynamicTenantStore> logger,
         IOptions<TenantIsolationOptions> options)
     {
+        ArgumentNullException.ThrowIfNull(tenantRepository);
+        ArgumentNullException.ThrowIfNull(logger);
+        ArgumentNullException.ThrowIfNull(options);
+
         _tenantRepository = tenantRepository;
         _logger = logger;
         _options = options.Value;
