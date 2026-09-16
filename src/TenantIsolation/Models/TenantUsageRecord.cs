@@ -40,9 +40,9 @@ public class TenantUsageRecord
     [Required]
     public Guid TenantId { get; set; }
 
-/// <summary>Navigation property to the owning tenant</summary>
-[ForeignKey(nameof(TenantId))]
-public Tenant? Tenant { get; set; }
+    /// <summary>Navigation property to the owning tenant</summary>
+    [ForeignKey(nameof(TenantId))]
+    public Tenant? Tenant { get; set; }
 
     /// <summary>Metric name, e.g. "api_calls", "storage_gb", "active_users"</summary>
     [Required]
@@ -88,6 +88,7 @@ public Tenant? Tenant { get; set; }
     public bool IsApproachingLimit(int thresholdPercent = 80) =>
         QuotaLimit.HasValue && UsagePercentage >= thresholdPercent;
 
+    /// <summary>Returns a string representation of the usage record for debugging.</summary>
     public override string ToString() => $"TenantUsageRecord {{ Id = {Id}, TenantId = {TenantId}, Tenant = {Tenant}, MetricKey = {MetricKey}, CurrentValue = {CurrentValue}, QuotaLimit = {QuotaLimit} }}";
 }
 
