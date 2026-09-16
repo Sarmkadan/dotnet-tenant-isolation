@@ -29,6 +29,14 @@ public class TenantResolutionMiddleware
     private readonly ICacheProvider _cacheProvider;
     private readonly IMemoryCache _memoryCache;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="TenantResolutionMiddleware"/> class.
+    /// </summary>
+    /// <param name="next">The next request delegate in the middleware pipeline.</param>
+    /// <param name="logger">The logger used to record tenant resolution activity.</param>
+    /// <param name="tenantIsolationOptions">The tenant isolation configuration options.</param>
+    /// <param name="cacheProvider">The provider used to cache resolved tenants.</param>
+    /// <param name="memoryCache">The in-memory cache used by the middleware.</param>
     public TenantResolutionMiddleware(
         RequestDelegate next,
         ILogger<TenantResolutionMiddleware> logger,
@@ -43,6 +51,12 @@ public class TenantResolutionMiddleware
         _memoryCache = memoryCache;
     }
 
+    /// <summary>
+    /// Resolves the tenant for the current request and invokes the next middleware component.
+    /// </summary>
+    /// <param name="context">The HTTP context for the current request.</param>
+    /// <param name="tenantResolutionService">The service used to resolve the current tenant.</param>
+    /// <returns>A task that represents the asynchronous middleware operation.</returns>
     public async Task InvokeAsync(
         HttpContext context,
         ITenantResolutionService tenantResolutionService)
@@ -207,4 +221,3 @@ public class TenantResolutionMiddleware
         return null;
     }
 }
-
