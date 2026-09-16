@@ -26,6 +26,11 @@ public class SubscriptionExpirationWorker : BackgroundService
     // Check every 6 hours
     private static readonly TimeSpan CheckInterval = TimeSpan.FromHours(6);
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="SubscriptionExpirationWorker"/> class.
+    /// </summary>
+    /// <param name="serviceProvider">The service provider used to create scopes for subscription checks.</param>
+    /// <param name="logger">The logger used to record worker activity.</param>
     public SubscriptionExpirationWorker(
         IServiceProvider serviceProvider,
         ILogger<SubscriptionExpirationWorker> logger)
@@ -35,6 +40,7 @@ public class SubscriptionExpirationWorker : BackgroundService
         _timer = new PeriodicTimer(CheckInterval);
     }
 
+    /// <inheritdoc/>
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         _logger.LogInformation("Subscription expiration worker started");
@@ -133,12 +139,14 @@ public class SubscriptionExpirationWorker : BackgroundService
         }
     }
 
+    /// <inheritdoc/>
     public override async Task StopAsync(CancellationToken cancellationToken)
     {
         _timer?.Dispose();
         await base.StopAsync(cancellationToken);
     }
 
+    /// <inheritdoc/>
     public override void Dispose()
     {
         _timer?.Dispose();
@@ -151,6 +159,11 @@ public class SubscriptionExpirationWorker : BackgroundService
 /// </summary>
 public static class SubscriptionExpirationWorkerExtensions
 {
+    /// <summary>
+    /// Registers the subscription expiration worker with the host.
+    /// </summary>
+    /// <param name="builder">The host builder to configure.</param>
+    /// <returns>The configured host builder.</returns>
     public static IHostBuilder AddSubscriptionExpirationWorker(this IHostBuilder builder)
     {
         return builder.ConfigureServices((context, services) =>
