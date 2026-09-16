@@ -1891,6 +1891,51 @@ appropriate check using the resolved current tenant ID before performing the
 operation. This keeps cross-tenant access explicit and prevents a target tenant ID
 supplied by a caller from becoming authorization on its own.
 
+### HealthCheckService
+
+`HealthCheckService` (implementing `IHealthCheckService`) monitors the runtime
+health of the components the application depends on and produces a single
+`HealthReport` describing the overall system state. It is registered as a scoped
+service via the `AddHealthCheckService` extension method.
+
+Each component is reported as a `ComponentHealthInfo` with one of three statuses:
+
+- `Healthy` — the component is fully operational.
+- `Degraded` — the component works but is under stress or slower than expected.
+- `Unhealthy` — the component is unavailable or failing.
+
+The overall `HealthReport.Status` is derived from the individual components: any
+`Unhealthy` component makes the whole report `Unhealthy`, otherwise any `Degraded`
+component makes it `Degraded`, and only when every component is `Healthy` is the
+report `Healthy`.
+
+The service performs the following checks:
+
+- **Database** — `CheckDatabaseAsync` verifies connectivity with
+  `TenantDbContext.Database.CanConnectAsync()` and then runs a real query
+  (`Tenants.CountAsync()`) to confirm the database is actually usable, not just
+  reachable. It reports the number of tenants found, marks the component
+  `Degraded` when the query takes longer than 1000 ms, and `Unhealthy` when the
+  connection fails or the query throws.
+- **Cache** — `CheckCache` reports the in-memory cache as operational. The check
+  is simulated (no real cache operations are performed) and is a placeholder for
+  testing actual cache reads/writes in a real deployment.
+- **Event bus** — `CheckEventBus` reports the event bus as operational. Like the
+  cache check, it is simulated and is a placeholder for testing real event
+  publishing/subscribing.
+
+Results are cached for 30 seconds (`_cacheExpiry`): repeated calls to
+`PerformHealthCheckAsync` within that window return the cached `HealthReport`
+instead of re-running the checks, so health probing does not hammer the database.
+`CheckComponentAsync` allows a single named component (`database`, `cache`, or
+`eventbus`) to be checked in isolation, and `GetCachedHealthReport` exposes the
+last report without triggering a new check.
+
+The health report is primarily useful for liveness/readiness probes, monitoring
+dashboards, and alerting: it turns a set of component checks into one
+machine-readable status (`Healthy` / `Degraded` / `Unhealthy`) plus per-component
+response times and messages that can be surfaced to operators.
+
 ### TenantService
 
 The `TenantService` provides services for managing tenant lifecycles, including creation, activation, suspension, and deletion. It handles tenant operations such as creating new tenants, retrieving tenant information, managing tenant status, and providing tenant statistics.
