@@ -14,12 +14,14 @@ namespace TenantIsolation.Utilities;
 public static class CollectionExtensions
 {
     /// <summary>
-    /// Check if collection is null or empty
+    /// Determines whether the specified sequence is <see langword="null"/> or contains no elements.
     /// </summary>
-    /// <exception cref="ArgumentNullException"><paramref name="collection"/> is <see langword="null"/></exception>
-    public static bool IsNullOrEmpty<T>(this IEnumerable<T>? collection)
+    /// <typeparam name="T">The type of elements in the sequence.</typeparam>
+    /// <param name="source">The sequence to check.</param>
+    /// <returns><see langword="true"/> if <paramref name="source"/> is <see langword="null"/> or empty; otherwise, <see langword="false"/>.</returns>
+    public static bool IsNullOrEmpty<T>(this IEnumerable<T>? source)
     {
-        return collection == null || !collection.Any();
+        return source == null || !source.Any();
     }
 
     /// <summary>
