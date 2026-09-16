@@ -16,6 +16,11 @@ namespace TenantIsolation.Data;
 /// </summary>
 public class TenantRepository : Repository<Tenant>
 {
+    /// <summary>
+    /// Initializes a new instance of the <see cref="TenantRepository"/> class.
+    /// </summary>
+    /// <param name="contextFactory">The factory used to create tenant database contexts.</param>
+    /// <exception cref="ArgumentNullException"><paramref name="contextFactory"/> is <see langword="null"/>.</exception>
     public TenantRepository(ITenantDbContextFactory<TenantDbContext> contextFactory) : base(contextFactory)
     {
         ArgumentNullException.ThrowIfNull(contextFactory);
