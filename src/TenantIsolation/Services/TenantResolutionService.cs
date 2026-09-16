@@ -36,6 +36,13 @@ public class TenantResolutionService : ITenantResolutionService
     // Track the strategy used for the current resolution
     private TenantResolutionStrategy? _resolvedStrategy;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="TenantResolutionService"/> class.
+    /// </summary>
+    /// <param name="httpContextAccessor">The accessor used to retrieve the current HTTP context.</param>
+    /// <param name="dynamicTenantStore">The store used to retrieve tenant information.</param>
+    /// <param name="logger">The logger used to record tenant resolution activity.</param>
+    /// <param name="options">The configured tenant resolution options.</param>
     public TenantResolutionService(
         IHttpContextAccessor httpContextAccessor,
         IDynamicTenantStore dynamicTenantStore,
@@ -214,8 +221,16 @@ public class TenantResolutionService : ITenantResolutionService
         return null;
     }
 
+    /// <summary>
+    /// Gets the identifier of the current tenant, if one is available.
+    /// </summary>
+    /// <returns>The current tenant identifier, or <see langword="null"/> when no tenant is available.</returns>
     public Guid? GetCurrentTenantId() => GetCurrentTenant()?.Id;
 
+    /// <summary>
+    /// Determines whether a current tenant is available.
+    /// </summary>
+    /// <returns><see langword="true"/> when a current tenant is available; otherwise, <see langword="false"/>.</returns>
     public bool HasTenant() => GetCurrentTenant() != null;
 
     /// <summary>
