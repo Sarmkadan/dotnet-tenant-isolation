@@ -30,6 +30,25 @@ namespace TenantIsolation.Models
         }
 
         /// <summary>
+        /// Determines whether the tenant's trial period has expired as of the specified time.
+        /// </summary>
+        /// <param name="tenant">The tenant instance.</param>
+        /// <param name="now">The time against which to evaluate the trial expiration.</param>
+        /// <returns>
+        /// <c>true</c> if the tenant is in a trial period with an expiration at or before
+        /// <paramref name="now"/>; otherwise, <c>false</c>.
+        /// </returns>
+        /// <exception cref="ArgumentNullException"><paramref name="tenant"/> is <c>null</c>.</exception>
+        public static bool IsTrialExpired(this Tenant tenant, DateTimeOffset now)
+        {
+            if (tenant == null) throw new ArgumentNullException(nameof(tenant));
+
+            return tenant.IsInTrial() &&
+                   tenant.SubscriptionExpiresAt.HasValue &&
+                   tenant.SubscriptionExpiresAt.Value <= now.UtcDateTime;
+        }
+
+        /// <summary>
         /// Checks whether the tenant has a specific feature enabled.
         /// </summary>
         /// <remarks>
