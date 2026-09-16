@@ -35,6 +35,12 @@ public class TenantDbContextFactory : ITenantDbContextFactory<TenantDbContext>
         IOptions<TenantIsolationOptions> tenantIsolationOptions,
         DbContextOptions<TenantDbContext> masterDbContextOptions) // Injected base options
     {
+        ArgumentNullException.ThrowIfNull(httpContextAccessor);
+        ArgumentNullException.ThrowIfNull(logger);
+        ArgumentNullException.ThrowIfNull(tenantResolutionService);
+        ArgumentNullException.ThrowIfNull(tenantIsolationOptions);
+        ArgumentNullException.ThrowIfNull(masterDbContextOptions);
+
         _httpContextAccessor = httpContextAccessor;
         _logger = logger;
         _tenantResolutionService = tenantResolutionService;
