@@ -23,6 +23,11 @@ public class ErrorHandlingMiddleware
     private readonly RequestDelegate _next;
     private readonly ILogger<ErrorHandlingMiddleware> _logger;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ErrorHandlingMiddleware"/> class.
+    /// </summary>
+    /// <param name="next">The next middleware delegate in the request pipeline.</param>
+    /// <param name="logger">The logger used to record unhandled exceptions.</param>
     public ErrorHandlingMiddleware(RequestDelegate next, ILogger<ErrorHandlingMiddleware> logger)
     {
         _next = next;
@@ -32,6 +37,8 @@ public class ErrorHandlingMiddleware
     /// <summary>
     /// Invoke middleware to handle exceptions in request pipeline
     /// </summary>
+    /// <param name="context">The HTTP context for the current request.</param>
+    /// <returns>A task that represents the asynchronous middleware operation.</returns>
     public async Task InvokeAsync(HttpContext context)
     {
         try
@@ -167,23 +174,46 @@ public class ErrorHandlingMiddleware
     /// </summary>
     private class ErrorResponse
     {
+        /// <summary>
+        /// Gets or sets the machine-readable error code.
+        /// </summary>
         [JsonPropertyName("code")]
         public string Code { get; set; } = string.Empty;
 
+        /// <summary>
+        /// Gets or sets the human-readable error message.
+        /// </summary>
         [JsonPropertyName("message")]
         public string Message { get; set; } = string.Empty;
 
+        /// <summary>
+        /// Gets or sets the HTTP status code associated with the error.
+        /// </summary>
         [JsonPropertyName("statusCode")]
         public int StatusCode { get; set; }
 
+        /// <summary>
+        /// Gets or sets the trace identifier for the request.
+        /// </summary>
         [JsonPropertyName("traceId")]
         public string? TraceId { get; set; }
 
+        /// <summary>
+        /// Gets or sets additional details about the error.
+        /// </summary>
         [JsonPropertyName("details")]
         public string? Details { get; set; }
 
+        /// <summary>
+        /// Gets or sets the UTC timestamp at which the error response was created.
+        /// </summary>
         [JsonPropertyName("timestamp")]
         public DateTime Timestamp { get; set; } = DateTime.UtcNow;
-public override string ToString() => $"ErrorHandlingMiddleware {{ Code = {Code}, Message = {Message}, StatusCode = {StatusCode}, TraceId = {TraceId}, Details = {Details}, Timestamp = {Timestamp} }}";
+
+        /// <summary>
+        /// Returns a string representation of the error response.
+        /// </summary>
+        /// <returns>A string containing the error response values.</returns>
+        public override string ToString() => $"ErrorHandlingMiddleware {{ Code = {Code}, Message = {Message}, StatusCode = {StatusCode}, TraceId = {TraceId}, Details = {Details}, Timestamp = {Timestamp} }}";
     }
 }
