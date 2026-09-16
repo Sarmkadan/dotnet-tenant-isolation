@@ -37,6 +37,9 @@ public class TenantResolutionResult
     /// </summary>
     /// <param name="tenant">The resolved tenant</param>
     /// <param name="strategy">The strategy used for resolution</param>
+    /// <exception cref="ArgumentNullException">
+    /// Thrown when <paramref name="tenant"/> is <see langword="null"/>.
+    /// </exception>
     public TenantResolutionResult(Tenant tenant, TenantResolutionStrategy strategy)
     {
         Tenant = tenant ?? throw new ArgumentNullException(nameof(tenant));
@@ -55,11 +58,15 @@ public class TenantResolutionResult
     /// <summary>
     /// Implicit conversion to bool for easy success checking.
     /// </summary>
+    /// <param name="result">The tenant resolution result to evaluate.</param>
+    /// <returns><see langword="true"/> if tenant resolution succeeded; otherwise, <see langword="false"/>.</returns>
     public static implicit operator bool(TenantResolutionResult result) => result.Success;
 
     /// <summary>
     /// Implicit conversion from Tenant for backward compatibility.
     /// </summary>
+    /// <param name="result">The tenant resolution result from which to retrieve the tenant.</param>
+    /// <returns>The resolved tenant, or <see langword="null"/> if resolution failed.</returns>
     public static implicit operator Tenant?(TenantResolutionResult result) => result.Tenant;
 }
 
@@ -87,21 +94,25 @@ public interface ITenantResolutionService
     /// <summary>
     /// Get the tenant already resolved for the current request, or null if none.
     /// </summary>
+    /// <returns>The resolved tenant, or <see langword="null"/> if no tenant has been resolved.</returns>
     Tenant? GetCurrentTenant();
 
     /// <summary>
     /// Get the id of the tenant resolved for the current request, or null.
     /// </summary>
+    /// <returns>The resolved tenant identifier, or <see langword="null"/> if no tenant has been resolved.</returns>
     Guid? GetCurrentTenantId();
 
     /// <summary>
     /// Whether a tenant has been resolved for the current request.
     /// </summary>
+    /// <returns><see langword="true"/> if a tenant has been resolved; otherwise, <see langword="false"/>.</returns>
     bool HasTenant();
 
     /// <summary>
     /// Get the strategy that was used to resolve the current tenant.
     /// Returns null if no tenant has been resolved yet.
     /// </summary>
+    /// <returns>The resolution strategy, or <see langword="null"/> if no tenant has been resolved.</returns>
     TenantResolutionStrategy? GetResolvedStrategy();
 }
