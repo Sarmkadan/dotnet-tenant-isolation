@@ -24,6 +24,16 @@ public class TenantService
     private readonly IDynamicTenantStore _dynamicTenantStore; // For read operations with caching
     private readonly ILogger<TenantService> _logger;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="TenantService"/> class.
+    /// </summary>
+    /// <param name="tenantRepository">The repository used to persist tenant data.</param>
+    /// <param name="dynamicTenantStore">The store used to retrieve tenant data.</param>
+    /// <param name="logger">The logger used to record tenant service activity.</param>
+    /// <exception cref="ArgumentNullException">
+    /// Thrown when <paramref name="tenantRepository"/>, <paramref name="dynamicTenantStore"/>, or
+    /// <paramref name="logger"/> is <see langword="null"/>.
+    /// </exception>
     public TenantService(
         TenantRepository tenantRepository,
         IDynamicTenantStore dynamicTenantStore,
