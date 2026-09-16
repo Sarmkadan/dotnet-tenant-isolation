@@ -152,6 +152,8 @@ public class AuditLogger : IAuditLogger
 
     public async Task<IEnumerable<AuditLogEntry>> GetUserLogsAsync(string userId, int limit = 100)
     {
+        ArgumentNullException.ThrowIfNull(userId);
+
         var logs = _logs.Values
             .Where(l => l.UserId == userId)
             .OrderByDescending(l => l.Timestamp)
@@ -254,6 +256,10 @@ public static class AuditLoggerExtensions
         string resourceId,
         Dictionary<string, object>? changeSet = null)
     {
+        ArgumentNullException.ThrowIfNull(logger);
+        ArgumentNullException.ThrowIfNull(resource);
+        ArgumentNullException.ThrowIfNull(resourceId);
+
         var entry = new AuditLogEntry
         {
             TenantId = tenantId,
@@ -280,6 +286,10 @@ public static class AuditLoggerExtensions
         string resourceId,
         Dictionary<string, object>? changeSet = null)
     {
+        ArgumentNullException.ThrowIfNull(logger);
+        ArgumentNullException.ThrowIfNull(resource);
+        ArgumentNullException.ThrowIfNull(resourceId);
+
         var entry = new AuditLogEntry
         {
             TenantId = tenantId,
@@ -305,6 +315,10 @@ public static class AuditLoggerExtensions
         string resource,
         string resourceId)
     {
+        ArgumentNullException.ThrowIfNull(logger);
+        ArgumentNullException.ThrowIfNull(resource);
+        ArgumentNullException.ThrowIfNull(resourceId);
+
         var entry = new AuditLogEntry
         {
             TenantId = tenantId,
