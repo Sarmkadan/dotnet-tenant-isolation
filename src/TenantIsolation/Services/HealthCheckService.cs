@@ -27,12 +27,34 @@ public enum HealthStatus
 /// </summary>
 public class ComponentHealthInfo
 {
+    /// <summary>
+    /// Name of the component being checked
+    /// </summary>
     public string Name { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Current health status of the component
+    /// </summary>
     public HealthStatus Status { get; set; } = HealthStatus.Healthy;
+
+    /// <summary>
+    /// Human-readable message describing the component health
+    /// </summary>
     public string Message { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Response time of the health check in milliseconds
+    /// </summary>
     public long ResponseTimeMs { get; set; }
+
+    /// <summary>
+    /// Timestamp when the component was checked
+    /// </summary>
     public DateTime CheckedAt { get; set; } = DateTime.UtcNow;
 
+    /// <summary>
+    /// Returns a string representation of the component health information
+    /// </summary>
     public override string ToString()
     {
         return $"ComponentHealthInfo {{ Name = {Name}, Status = {Status}, Message = {Message}, ResponseTimeMs = {ResponseTimeMs}, CheckedAt = {CheckedAt} }}";
@@ -44,9 +66,24 @@ public class ComponentHealthInfo
 /// </summary>
 public class HealthReport
 {
+    /// <summary>
+    /// Overall health status of the system
+    /// </summary>
     public HealthStatus Status { get; set; } = HealthStatus.Healthy;
+
+    /// <summary>
+    /// Timestamp when the health check was performed
+    /// </summary>
     public DateTime CheckedAt { get; set; } = DateTime.UtcNow;
+
+    /// <summary>
+    /// Dictionary of component health information keyed by component name
+    /// </summary>
     public Dictionary<string, ComponentHealthInfo> Components { get; set; } = new();
+
+    /// <summary>
+    /// Total duration of all health checks performed
+    /// </summary>
     public TimeSpan TotalCheckDuration { get; set; }
 
     /// <summary>
@@ -72,16 +109,20 @@ public interface IHealthCheckService
     /// <summary>
     /// Perform comprehensive health check
     /// </summary>
+    /// <returns>A task representing the asynchronous operation, containing the health report</returns>
     Task<HealthReport> PerformHealthCheckAsync();
 
     /// <summary>
     /// Check specific component health
     /// </summary>
+    /// <param name="componentName">Name of the component to check</param>
+    /// <returns>A task representing the asynchronous operation, containing the component health information</returns>
     Task<ComponentHealthInfo> CheckComponentAsync(string componentName);
 
     /// <summary>
     /// Get cached health report
     /// </summary>
+    /// <returns>The cached health report, or null if no report has been generated</returns>
     HealthReport? GetCachedHealthReport();
 }
 
@@ -99,6 +140,11 @@ public class HealthCheckService : IHealthCheckService
     private DateTime _lastCheckTime = DateTime.MinValue;
     private readonly TimeSpan _cacheExpiry = TimeSpan.FromSeconds(30);
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="HealthCheckService"/> class
+    /// </summary>
+    /// <param name="dbContext">The database context used for health checks</param>
+    /// <param name="logger">The logger used for health check diagnostics</param>
     public HealthCheckService(TenantDbContext dbContext, ILogger<HealthCheckService> logger)
     {
         _dbContext = dbContext;
@@ -106,6 +152,10 @@ public class HealthCheckService : IHealthCheckService
         _componentCache = new ConcurrentDictionary<string, ComponentHealthInfo>();
     }
 
+    /// <summary>
+    /// Perform comprehensive health check
+    /// </summary>
+    /// <returns>A task representing the asynchronous operation, containing the health report</returns>
     public async Task<HealthReport> PerformHealthCheckAsync()
     {
         // Return cached report if still valid
@@ -172,6 +222,11 @@ public class HealthCheckService : IHealthCheckService
         return _cachedReport;
     }
 
+    /// <summary>
+    /// Check specific component health
+    /// </summary>
+    /// <param name="componentName">Name of the component to check</param>
+    /// <returns>A task representing the asynchronous operation, containing the component health information</returns>
     public async Task<ComponentHealthInfo> CheckComponentAsync(string componentName)
     {
         return componentName.ToLowerInvariant() switch
@@ -188,6 +243,10 @@ public class HealthCheckService : IHealthCheckService
         };
     }
 
+    /// <summary>
+    /// Get cached health report
+    /// </summary>
+    /// <returns>The cached health report, or null if no report has been generated</returns>
     public HealthReport? GetCachedHealthReport()
     {
         return _cachedReport;
@@ -308,6 +367,11 @@ public class HealthCheckService : IHealthCheckService
 /// </summary>
 public static class HealthCheckServiceExtensions
 {
+    /// <summary>
+    /// Register the health check service with the dependency injection container
+    /// </summary>
+    /// <param name="services">The service collection to add the health check service to</param>
+    /// <returns>The service collection for chaining</returns>
     public static IServiceCollection AddHealthCheckService(this IServiceCollection services)
     {
         services.AddScoped<IHealthCheckService, HealthCheckService>();
