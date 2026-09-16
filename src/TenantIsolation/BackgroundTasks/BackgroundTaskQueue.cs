@@ -15,11 +15,34 @@ namespace TenantIsolation.BackgroundTasks;
 /// </summary>
 public class BackgroundTask
 {
+    /// <summary>
+    /// Gets or sets the unique identifier of the task.
+    /// </summary>
     public string Id { get; set; } = Guid.NewGuid().ToString("N");
+
+    /// <summary>
+    /// Gets or sets the display name of the task.
+    /// </summary>
     public string Name { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets the work item to execute for the task.
+    /// </summary>
     public Func<CancellationToken, Task> WorkItem { get; set; } = null!;
+
+    /// <summary>
+    /// Gets or sets the time the task was enqueued.
+    /// </summary>
     public DateTime EnqueuedAt { get; set; } = DateTime.UtcNow;
+
+    /// <summary>
+    /// Gets or sets the priority of the task.
+    /// </summary>
     public BackgroundTaskPriority Priority { get; set; } = BackgroundTaskPriority.Normal;
+
+    /// <summary>
+    /// Gets or sets the maximum number of retries for the task.
+    /// </summary>
     public int MaxRetries { get; set; } = 3;
 }
 
@@ -28,9 +51,24 @@ public class BackgroundTask
 /// </summary>
 public enum BackgroundTaskPriority
 {
+    /// <summary>
+    /// Low priority task.
+    /// </summary>
     Low = 0,
+
+    /// <summary>
+    /// Normal priority task.
+    /// </summary>
     Normal = 1,
+
+    /// <summary>
+    /// High priority task.
+    /// </summary>
     High = 2,
+
+    /// <summary>
+    /// Critical priority task.
+    /// </summary>
     Critical = 3
 }
 
@@ -60,10 +98,29 @@ public interface IBackgroundTaskQueue
 /// </summary>
 public class QueueStatistics
 {
+    /// <summary>
+    /// Gets or sets the number of tasks currently pending in the queue.
+    /// </summary>
     public int PendingTasks { get; set; }
+
+    /// <summary>
+    /// Gets or sets the number of tasks that have completed successfully.
+    /// </summary>
     public int CompletedTasks { get; set; }
+
+    /// <summary>
+    /// Gets or sets the number of tasks that have failed.
+    /// </summary>
     public int FailedTasks { get; set; }
+
+    /// <summary>
+    /// Gets or sets the number of tasks currently running.
+    /// </summary>
     public int RunningTasks { get; set; }
+
+    /// <summary>
+    /// Gets or sets the average execution time of completed tasks.
+    /// </summary>
     public TimeSpan AverageExecutionTime { get; set; }
 }
 
@@ -82,6 +139,10 @@ public class BackgroundTaskQueue : IBackgroundTaskQueue
     private int _runningTasks;
     private readonly List<long> _executionTimes = new();
 
+    /// <summary>
+    /// Initializes a new instance of the BackgroundTaskQueue class.
+    /// </summary>
+    /// <param name="logger">The logger instance.</param>
     public BackgroundTaskQueue(ILogger<BackgroundTaskQueue> logger)
     {
         _queue = new PriorityQueue<BackgroundTask, BackgroundTaskPriority>();
@@ -89,6 +150,10 @@ public class BackgroundTaskQueue : IBackgroundTaskQueue
         _logger = logger;
     }
 
+    /// <summary>
+    /// Enqueue task for background execution.
+    /// </summary>
+    /// <param name="task">The task to enqueue.</param>
     public void QueueTask(BackgroundTask task)
     {
         if (task == null)
@@ -104,6 +169,11 @@ public class BackgroundTaskQueue : IBackgroundTaskQueue
         _signal.Release();
     }
 
+    /// <summary>
+    /// Dequeue next task.
+    /// </summary>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>The dequeued task, or null if none available.</returns>
     public async Task<BackgroundTask?> DequeueAsync(CancellationToken cancellationToken)
     {
         await _signal.WaitAsync(cancellationToken);
@@ -114,6 +184,10 @@ public class BackgroundTaskQueue : IBackgroundTaskQueue
         }
     }
 
+    /// <summary>
+    /// Get queue statistics.
+    /// </summary>
+    /// <returns>The current queue statistics.</returns>
     public QueueStatistics GetStatistics()
     {
         lock (_queue)
@@ -134,8 +208,10 @@ public class BackgroundTaskQueue : IBackgroundTaskQueue
     }
 
     /// <summary>
-    /// Internal method to record task completion
+    /// Internal method to record task completion.
     /// </summary>
+    /// <param name="executionTimeMs">The execution time in milliseconds.</param>
+    /// <param name="isSuccess">Whether the task completed successfully.</param>
     public void RecordTaskCompletion(long executionTimeMs, bool isSuccess)
     {
         lock (_queue)
@@ -152,7 +228,14 @@ public class BackgroundTaskQueue : IBackgroundTaskQueue
         }
     }
 
+    /// <summary>
+    /// Increments the running task count.
+    /// </summary>
     public void IncrementRunningCount() => Interlocked.Increment(ref _runningTasks);
+
+    /// <summary>
+    /// Decrements the running task count.
+    /// </summary>
     public void DecrementRunningCount() => Interlocked.Decrement(ref _runningTasks);
 }
 
@@ -166,6 +249,12 @@ public class BackgroundTaskHostedService : BackgroundService
     private readonly ILogger<BackgroundTaskHostedService> _logger;
     private readonly IServiceProvider _serviceProvider;
 
+    /// <summary>
+    /// Initializes a new instance of the BackgroundTaskHostedService class.
+    /// </summary>
+    /// <param name="taskQueue">The background task queue.</param>
+    /// <param name="logger">The logger instance.</param>
+    /// <param name="serviceProvider">The service provider.</param>
     public BackgroundTaskHostedService(
         IBackgroundTaskQueue taskQueue,
         ILogger<BackgroundTaskHostedService> logger,
@@ -176,6 +265,11 @@ public class BackgroundTaskHostedService : BackgroundService
         _serviceProvider = serviceProvider;
     }
 
+    /// <summary>
+    /// Executes the background task processing logic.
+    /// </summary>
+    /// <param name="stoppingToken">The cancellation token.</param>
+    /// <returns>A task representing the execution.</returns>
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         _logger.LogInformation("Background task processor started");
@@ -248,6 +342,11 @@ public class BackgroundTaskHostedService : BackgroundService
 /// </summary>
 public static class BackgroundTaskExtensions
 {
+    /// <summary>
+    /// Registers the background task queue and hosted service with the service collection.
+    /// </summary>
+    /// <param name="services">The service collection.</param>
+    /// <returns>The service collection for chaining.</returns>
     public static IServiceCollection AddBackgroundTaskQueue(this IServiceCollection services)
     {
         services.AddSingleton<IBackgroundTaskQueue, BackgroundTaskQueue>();
