@@ -40,6 +40,8 @@ public class TenantAwareDistributedCacheProvider : ITenantAwareDistributedCacheP
     /// <returns>The tenant-prefixed key or the original key if no tenant is found.</returns>
     private string GetTenantPrefixedKey(string key)
     {
+        ArgumentNullException.ThrowIfNull(key);
+
         var tenantId = _httpContextAccessor.HttpContext?.Items[TenantConstants.CurrentTenantContextKey]?.ToString();
 
         if (string.IsNullOrEmpty(tenantId))
@@ -54,6 +56,8 @@ public class TenantAwareDistributedCacheProvider : ITenantAwareDistributedCacheP
 
     public async ValueTask<T?> GetAsync<T>(string key)
     {
+        ArgumentNullException.ThrowIfNull(key);
+
         if (string.IsNullOrWhiteSpace(key))
         {
             _logger.LogWarning("Attempted to get a value with a null or whitespace cache key.");
@@ -83,6 +87,8 @@ public class TenantAwareDistributedCacheProvider : ITenantAwareDistributedCacheP
 
     public async ValueTask SetAsync<T>(string key, T value, TimeSpan? expiration = null)
     {
+        ArgumentNullException.ThrowIfNull(key);
+
         if (string.IsNullOrWhiteSpace(key))
         {
             _logger.LogWarning("Attempted to set a value with a null or whitespace cache key.");
@@ -115,6 +121,8 @@ public class TenantAwareDistributedCacheProvider : ITenantAwareDistributedCacheP
 
     public async ValueTask RemoveAsync(string key)
     {
+        ArgumentNullException.ThrowIfNull(key);
+
         if (string.IsNullOrWhiteSpace(key))
         {
             _logger.LogWarning("Attempted to remove a value with a null or whitespace cache key.");
@@ -135,6 +143,8 @@ public class TenantAwareDistributedCacheProvider : ITenantAwareDistributedCacheP
 
     public async ValueTask<bool> ExistsAsync(string key)
     {
+        ArgumentNullException.ThrowIfNull(key);
+
         // IDistributedCache doesn't have an Exists method. A 'Get' followed by a null check is the common approach.
         // This might retrieve the entire value, which could be inefficient for large objects.
         _logger.LogWarning("ExistsAsync for distributed cache will perform a Get operation, which might be inefficient for large objects.");
