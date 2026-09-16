@@ -1973,6 +1973,36 @@ public class TenantManagementExample
 
 *Note:* `InMemoryDynamicTenantStore` is a placeholder for your own `IDynamicTenantStore` implementation.
 
+### ExportService
+
+The `ExportService` handles conversion of tenant data to various export formats (JSON, CSV, XML) with optional gzip compression. It is registered as `IExportService` via `AddExportService()` and is scoped per request.
+
+`ExportAsync` accepts an `ExportRequest` describing the target tenant, resource type, format, and optional filters, field selection, and record limits. It validates that the record count does not exceed `MaxRecords`, converts the supplied data to the requested format, and returns an `ExportResult` containing the serialized content, content type, generated file name, and size. When `Compress` is set, the payload is gzip-compressed and the content type becomes `application/gzip`.
+
+**Usage example**
+
+```csharp
+using Microsoft.Extensions.DependencyInjection;
+using TenantIsolation.Services;
+
+var services = new ServiceCollection();
+services.AddExportService();
+var provider = services.BuildServiceProvider();
+
+var exportService = provider.GetRequiredService<IExportService>();
+
+var request = new ExportRequest
+{
+    TenantId = tenantId,
+    ResourceType = "Organizations",
+    Format = ExportFormat.Json,
+    Compress = true
+};
+
+var result = await exportService.ExportAsync(request, data);
+Console.WriteLine($"Exported {result.SizeBytes} bytes to {result.FileName}");
+```
+
 ### ConfigurationService
 Handles tenant-specific configuration settings with encryption and validation.
 
