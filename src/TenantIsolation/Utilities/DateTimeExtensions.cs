@@ -124,6 +124,16 @@ public static class DateTimeExtensions
     }
 
     /// <summary>
+    /// Check if date is in the past
+    /// </summary>
+    /// <param name="value">The date/time offset value to check</param>
+    /// <returns>True if the date is in the past; otherwise false</returns>
+    public static bool IsInPast(this DateTimeOffset value)
+    {
+        return value < DateTimeOffset.UtcNow;
+    }
+
+    /// <summary>
     /// Check if date is in future
     /// </summary>
     /// <param name="dateTime">The date/time value to check</param>
