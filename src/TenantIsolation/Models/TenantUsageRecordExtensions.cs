@@ -12,6 +12,19 @@ namespace TenantIsolation.Models;
 public static class TenantUsageRecordExtensions
 {
     /// <summary>
+    /// Determines whether the record's <see cref="TenantUsageRecord.CurrentValue"/> is within the specified limit.
+    /// </summary>
+    /// <param name="record">The usage record to evaluate.</param>
+    /// <param name="limit">The maximum allowed value.</param>
+    /// <returns><c>true</c> when <c>CurrentValue</c> is less than or equal to <paramref name="limit"/>; otherwise, <c>false</c>.</returns>
+    public static bool IsWithinLimit(this TenantUsageRecord record, long limit)
+    {
+        if (record is null) throw new ArgumentNullException(nameof(record));
+
+        return record.CurrentValue <= limit;
+    }
+
+    /// <summary>
     /// Calculates the total <see cref="TenantUsageRecord.CurrentValue"/> for a given metric key
     /// across the supplied collection.
     /// </summary>
